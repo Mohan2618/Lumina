@@ -211,6 +211,42 @@ body {
 
 <div class="profile" id="profile" title="Profile Menu">AB</div>
 
+  <div id="profileMenu" style="
+  display:none;
+  position:fixed;
+  top:65px;
+  right:18px;
+  width:250px;
+  background:rgba(0,0,0,0.6);
+  backdrop-filter:blur(15px);
+  border-radius:12px;
+  padding:15px;
+  color:white;
+  z-index:1000;
+">
+
+  <div style="padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.2);">
+    <strong id="profileName">User Name</strong><br>
+    <span style="font-size:12px; opacity:0.7;">Free</span>
+  </div>
+
+  <div style="padding:10px 0; cursor:pointer;" onclick="openHelp()">
+    <span class="material-icons" style="vertical-align:middle;">help_outline</span>
+    Help
+  </div>
+
+  <div style="padding:10px 0; cursor:pointer;" onclick="openSettings()">
+    <span class="material-icons" style="vertical-align:middle;">settings</span>
+    Settings
+  </div>
+
+  <div style="padding:10px 0; cursor:pointer;" onclick="logout()">
+    <span class="material-icons" style="vertical-align:middle;">logout</span>
+    Log out
+  </div>
+
+</div>
+
 <div class="watermark" id="watermark">Berry</div>
 
 <div id="chatWrapper">
@@ -601,7 +637,11 @@ function submitAuth() {
 
     document.getElementById("authButtons").style.display = "none";
     document.getElementById("profile").style.display = "flex";
-    document.getElementById("profile").innerText = stored.firstName.charAt(0);
+    document.getElementById("profile").innerText =
+  stored.firstName.charAt(0).toUpperCase();
+
+document.getElementById("profileName").innerText =
+  stored.firstName + " " + stored.lastName;
     closeAuth();
   } else {
     alert("Invalid credentials");
@@ -619,14 +659,28 @@ function forgotPassword() {
 }
 
 /* ================= PROFILE DROPDOWN ================= */
-document.getElementById("profile").onclick = function() {
-  const action = confirm("Press OK to Logout");
-  if (action) logout();
+document.getElementById("profile").onclick = function(e) {
+  e.stopPropagation();
+  const menu = document.getElementById("profileMenu");
+  menu.style.display =
+    menu.style.display === "block" ? "none" : "block";
 };
+
+  document.addEventListener("click", function() {
+  document.getElementById("profileMenu").style.display = "none";
+});
 
   function logout() {
   document.getElementById("authButtons").style.display = "flex";
   document.getElementById("profile").style.display = "none";
+}
+
+  function openHelp() {
+  alert("Help section coming soon.");
+}
+
+function openSettings() {
+  alert("Settings panel coming soon.");
 }
 
 </script>
