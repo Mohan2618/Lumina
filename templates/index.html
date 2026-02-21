@@ -120,7 +120,7 @@ body {
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-direction: column; /* IMPORTANT */
   width: min(90%, 700px);
   padding: 14px 18px;
   background: rgba(255, 255, 255, 0.22);
@@ -281,28 +281,43 @@ body {
 
 <!-- Prompt -->
 <div class="prompt-container">
-  <button class="icon-btn" onclick="uploadImage()" title="Attach File">
-  <span class="material-icons">add</span>
-</button>
 
-  <div id="attachmentPreview" style="display:flex; gap:10px;"></div>
+  <!-- Attachment Row -->
+  <div id="attachmentPreview"
+       style="
+         display:flex;
+         gap:10px;
+         margin-bottom:10px;
+         flex-wrap:wrap;
+       ">
+  </div>
 
-  <input
-    type="text"
-    class="prompt-input"
-    id="promptInput"
-    placeholder="Ask anything..."
-    oninput="toggleIcon()"
-    onkeydown="if(event.key==='Enter') sendMessage()"
-  >
+  <!-- Input Row -->
+  <div style="display:flex; align-items:center; gap:12px;">
 
-  <button class="icon-btn" onclick="micAction()" title="Voice Input">
-  <span class="material-icons">mic</span>
-</button>
+    <button class="icon-btn" onclick="uploadImage()" title="Attach File">
+      <span class="material-icons">add</span>
+    </button>
 
-  <button class="send-btn" onclick="sendMessage()">
-    <span class="material-icons" id="actionIcon">graphic_eq</span>
-  </button>
+    <input
+      type="text"
+      class="prompt-input"
+      id="promptInput"
+      placeholder="Ask anything..."
+      oninput="toggleIcon()"
+      onkeydown="if(event.key==='Enter') sendMessage()"
+    >
+
+    <button class="icon-btn" onclick="micAction()" title="Voice Input">
+      <span class="material-icons">mic</span>
+    </button>
+
+    <button class="send-btn" onclick="sendMessage()">
+      <span class="material-icons" id="actionIcon">graphic_eq</span>
+    </button>
+
+  </div>
+
 </div>
 
 <div class="bottom-tools">
@@ -566,19 +581,20 @@ function uploadImage() {
   preview.innerHTML = "";
 
   attachedFiles.forEach((file, index) => {
+
     const wrapper = document.createElement("div");
     wrapper.style.position = "relative";
 
     const img = document.createElement("img");
     img.src = file;
-    img.style.height = "50px";
+    img.style.height = "60px";
     img.style.borderRadius = "8px";
 
     const removeBtn = document.createElement("span");
     removeBtn.innerHTML = "×";
     removeBtn.style.position = "absolute";
-    removeBtn.style.top = "-5px";
-    removeBtn.style.right = "-5px";
+    removeBtn.style.top = "-6px";
+    removeBtn.style.right = "-6px";
     removeBtn.style.background = "white";
     removeBtn.style.borderRadius = "50%";
     removeBtn.style.cursor = "pointer";
