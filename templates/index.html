@@ -247,7 +247,7 @@ body {
   <button onclick="newChat()" title="New Chat">
   <span class="material-icons">edit</span>
 </button>
-  <button onclick="searchChat()" title="Search Chat">
+  <button onclick="openHistory()" title="Chat History">
   <span class="material-icons">search</span>
 </button>
   <button onclick="uploadImage()" title="Upload Image">
@@ -278,6 +278,30 @@ function startChatMode() {
     document.getElementById("chatArea").style.display = "flex";
     chatStarted = true;
   }
+}
+
+  function openHistory() {
+  const panel = document.getElementById("historyPanel");
+  panel.style.display = panel.style.display === "block" ? "none" : "block";
+
+  const history = JSON.parse(localStorage.getItem("berryChats")) || [];
+  const list = document.getElementById("historyList");
+  list.innerHTML = "";
+
+  history.forEach((chat, index) => {
+    const item = document.createElement("div");
+    item.style.padding = "10px";
+    item.style.cursor = "pointer";
+    item.innerText = "Chat " + (index + 1);
+
+    item.onclick = function() {
+      document.getElementById("chatArea").innerHTML = chat;
+      panel.style.display = "none";
+      startChatMode();
+    };
+
+    list.appendChild(item);
+  });
 }
 
 /* ================= ADD MESSAGE ================= */
@@ -329,7 +353,33 @@ function sendMessage() {
   setTimeout(() => {
     addMessage("AI response for your input.", "bot");
   }, 500);
+  saveChatHistory();
 }
+
+  function saveChatHistory() {
+  const chats = document.getElementById("chatArea").innerHTML;
+  let history = JSON.parse(localStorage.getItem("berryChats")) || [];
+  history.push(chats);
+  localStorage.setItem("berryChats", JSON.stringify(history));
+}
+
+  <div id="historyPanel" style="
+  display:none;
+  position:fixed;
+  right:0;
+  top:0;
+  width:300px;
+  height:100%;
+  background:rgba(0,0,0,0.5);
+  backdrop-filter:blur(10px);
+  padding:20px;
+  overflow-y:auto;
+  color:white;
+  z-index:900;
+">
+  <h3>Chat History</h3>
+  <div id="historyList"></div>
+</div>
 
 /* ================= NEW CHAT ================= */
 function newChat() {
@@ -400,12 +450,16 @@ let authMode = "signin";
 function signIn() {
   authMode = "signin";
   document.getElementById("authTitle").innerText = "Sign In";
+  document.getElementById("signupFields").style.display = "none";
+  document.getElementById("loginIdentifier").style.display = "block";
   document.getElementById("authModal").style.display = "flex";
 }
 
 function signUp() {
   authMode = "signup";
   document.getElementById("authTitle").innerText = "Sign Up";
+  document.getElementById("signupFields").style.display = "flex";
+  document.getElementById("loginIdentifier").style.display = "none";
   document.getElementById("authModal").style.display = "flex";
 }
 
@@ -414,27 +468,58 @@ function closeAuth() {
 }
 
 function submitAuth() {
-  const username = document.getElementById("authUsername").value;
-  const password = document.getElementById("authPassword").value;
-
-  if (!username || !password) return;
 
   if (authMode === "signup") {
-    localStorage.setItem("berryUser", JSON.stringify({username, password}));
-    alert("Account created!");
-  } else {
-    const stored = JSON.parse(localStorage.getItem("berryUser"));
-    if (!stored || stored.username !== username || stored.password !== password) {
-      alert("Invalid credentials");
+
+    const user = {
+      firstName: firstName.value,
+      lastName: lastName.value,
+      dob: dob.value,
+      email: email.value,
+      username: username.value,
+      password: password.value
+    };
+
+    if (!user.email || !user.password || !user.username) {
+      alert("Fill required fields");
       return;
     }
+
+    localStorage.setItem("berryUser", JSON.stringify(user));
+    alert("Account created!");
+    closeAuth();
+    return;
   }
 
-  document.getElementById("authButtons").style.display = "none";
-  document.getElementById("profile").style.display = "flex";
-  document.getElementById("profile").innerText = username.charAt(0).toUpperCase();
+  // Sign In
+  const stored = JSON.parse(localStorage.getItem("berryUser"));
+  const identifier = loginIdentifier.value;
 
-  closeAuth();
+  if (!stored) {
+    alert("No user found.");
+    return;
+  }
+
+  if ((stored.email === identifier || stored.username === identifier)
+      && stored.password === password.value) {
+
+    document.getElementById("authButtons").style.display = "none";
+    document.getElementById("profile").style.display = "flex";
+    document.getElementById("profile").innerText = stored.firstName.charAt(0);
+    closeAuth();
+  } else {
+    alert("Invalid credentials");
+  }
+}
+
+function forgotPassword() {
+  const stored = JSON.parse(localStorage.getItem("berryUser"));
+  if (!stored) {
+    alert("No account found.");
+    return;
+  }
+
+  alert("Password is: " + stored.password);
 }
 
 /* ================= PROFILE DROPDOWN ================= */
@@ -452,39 +537,59 @@ document.getElementById("profile").onclick = function() {
   left:0;
   width:100%;
   height:100%;
-  backdrop-filter:blur(8px);
+  backdrop-filter:blur(10px);
   justify-content:center;
   align-items:center;
+  z-index:1000;
 ">
 
   <div style="
-    width:350px;
+    width:400px;
+    max-height:80vh;
+    overflow-y:auto;
     padding:30px;
-    background:rgba(255,255,255,0.2);
+    background:rgba(255,255,255,0.18);
     border-radius:20px;
     backdrop-filter:blur(15px);
     display:flex;
     flex-direction:column;
-    gap:15px;
+    gap:12px;
   ">
 
-    <h3 id="authTitle" style="color:white; text-align:center;">Sign In</h3>
+    <h3 id="authTitle" style="color:white;text-align:center;">Sign In</h3>
 
-    <input id="authUsername" placeholder="Username"
-      style="padding:10px;border-radius:10px;border:none;">
+    <div id="signupFields" style="display:none; flex-direction:column; gap:10px;">
+      <input id="firstName" placeholder="First Name" style="padding:10px;border-radius:8px;border:none;">
+      <input id="lastName" placeholder="Last Name" style="padding:10px;border-radius:8px;border:none;">
+      <input id="dob" type="date" style="padding:10px;border-radius:8px;border:none;">
+      <input id="email" placeholder="Email" style="padding:10px;border-radius:8px;border:none;">
+      <input id="username" placeholder="Username" style="padding:10px;border-radius:8px;border:none;">
+    </div>
 
-    <input id="authPassword" type="password" placeholder="Password"
-      style="padding:10px;border-radius:10px;border:none;">
+    <input id="loginIdentifier" placeholder="Email or Username" style="padding:10px;border-radius:8px;border:none;">
+    <input id="password" type="password" placeholder="Password" style="padding:10px;border-radius:8px;border:none;">
 
-    <button onclick="submitAuth()"
-      style="padding:10px;border-radius:10px;border:none;cursor:pointer;">
-      Submit
-    </button>
+    <button onclick="submitAuth()" style="
+      padding:10px;
+      border-radius:8px;
+      border:none;
+      cursor:pointer;
+    ">Submit</button>
 
-    <button onclick="closeAuth()"
-      style="background:none;border:none;color:white;cursor:pointer;">
-      Cancel
-    </button>
+    <button onclick="forgotPassword()" style="
+      background:none;
+      border:none;
+      color:white;
+      cursor:pointer;
+      text-decoration:underline;
+    ">Forgot Password?</button>
+
+    <button onclick="closeAuth()" style="
+      background:none;
+      border:none;
+      color:white;
+      cursor:pointer;
+    ">Cancel</button>
 
   </div>
 </div>
