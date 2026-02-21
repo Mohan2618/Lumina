@@ -217,6 +217,24 @@ body {
   <div id="chatArea"></div>
 </div>
 
+  <div id="historyPanel" style="
+  display:none;
+  position:fixed;
+  right:0;
+  top:0;
+  width:300px;
+  height:100%;
+  background:rgba(0,0,0,0.5);
+  backdrop-filter:blur(10px);
+  padding:20px;
+  overflow-y:auto;
+  color:white;
+  z-index:900;
+">
+  <h3>Chat History</h3>
+  <div id="historyList"></div>
+</div>
+
 <!-- Prompt -->
 <div class="prompt-container">
   <button class="icon-btn" onclick="uploadImage()" title="Attach File">
@@ -267,7 +285,12 @@ let loggedIn = false;
 function toggleIcon() {
   const input = document.getElementById("promptInput");
   const icon = document.getElementById("actionIcon");
-  icon.textContent = input.value.trim() ? "send" : "graphic_eq";
+
+  if (input.value.trim().length > 0) {
+    icon.textContent = "send";
+  } else {
+    icon.textContent = "graphic_eq";
+  }
 }
 
 /* ================= CHAT MODE ================= */
@@ -282,16 +305,28 @@ function startChatMode() {
 
   function openHistory() {
   const panel = document.getElementById("historyPanel");
-  panel.style.display = panel.style.display === "block" ? "none" : "block";
+
+  panel.style.display =
+    panel.style.display === "block" ? "none" : "block";
 
   const history = JSON.parse(localStorage.getItem("berryChats")) || [];
   const list = document.getElementById("historyList");
+
   list.innerHTML = "";
+
+  if (history.length === 0) {
+    list.innerHTML = "<p>No previous chats</p>";
+    return;
+  }
 
   history.forEach((chat, index) => {
     const item = document.createElement("div");
     item.style.padding = "10px";
     item.style.cursor = "pointer";
+    item.style.marginBottom = "10px";
+    item.style.background = "rgba(255,255,255,0.1)";
+    item.style.borderRadius = "8px";
+
     item.innerText = "Chat " + (index + 1);
 
     item.onclick = function() {
@@ -344,42 +379,29 @@ function sendMessage() {
 
   document.getElementById("chatArea").appendChild(container);
 
-  document.getElementById("attachmentPreview").innerHTML = "";
-  attachedImage = null;
-
   input.value = "";
+  attachedImage = null;
+  document.getElementById("attachmentPreview").innerHTML = "";
+
   toggleIcon();
 
   setTimeout(() => {
     addMessage("AI response for your input.", "bot");
-  }, 500);
-  saveChatHistory();
+    saveChatHistory();
+  }, 400);
 }
 
   function saveChatHistory() {
-  const chats = document.getElementById("chatArea").innerHTML;
-  let history = JSON.parse(localStorage.getItem("berryChats")) || [];
-  history.push(chats);
-  localStorage.setItem("berryChats", JSON.stringify(history));
-}
+  const chatHTML = document.getElementById("chatArea").innerHTML;
 
-  <div id="historyPanel" style="
-  display:none;
-  position:fixed;
-  right:0;
-  top:0;
-  width:300px;
-  height:100%;
-  background:rgba(0,0,0,0.5);
-  backdrop-filter:blur(10px);
-  padding:20px;
-  overflow-y:auto;
-  color:white;
-  z-index:900;
-">
-  <h3>Chat History</h3>
-  <div id="historyList"></div>
-</div>
+  let history = JSON.parse(localStorage.getItem("berryChats")) || [];
+
+  // Avoid duplicate saves
+  if (history.length === 0 || history[history.length - 1] !== chatHTML) {
+    history.push(chatHTML);
+    localStorage.setItem("berryChats", JSON.stringify(history));
+  }
+}
 
 /* ================= NEW CHAT ================= */
 function newChat() {
@@ -527,6 +549,11 @@ document.getElementById("profile").onclick = function() {
   const action = confirm("Press OK to Logout");
   if (action) logout();
 };
+
+  function logout() {
+  document.getElementById("authButtons").style.display = "flex";
+  document.getElementById("profile").style.display = "none";
+}
 
 </script>
 
