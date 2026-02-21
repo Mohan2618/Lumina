@@ -199,11 +199,11 @@ body {
 
 <!-- Auth -->
 <div class="auth-buttons" id="authButtons">
-  <button onclick="signIn()">Sign In</button>
-  <button onclick="signUp()">Sign Up</button>
+  <button onclick="signIn()" title="Login to your account">Sign In</button>
+<button onclick="signUp()" title="Create new account">Sign Up</button>
 </div>
 
-<div class="profile" id="profile">AB</div>
+<div class="profile" id="profile" title="Profile Menu">AB</div>
 
 <div class="watermark" id="watermark">Berry</div>
 
@@ -211,7 +211,9 @@ body {
 
 <!-- Prompt -->
 <div class="prompt-container">
-  <button class="icon-btn"><span class="material-icons">add</span></button>
+  <button class="icon-btn" onclick="uploadImage()" title="Attach File">
+  <span class="material-icons">add</span>
+</button>
 
   <input
     type="text"
@@ -222,7 +224,9 @@ body {
     onkeydown="if(event.key==='Enter') sendMessage()"
   >
 
-  <button class="icon-btn"><span class="material-icons">mic</span></button>
+  <button class="icon-btn" onclick="micAction()" title="Voice Input">
+  <span class="material-icons">mic</span>
+</button>
 
   <button class="send-btn" onclick="sendMessage()">
     <span class="material-icons" id="actionIcon">graphic_eq</span>
@@ -230,21 +234,33 @@ body {
 </div>
 
 <div class="bottom-tools">
-  <button onclick="newChat()"><span class="material-icons">edit</span></button>
-  <button><span class="material-icons">search</span></button>
-  <button><span class="material-icons">image</span></button>
+  <button onclick="newChat()" title="New Chat">
+  <span class="material-icons">edit</span>
+</button>
+  <button onclick="searchChat()" title="Search Chat">
+  <span class="material-icons">search</span>
+</button>
+  <button onclick="uploadImage()" title="Upload Image">
+  <span class="material-icons">image</span>
+</button>
 </div>
 
 <script>
+
 let chatStarted = false;
 let loggedIn = false;
 
+/* ================= TOOLTIP HANDLING ================= */
+// Already using title="" attributes (native browser tooltip)
+
+/* ================= ICON TOGGLE ================= */
 function toggleIcon() {
   const input = document.getElementById("promptInput");
   const icon = document.getElementById("actionIcon");
   icon.textContent = input.value.trim() ? "send" : "graphic_eq";
 }
 
+/* ================= CHAT MODE ================= */
 function startChatMode() {
   if (!chatStarted) {
     document.body.classList.add("chat-mode");
@@ -254,17 +270,20 @@ function startChatMode() {
   }
 }
 
+/* ================= ADD MESSAGE ================= */
 function addMessage(text, type) {
   const msg = document.createElement("div");
   msg.classList.add("chat-msg");
   msg.classList.add(type === "user" ? "user-msg" : "bot-msg");
   msg.innerText = text;
+
   const chat = document.getElementById("chatArea");
   chat.appendChild(msg);
   chat.scrollTop = chat.scrollHeight;
 }
 
-async function sendMessage() {
+/* ================= SEND MESSAGE ================= */
+function sendMessage() {
   const input = document.getElementById("promptInput");
   const text = input.value.trim();
   if (!text) return;
@@ -274,12 +293,12 @@ async function sendMessage() {
   input.value = "";
   toggleIcon();
 
-  // Dummy response (replace with backend API)
   setTimeout(() => {
-    addMessage("This is a sample AI response.", "bot");
+    addMessage("AI response for: " + text, "bot");
   }, 500);
 }
 
+/* ================= NEW CHAT ================= */
 function newChat() {
   document.getElementById("chatArea").innerHTML = "";
   document.body.classList.remove("chat-mode");
@@ -288,15 +307,98 @@ function newChat() {
   chatStarted = false;
 }
 
+/* ================= SEARCH CHAT ================= */
+function searchChat() {
+  const keyword = prompt("Search in chat:");
+  if (!keyword) return;
+
+  const messages = document.querySelectorAll(".chat-msg");
+  messages.forEach(msg => {
+    if (msg.innerText.toLowerCase().includes(keyword.toLowerCase())) {
+      msg.style.border = "2px solid yellow";
+    } else {
+      msg.style.border = "none";
+    }
+  });
+}
+
+/* ================= IMAGE UPLOAD ================= */
+function uploadImage() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    startChatMode();
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      const img = document.createElement("img");
+      img.src = event.target.result;
+      img.style.maxWidth = "200px";
+      img.style.borderRadius = "12px";
+
+      const container = document.createElement("div");
+      container.classList.add("chat-msg", "user-msg");
+      container.appendChild(img);
+
+      document.getElementById("chatArea").appendChild(container);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  input.click();
+}
+
+/* ================= MIC SIMULATION ================= */
+function micAction() {
+  alert("Voice input feature coming soon 🎤");
+}
+
+/* ================= AUTH SYSTEM ================= */
+
+function signUp() {
+  const username = prompt("Enter username:");
+  const password = prompt("Enter password:");
+
+  if (!username || !password) return;
+
+  localStorage.setItem("berryUser", JSON.stringify({username, password}));
+  alert("Account created! Now sign in.");
+}
+
 function signIn() {
+  const username = prompt("Username:");
+  const password = prompt("Password:");
+
+  const stored = JSON.parse(localStorage.getItem("berryUser"));
+
+  if (!stored || stored.username !== username || stored.password !== password) {
+    alert("Invalid credentials");
+    return;
+  }
+
   loggedIn = true;
   document.getElementById("authButtons").style.display = "none";
   document.getElementById("profile").style.display = "flex";
+  document.getElementById("profile").innerText = username.charAt(0).toUpperCase();
 }
 
-function signUp() {
-  signIn();
+function logout() {
+  loggedIn = false;
+  document.getElementById("authButtons").style.display = "flex";
+  document.getElementById("profile").style.display = "none";
 }
+
+/* ================= PROFILE DROPDOWN ================= */
+document.getElementById("profile").onclick = function() {
+  const action = confirm("Press OK to Logout");
+  if (action) logout();
+};
+
 </script>
 
 </body>
