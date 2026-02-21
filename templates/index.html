@@ -231,6 +231,17 @@ body {
   color:white;
   z-index:900;
 ">
+
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h3>Chat History</h3>
+    <span class="material-icons" 
+          style="cursor:pointer;"
+          onclick="closeHistory()">close</span>
+  </div>
+
+  <div id="historyList"></div>
+</div>
+  
   <h3>Chat History</h3>
   <div id="historyList"></div>
 </div>
@@ -298,7 +309,7 @@ function startChatMode() {
   if (!chatStarted) {
     document.body.classList.add("chat-mode");
     document.getElementById("watermark").style.display = "none";
-    document.getElementById("chatArea").style.display = "flex";
+    document.getElementById("chatWrapper").style.display = "block"; // FIXED
     chatStarted = true;
   }
 }
@@ -306,12 +317,10 @@ function startChatMode() {
   function openHistory() {
   const panel = document.getElementById("historyPanel");
 
-  panel.style.display =
-    panel.style.display === "block" ? "none" : "block";
+  panel.style.display = "block";
 
   const history = JSON.parse(localStorage.getItem("berryChats")) || [];
   const list = document.getElementById("historyList");
-
   list.innerHTML = "";
 
   if (history.length === 0) {
@@ -331,12 +340,16 @@ function startChatMode() {
 
     item.onclick = function() {
       document.getElementById("chatArea").innerHTML = chat;
-      panel.style.display = "none";
+      closeHistory();
       startChatMode();
     };
 
     list.appendChild(item);
   });
+}
+
+  function closeHistory() {
+  document.getElementById("historyPanel").style.display = "none";
 }
 
 /* ================= ADD MESSAGE ================= */
@@ -408,7 +421,7 @@ function newChat() {
   document.getElementById("chatArea").innerHTML = "";
   document.body.classList.remove("chat-mode");
   document.getElementById("watermark").style.display = "block";
-  document.getElementById("chatArea").style.display = "none";
+  document.getElementById("chatWrapper").style.display = "none"; // FIXED
   chatStarted = false;
 }
 
