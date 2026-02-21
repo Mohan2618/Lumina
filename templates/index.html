@@ -73,18 +73,24 @@ body {
   color: rgba(255, 255, 255, 0.12);
 }
 
-/* Chat Area */
-#chatArea {
+#chatWrapper {
   position: absolute;
   top: 100px;
   left: 50%;
   transform: translateX(-50%);
   width: min(90%, 700px);
-  max-height: 65vh;
-  overflow-y: auto;
+  height: 60vh;
   display: none;
+}
+
+#chatArea {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
   flex-direction: column;
   gap: 15px;
+  padding-right: 10px;
 }
 
 /* Chat bubbles */
@@ -207,13 +213,17 @@ body {
 
 <div class="watermark" id="watermark">Berry</div>
 
-<div id="chatArea"></div>
+<div id="chatWrapper">
+  <div id="chatArea"></div>
+</div>
 
 <!-- Prompt -->
 <div class="prompt-container">
   <button class="icon-btn" onclick="uploadImage()" title="Attach File">
   <span class="material-icons">add</span>
 </button>
+
+  <div id="attachmentPreview" style="display:flex; gap:10px;"></div>
 
   <input
     type="text"
@@ -286,15 +296,38 @@ function addMessage(text, type) {
 function sendMessage() {
   const input = document.getElementById("promptInput");
   const text = input.value.trim();
-  if (!text) return;
+
+  if (!text && !attachedImage) return;
 
   startChatMode();
-  addMessage(text, "user");
+
+  const container = document.createElement("div");
+  container.classList.add("chat-msg", "user-msg");
+
+  if (attachedImage) {
+    const img = document.createElement("img");
+    img.src = attachedImage;
+    img.style.maxWidth = "200px";
+    img.style.borderRadius = "12px";
+    container.appendChild(img);
+  }
+
+  if (text) {
+    const msgText = document.createElement("div");
+    msgText.innerText = text;
+    container.appendChild(msgText);
+  }
+
+  document.getElementById("chatArea").appendChild(container);
+
+  document.getElementById("attachmentPreview").innerHTML = "";
+  attachedImage = null;
+
   input.value = "";
   toggleIcon();
 
   setTimeout(() => {
-    addMessage("AI response for: " + text, "bot");
+    addMessage("AI response for your input.", "bot");
   }, 500);
 }
 
@@ -323,6 +356,8 @@ function searchChat() {
 }
 
 /* ================= IMAGE UPLOAD ================= */
+let attachedImage = null;
+
 function uploadImage() {
   const input = document.createElement("input");
   input.type = "file";
@@ -332,20 +367,20 @@ function uploadImage() {
     const file = e.target.files[0];
     if (!file) return;
 
-    startChatMode();
-
     const reader = new FileReader();
     reader.onload = function(event) {
+
+      attachedImage = event.target.result;
+
+      const preview = document.getElementById("attachmentPreview");
+      preview.innerHTML = "";
+
       const img = document.createElement("img");
-      img.src = event.target.result;
-      img.style.maxWidth = "200px";
-      img.style.borderRadius = "12px";
+      img.src = attachedImage;
+      img.style.height = "40px";
+      img.style.borderRadius = "8px";
 
-      const container = document.createElement("div");
-      container.classList.add("chat-msg", "user-msg");
-      container.appendChild(img);
-
-      document.getElementById("chatArea").appendChild(container);
+      preview.appendChild(img);
     };
     reader.readAsDataURL(file);
   };
@@ -360,37 +395,46 @@ function micAction() {
 
 /* ================= AUTH SYSTEM ================= */
 
+let authMode = "signin";
+
+function signIn() {
+  authMode = "signin";
+  document.getElementById("authTitle").innerText = "Sign In";
+  document.getElementById("authModal").style.display = "flex";
+}
+
 function signUp() {
-  const username = prompt("Enter username:");
-  const password = prompt("Enter password:");
+  authMode = "signup";
+  document.getElementById("authTitle").innerText = "Sign Up";
+  document.getElementById("authModal").style.display = "flex";
+}
+
+function closeAuth() {
+  document.getElementById("authModal").style.display = "none";
+}
+
+function submitAuth() {
+  const username = document.getElementById("authUsername").value;
+  const password = document.getElementById("authPassword").value;
 
   if (!username || !password) return;
 
-  localStorage.setItem("berryUser", JSON.stringify({username, password}));
-  alert("Account created! Now sign in.");
-}
-
-function signIn() {
-  const username = prompt("Username:");
-  const password = prompt("Password:");
-
-  const stored = JSON.parse(localStorage.getItem("berryUser"));
-
-  if (!stored || stored.username !== username || stored.password !== password) {
-    alert("Invalid credentials");
-    return;
+  if (authMode === "signup") {
+    localStorage.setItem("berryUser", JSON.stringify({username, password}));
+    alert("Account created!");
+  } else {
+    const stored = JSON.parse(localStorage.getItem("berryUser"));
+    if (!stored || stored.username !== username || stored.password !== password) {
+      alert("Invalid credentials");
+      return;
+    }
   }
 
-  loggedIn = true;
   document.getElementById("authButtons").style.display = "none";
   document.getElementById("profile").style.display = "flex";
   document.getElementById("profile").innerText = username.charAt(0).toUpperCase();
-}
 
-function logout() {
-  loggedIn = false;
-  document.getElementById("authButtons").style.display = "flex";
-  document.getElementById("profile").style.display = "none";
+  closeAuth();
 }
 
 /* ================= PROFILE DROPDOWN ================= */
@@ -400,6 +444,50 @@ document.getElementById("profile").onclick = function() {
 };
 
 </script>
+
+  <div id="authModal" style="
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  backdrop-filter:blur(8px);
+  justify-content:center;
+  align-items:center;
+">
+
+  <div style="
+    width:350px;
+    padding:30px;
+    background:rgba(255,255,255,0.2);
+    border-radius:20px;
+    backdrop-filter:blur(15px);
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+  ">
+
+    <h3 id="authTitle" style="color:white; text-align:center;">Sign In</h3>
+
+    <input id="authUsername" placeholder="Username"
+      style="padding:10px;border-radius:10px;border:none;">
+
+    <input id="authPassword" type="password" placeholder="Password"
+      style="padding:10px;border-radius:10px;border:none;">
+
+    <button onclick="submitAuth()"
+      style="padding:10px;border-radius:10px;border:none;cursor:pointer;">
+      Submit
+    </button>
+
+    <button onclick="closeAuth()"
+      style="background:none;border:none;color:white;cursor:pointer;">
+      Cancel
+    </button>
+
+  </div>
+</div>
 
 </body>
 </html>
