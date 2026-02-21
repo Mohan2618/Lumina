@@ -332,8 +332,8 @@ function toggleIcon() {
   const input = document.getElementById("promptInput");
   const icon = document.getElementById("actionIcon");
 
-  if (input.value.trim().length > 0) {
-    icon.textContent = "send";
+  if (input.value.trim() || attachedFiles.length > 0) {
+    icon.textContent = "arrow_upward";
   } else {
     icon.textContent = "graphic_eq";
   }
@@ -445,20 +445,22 @@ function sendMessage() {
   const input = document.getElementById("promptInput");
   const text = input.value.trim();
 
-  if (!text && !attachedImage) return;
+  if (!text && attachedFiles.length === 0) return;
 
   startChatMode();
 
   const container = document.createElement("div");
   container.classList.add("chat-msg", "user-msg");
 
-  if (attachedImage) {
+  attachedFiles.forEach(file => {
     const img = document.createElement("img");
-    img.src = attachedImage;
+    img.src = file;
     img.style.maxWidth = "200px";
     img.style.borderRadius = "12px";
+    img.style.display = "block";
+    img.style.marginBottom = "8px";
     container.appendChild(img);
-  }
+  });
 
   if (text) {
     const msgText = document.createElement("div");
@@ -468,16 +470,15 @@ function sendMessage() {
 
   document.getElementById("chatArea").appendChild(container);
 
-  // SAVE MESSAGE TO CURRENT CHAT ARRAY
   currentChat.push({
     role: "user",
     content: text,
-    image: attachedImage
+    files: [...attachedFiles]
   });
 
   input.value = "";
-  attachedImage = null;
-  document.getElementById("attachmentPreview").innerHTML = "";
+  attachedFiles = [];
+  renderAttachmentPreview();
   toggleIcon();
 
   setTimeout(() => {
@@ -488,7 +489,6 @@ function sendMessage() {
       role: "bot",
       content: botReply
     });
-
   }, 400);
 }
 
@@ -506,15 +506,12 @@ function sendMessage() {
 
 /* ================= NEW CHAT ================= */
 function newChat() {
-
-  // SAVE previous chat if it exists
   if (currentChat.length > 0) {
     allChats.push(currentChat);
     localStorage.setItem("berryChats", JSON.stringify(allChats));
   }
 
   currentChat = [];
-
   document.getElementById("chatArea").innerHTML = "";
   document.body.classList.remove("chat-mode");
   document.getElementById("watermark").style.display = "block";
@@ -538,36 +535,64 @@ function searchChat() {
 }
 
 /* ================= IMAGE UPLOAD ================= */
-let attachedImage = null;
+let attachedFiles = [];
 
 function uploadImage() {
   const input = document.createElement("input");
   input.type = "file";
   input.accept = "image/*";
+  input.multiple = true;
 
   input.onchange = e => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
 
-    const reader = new FileReader();
-    reader.onload = function(event) {
-
-      attachedImage = event.target.result;
-
-      const preview = document.getElementById("attachmentPreview");
-      preview.innerHTML = "";
-
-      const img = document.createElement("img");
-      img.src = attachedImage;
-      img.style.height = "40px";
-      img.style.borderRadius = "8px";
-
-      preview.appendChild(img);
-    };
-    reader.readAsDataURL(file);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        attachedFiles.push(event.target.result);
+        renderAttachmentPreview();
+        toggleIcon(); // switch to send mode
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   input.click();
+}
+
+  function renderAttachmentPreview() {
+  const preview = document.getElementById("attachmentPreview");
+  preview.innerHTML = "";
+
+  attachedFiles.forEach((file, index) => {
+    const wrapper = document.createElement("div");
+    wrapper.style.position = "relative";
+
+    const img = document.createElement("img");
+    img.src = file;
+    img.style.height = "50px";
+    img.style.borderRadius = "8px";
+
+    const removeBtn = document.createElement("span");
+    removeBtn.innerHTML = "×";
+    removeBtn.style.position = "absolute";
+    removeBtn.style.top = "-5px";
+    removeBtn.style.right = "-5px";
+    removeBtn.style.background = "white";
+    removeBtn.style.borderRadius = "50%";
+    removeBtn.style.cursor = "pointer";
+    removeBtn.style.padding = "2px 6px";
+    removeBtn.onclick = () => {
+      attachedFiles.splice(index, 1);
+      renderAttachmentPreview();
+      toggleIcon();
+    };
+
+    wrapper.appendChild(img);
+    wrapper.appendChild(removeBtn);
+    preview.appendChild(wrapper);
+  });
 }
 
 /* ================= MIC SIMULATION ================= */
@@ -585,6 +610,7 @@ function signIn() {
   document.getElementById("signupFields").style.display = "none";
   document.getElementById("loginIdentifier").style.display = "block";
   document.getElementById("authModal").style.display = "flex";
+  document.querySelector("button[onclick='forgotPassword()']").style.display = "block";
 }
 
 function signUp() {
@@ -593,6 +619,7 @@ function signUp() {
   document.getElementById("signupFields").style.display = "flex";
   document.getElementById("loginIdentifier").style.display = "none";
   document.getElementById("authModal").style.display = "flex";
+  document.querySelector("button[onclick='forgotPassword()']").style.display = "none";
 }
 
 function closeAuth() {
@@ -600,8 +627,29 @@ function closeAuth() {
 }
 
 function submitAuth() {
+  const emailPattern = /^[^ ]+@[^ ]+\.[a-z]{2,3}$/;
 
   if (authMode === "signup") {
+
+    if (!firstName.value ||
+        !lastName.value ||
+        !dob.value ||
+        !email.value ||
+        !username.value ||
+        !password.value) {
+      alert("All fields are required.");
+      return;
+    }
+
+    if (!emailPattern.test(email.value)) {
+      alert("Enter valid email.");
+      return;
+    }
+
+    if (password.value.length < 6) {
+      alert("Password must be at least 6 characters.");
+      return;
+    }
 
     const user = {
       firstName: firstName.value,
@@ -612,23 +660,23 @@ function submitAuth() {
       password: password.value
     };
 
-    if (!user.email || !user.password || !user.username) {
-      alert("Fill required fields");
-      return;
-    }
-
     localStorage.setItem("berryUser", JSON.stringify(user));
-    alert("Account created!");
+    alert("Account created successfully!");
     closeAuth();
     return;
   }
 
-  // Sign In
+  // SIGN IN
   const stored = JSON.parse(localStorage.getItem("berryUser"));
   const identifier = loginIdentifier.value;
 
+  if (!identifier || !password.value) {
+    alert("Enter credentials.");
+    return;
+  }
+
   if (!stored) {
-    alert("No user found.");
+    alert("No account found.");
     return;
   }
 
@@ -638,13 +686,13 @@ function submitAuth() {
     document.getElementById("authButtons").style.display = "none";
     document.getElementById("profile").style.display = "flex";
     document.getElementById("profile").innerText =
-  stored.firstName.charAt(0).toUpperCase();
+      stored.firstName.charAt(0).toUpperCase();
+    document.getElementById("profileName").innerText =
+      stored.firstName + " " + stored.lastName;
 
-document.getElementById("profileName").innerText =
-  stored.firstName + " " + stored.lastName;
     closeAuth();
   } else {
-    alert("Invalid credentials");
+    alert("Invalid credentials.");
   }
 }
 
