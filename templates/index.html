@@ -242,9 +242,6 @@ body {
   <div id="historyList"></div>
 </div>
   
-  <h3>Chat History</h3>
-  <div id="historyList"></div>
-</div>
 
 <!-- Prompt -->
 <div class="prompt-container">
@@ -288,6 +285,8 @@ body {
 
 let chatStarted = false;
 let loggedIn = false;
+let currentChat = [];
+let allChats = JSON.parse(localStorage.getItem("berryChats")) || [];
 
 /* ================= TOOLTIP HANDLING ================= */
 // Already using title="" attributes (native browser tooltip)
@@ -316,36 +315,77 @@ function startChatMode() {
 
   function openHistory() {
   const panel = document.getElementById("historyPanel");
-
   panel.style.display = "block";
 
-  const history = JSON.parse(localStorage.getItem("berryChats")) || [];
   const list = document.getElementById("historyList");
   list.innerHTML = "";
 
-  if (history.length === 0) {
-    list.innerHTML = "<p>No previous chats</p>";
+  if (allChats.length === 0) {
+    list.innerHTML = "<p>No chats yet</p>";
     return;
   }
 
-  history.forEach((chat, index) => {
+  allChats.forEach((chat, index) => {
+
+    // Find first user message
+    const firstMessage = chat.find(m => m.role === "user");
+
     const item = document.createElement("div");
-    item.style.padding = "10px";
-    item.style.cursor = "pointer";
+    item.style.padding = "12px";
     item.style.marginBottom = "10px";
     item.style.background = "rgba(255,255,255,0.1)";
     item.style.borderRadius = "8px";
+    item.style.cursor = "pointer";
 
-    item.innerText = "Chat " + (index + 1);
+    item.innerText = firstMessage
+      ? firstMessage.content.substring(0, 30)
+      : "Chat " + (index + 1);
 
     item.onclick = function() {
-      document.getElementById("chatArea").innerHTML = chat;
+      loadChat(index);
       closeHistory();
-      startChatMode();
     };
 
     list.appendChild(item);
   });
+}
+
+
+  function loadChat(index) {
+  const chat = allChats[index];
+  currentChat = chat;
+
+  const chatArea = document.getElementById("chatArea");
+  chatArea.innerHTML = "";
+
+  chat.forEach(message => {
+    const msgDiv = document.createElement("div");
+    msgDiv.classList.add("chat-msg");
+
+    if (message.role === "user") {
+      msgDiv.classList.add("user-msg");
+
+      if (message.image) {
+        const img = document.createElement("img");
+        img.src = message.image;
+        img.style.maxWidth = "200px";
+        img.style.borderRadius = "12px";
+        msgDiv.appendChild(img);
+      }
+
+      const textDiv = document.createElement("div");
+      textDiv.innerText = message.content;
+      msgDiv.appendChild(textDiv);
+
+    } else {
+      msgDiv.classList.add("bot-msg");
+      msgDiv.innerText = message.content;
+    }
+
+    chatArea.appendChild(msgDiv);
+  });
+
+  startChatMode();
 }
 
   function closeHistory() {
@@ -392,15 +432,27 @@ function sendMessage() {
 
   document.getElementById("chatArea").appendChild(container);
 
+  // SAVE MESSAGE TO CURRENT CHAT ARRAY
+  currentChat.push({
+    role: "user",
+    content: text,
+    image: attachedImage
+  });
+
   input.value = "";
   attachedImage = null;
   document.getElementById("attachmentPreview").innerHTML = "";
-
   toggleIcon();
 
   setTimeout(() => {
-    addMessage("AI response for your input.", "bot");
-    saveChatHistory();
+    const botReply = "AI response for your input.";
+    addMessage(botReply, "bot");
+
+    currentChat.push({
+      role: "bot",
+      content: botReply
+    });
+
   }, 400);
 }
 
@@ -418,10 +470,19 @@ function sendMessage() {
 
 /* ================= NEW CHAT ================= */
 function newChat() {
+
+  // SAVE previous chat if it exists
+  if (currentChat.length > 0) {
+    allChats.push(currentChat);
+    localStorage.setItem("berryChats", JSON.stringify(allChats));
+  }
+
+  currentChat = [];
+
   document.getElementById("chatArea").innerHTML = "";
   document.body.classList.remove("chat-mode");
   document.getElementById("watermark").style.display = "block";
-  document.getElementById("chatWrapper").style.display = "none"; // FIXED
+  document.getElementById("chatWrapper").style.display = "none";
   chatStarted = false;
 }
 
