@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Berry</title>
@@ -10,36 +10,78 @@ body {
   margin: 0;
   height: 100vh;
   background: linear-gradient(45deg, #6a7bd1, #41e1ae);
-  font-family: Arial;
+  font-family: Arial, sans-serif;
   overflow: hidden;
 }
 
-/* Landing */
-.landing {
-  height: 100%;
+/* Logo */
+.glass-logo {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  width: 78px;
+  cursor: pointer;
+}
+
+/* Auth Buttons */
+.auth-buttons {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  display: flex;
+  gap: 12px;
+}
+
+.auth-buttons button {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+}
+
+/* Profile */
+.profile {
+  display: none;
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #1abc9c;
+  color: #0f172a;
+  font-weight: bold;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-direction: column;
 }
 
-/* Chat Layout */
-.chat-layout {
-  display: none;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+/* Watermark */
+.watermark {
+  position: absolute;
+  top: 35%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 100px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.12);
 }
 
-.chat-container {
-  flex: 1;
+/* Chat Area */
+.chat-area {
+  position: absolute;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(800px, 90%);
+  height: calc(100vh - 220px);
   overflow-y: auto;
-  padding: 20px;
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 15px;
 }
 
+/* Messages */
 .message {
   max-width: 60%;
   padding: 12px 16px;
@@ -48,76 +90,119 @@ body {
 
 .user {
   align-self: flex-end;
-  background: #ffffffcc;
+  background: rgba(255,255,255,0.8);
 }
 
 .bot {
   align-self: flex-start;
-  background: #00000040;
+  background: rgba(0,0,0,0.3);
   color: white;
 }
 
-.prompt-bar {
-  position: fixed;
-  bottom: 20px;
+/* Prompt */
+.prompt-container {
+  position: absolute;
+  bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
-  width: min(90%, 700px);
   display: flex;
-  gap: 10px;
-  padding: 12px;
+  gap: 12px;
+  width: min(90%, 700px);
+  padding: 14px 18px;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(14px);
   border-radius: 50px;
-  backdrop-filter: blur(10px);
-  background: rgba(255,255,255,0.2);
 }
 
-.prompt-bar input {
+.prompt-input {
   flex: 1;
+  background: transparent;
   border: none;
   outline: none;
-  background: transparent;
+  font-size: 16px;
   color: white;
+}
+
+.icon-btn, .send-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: white;
+}
+
+/* Bottom Tools */
+.bottom-tools {
+  position: fixed;
+  bottom: 18px;
+  right: 18px;
+  display: flex;
+  gap: 18px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(14px);
+  border-radius: 50px;
 }
 </style>
 </head>
 
 <body>
 
-<!-- LANDING -->
-<div class="landing" id="landing">
-  <h1 style="color:white;opacity:0.2;font-size:80px;">Berry</h1>
+<img src="https://logo-icons.com/cdn/shop/files/4765-logo-1739200822.556color-003932.svg?v=1739228536&width=416"
+     class="glass-logo">
+
+<!-- Auth Buttons -->
+<div class="auth-buttons" id="authButtons">
+  <button onclick="signIn()">Sign In</button>
+  <button onclick="signUp()">Sign Up</button>
 </div>
 
-<!-- CHAT MODE -->
-<div class="chat-layout" id="chatLayout">
-  <div class="chat-container" id="chat"></div>
-</div>
+<!-- Profile -->
+<div class="profile" id="profile">AB</div>
 
-<!-- PROMPT BAR (ALWAYS VISIBLE) -->
-<div class="prompt-bar">
+<!-- Watermark -->
+<div class="watermark" id="watermark">Berry</div>
+
+<!-- Chat Area -->
+<div class="chat-area" id="chatArea"></div>
+
+<!-- Prompt -->
+<div class="prompt-container">
   <input type="file" id="imageInput" hidden>
-  <button onclick="document.getElementById('imageInput').click()">
+  <button class="icon-btn" onclick="document.getElementById('imageInput').click()">
     <span class="material-icons">add</span>
   </button>
 
-  <input id="promptInput" placeholder="Ask anything...">
+  <input type="text" id="promptInput" class="prompt-input"
+         placeholder="Ask anything..." onkeydown="if(event.key==='Enter') sendMessage()">
 
-  <button onclick="sendMessage()">
+  <button class="send-btn" onclick="sendMessage()">
     <span class="material-icons">send</span>
   </button>
+</div>
+
+<!-- Bottom Tools -->
+<div class="bottom-tools">
+  <button onclick="newChat()"><span class="material-icons">edit</span></button>
+  <button><span class="material-icons">search</span></button>
+  <button><span class="material-icons">image</span></button>
 </div>
 
 <script>
 
 let chatStarted = false;
-const chat = document.getElementById("chat");
-const landing = document.getElementById("landing");
-const chatLayout = document.getElementById("chatLayout");
+const chatArea = document.getElementById("chatArea");
+const watermark = document.getElementById("watermark");
 
 function startChatMode() {
   if (!chatStarted) {
-    landing.style.display = "none";
-    chatLayout.style.display = "flex";
+    watermark.style.display = "none";
+    chatArea.style.display = "flex";
     chatStarted = true;
   }
 }
@@ -126,8 +211,8 @@ function addMessage(text, type) {
   const div = document.createElement("div");
   div.className = "message " + type;
   div.innerText = text;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
 }
 
 async function sendMessage() {
@@ -136,11 +221,9 @@ async function sendMessage() {
   if (!text) return;
 
   startChatMode();
-
   addMessage(text, "user");
   input.value = "";
 
-  // Call backend
   const formData = new FormData();
   formData.append("prompt", text);
 
@@ -153,9 +236,20 @@ async function sendMessage() {
   addMessage(data.reply, "bot");
 }
 
-document.getElementById("imageInput").addEventListener("change", async function() {
-  startChatMode();
-});
+function newChat() {
+  chatArea.innerHTML = "";
+  watermark.style.display = "block";
+  chatArea.style.display = "none";
+  chatStarted = false;
+}
+
+function signIn() {
+  alert("Sign In page coming next step.");
+}
+
+function signUp() {
+  alert("Sign Up page coming next step.");
+}
 
 </script>
 
