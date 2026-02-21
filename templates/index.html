@@ -1,192 +1,56 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Berry</title>
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-
-<style>
-body {
-  margin: 0;
-  height: 100vh;
-  background: linear-gradient(45deg, #6a7bd1, #41e1ae);
-  font-family: Arial, sans-serif;
-  overflow: hidden;
-}
-
-/* Logo */
-.glass-logo {
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  width: 78px;
-  cursor: pointer;
-}
-
-/* Auth Buttons */
-.auth-buttons {
-  position: fixed;
-  top: 18px;
-  right: 18px;
-  display: flex;
-  gap: 12px;
-}
-
-.auth-buttons button {
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: none;
-  cursor: pointer;
-}
-
-/* Profile */
-.profile {
-  display: none;
-  position: fixed;
-  top: 18px;
-  right: 18px;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: #1abc9c;
-  color: #0f172a;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Watermark */
-.watermark {
-  position: absolute;
-  top: 35%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 100px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.12);
-}
-
-/* Chat Area */
-.chat-area {
-  position: absolute;
-  top: 100px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(800px, 90%);
-  height: calc(100vh - 220px);
-  overflow-y: auto;
-  display: none;
-  flex-direction: column;
-  gap: 15px;
-}
-
-/* Messages */
-.message {
-  max-width: 60%;
-  padding: 12px 16px;
-  border-radius: 18px;
-}
-
-.user {
-  align-self: flex-end;
-  background: rgba(255,255,255,0.8);
-}
-
-.bot {
-  align-self: flex-start;
-  background: rgba(0,0,0,0.3);
-  color: white;
-}
-
-/* Prompt */
-.prompt-container {
-  position: absolute;
-  bottom: 40px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 12px;
-  width: min(90%, 700px);
-  padding: 14px 18px;
-  background: rgba(255, 255, 255, 0.22);
-  backdrop-filter: blur(14px);
-  border-radius: 50px;
-}
-
-.prompt-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-size: 16px;
-  color: white;
-}
-
-.icon-btn, .send-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
-
-.send-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: white;
-}
-
-/* Bottom Tools */
-.bottom-tools {
-  position: fixed;
-  bottom: 18px;
-  right: 18px;
-  display: flex;
-  gap: 18px;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(14px);
-  border-radius: 50px;
-}
-</style>
-</head>
-
 <body>
 
 <img src="https://logo-icons.com/cdn/shop/files/4765-logo-1739200822.556color-003932.svg?v=1739228536&width=416"
+     alt="Berry Logo"
      class="glass-logo">
 
-<!-- Auth Buttons -->
-<div class="auth-buttons" id="authButtons">
-  <button onclick="signIn()">Sign In</button>
-  <button onclick="signUp()">Sign Up</button>
+<!-- AUTH BUTTONS (shown when not logged in) -->
+<div id="authButtons" style="position:fixed; top:18px; right:18px; display:flex; gap:12px;">
+  <button onclick="signIn()" style="padding:8px 18px;border-radius:20px;border:none;cursor:pointer;">Sign In</button>
+  <button onclick="signUp()" style="padding:8px 18px;border-radius:20px;border:none;cursor:pointer;">Sign Up</button>
 </div>
 
-<!-- Profile -->
-<div class="profile" id="profile">AB</div>
+<!-- PROFILE (hidden initially) -->
+<div class="profile" id="profile" style="display:none;">AB</div>
 
 <!-- Watermark -->
 <div class="watermark" id="watermark">Berry</div>
 
-<!-- Chat Area -->
-<div class="chat-area" id="chatArea"></div>
+<!-- CHAT AREA (hidden initially) -->
+<div id="chatArea"
+     style="position:absolute;
+            top:120px;
+            left:50%;
+            transform:translateX(-50%);
+            width:min(90%,700px);
+            max-height:55vh;
+            overflow-y:auto;
+            display:none;
+            flex-direction:column;
+            gap:15px;">
+</div>
 
-<!-- Prompt -->
+<!-- Prompt (UNCHANGED STRUCTURE) -->
 <div class="prompt-container">
-  <input type="file" id="imageInput" hidden>
-  <button class="icon-btn" onclick="document.getElementById('imageInput').click()">
-    <span class="material-icons">add</span>
-  </button>
+  <button class="icon-btn"><span class="material-icons">add</span></button>
 
-  <input type="text" id="promptInput" class="prompt-input"
-         placeholder="Ask anything..." onkeydown="if(event.key==='Enter') sendMessage()">
+  <input
+    type="text"
+    class="prompt-input"
+    id="promptInput"
+    placeholder="Ask anything..."
+    oninput="toggleIcon()"
+    onkeydown="if(event.key==='Enter') sendMessage()"
+  >
+
+  <button class="icon-btn"><span class="material-icons">mic</span></button>
 
   <button class="send-btn" onclick="sendMessage()">
-    <span class="material-icons">send</span>
+    <span class="material-icons" id="actionIcon">graphic_eq</span>
   </button>
 </div>
 
-<!-- Bottom Tools -->
+<!-- Bottom Right Tools -->
 <div class="bottom-tools">
   <button onclick="newChat()"><span class="material-icons">edit</span></button>
   <button><span class="material-icons">search</span></button>
@@ -196,23 +60,42 @@ body {
 <script>
 
 let chatStarted = false;
-const chatArea = document.getElementById("chatArea");
-const watermark = document.getElementById("watermark");
+let loggedIn = false;
+
+function toggleIcon() {
+  const input = document.getElementById("promptInput");
+  const icon = document.getElementById("actionIcon");
+  icon.textContent = input.value.trim() ? "send" : "graphic_eq";
+}
 
 function startChatMode() {
   if (!chatStarted) {
-    watermark.style.display = "none";
-    chatArea.style.display = "flex";
+    document.getElementById("watermark").style.display = "none";
+    document.getElementById("chatArea").style.display = "flex";
     chatStarted = true;
   }
 }
 
 function addMessage(text, type) {
-  const div = document.createElement("div");
-  div.className = "message " + type;
-  div.innerText = text;
-  chatArea.appendChild(div);
-  chatArea.scrollTop = chatArea.scrollHeight;
+  const msg = document.createElement("div");
+  msg.style.padding = "12px 16px";
+  msg.style.borderRadius = "18px";
+  msg.style.maxWidth = "70%";
+  msg.style.wordWrap = "break-word";
+
+  if (type === "user") {
+    msg.style.alignSelf = "flex-end";
+    msg.style.background = "rgba(255,255,255,0.8)";
+  } else {
+    msg.style.alignSelf = "flex-start";
+    msg.style.background = "rgba(0,0,0,0.3)";
+    msg.style.color = "white";
+  }
+
+  msg.innerText = text;
+  const chat = document.getElementById("chatArea");
+  chat.appendChild(msg);
+  chat.scrollTop = chat.scrollHeight;
 }
 
 async function sendMessage() {
@@ -223,6 +106,7 @@ async function sendMessage() {
   startChatMode();
   addMessage(text, "user");
   input.value = "";
+  toggleIcon();
 
   const formData = new FormData();
   formData.append("prompt", text);
@@ -237,9 +121,9 @@ async function sendMessage() {
 }
 
 function newChat() {
-  chatArea.innerHTML = "";
-  watermark.style.display = "block";
-  chatArea.style.display = "none";
+  document.getElementById("chatArea").innerHTML = "";
+  document.getElementById("watermark").style.display = "block";
+  document.getElementById("chatArea").style.display = "none";
   chatStarted = false;
 }
 
@@ -254,4 +138,3 @@ function signUp() {
 </script>
 
 </body>
-</html>
