@@ -128,6 +128,11 @@ body {
   border-radius: 50px;
 }
 
+  .prompt-container.dragover {
+  border: 2px dashed white;
+  background: rgba(255,255,255,0.3);
+}
+
 .prompt-input {
   flex: 1;
   background: transparent;
@@ -575,6 +580,25 @@ function uploadImage() {
 
   input.click();
 }
+
+  const promptBox = document.querySelector(".prompt-container");
+
+promptBox.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  promptBox.classList.add("dragover");
+});
+
+promptBox.addEventListener("dragleave", () => {
+  promptBox.classList.remove("dragover");
+});
+
+promptBox.addEventListener("drop", (e) => {
+  e.preventDefault();
+  promptBox.classList.remove("dragover");
+
+  const files = Array.from(e.dataTransfer.files);
+  handleFiles(files);
+});
 
   function renderAttachmentPreview() {
   const preview = document.getElementById("attachmentPreview");
