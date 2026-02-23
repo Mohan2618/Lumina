@@ -225,22 +225,6 @@ body {
   40% { transform: scale(1); }
 }
 
-  .light-mode {
-  background: #f2f2f2;
-}
-
-.light-mode .prompt-container {
-  background: rgba(0,0,0,0.05);
-}
-
-.light-mode .user-msg {
-  background: #d1e7ff;
-}
-
-.light-mode .bot-msg {
-  background: #eeeeee;
-  color: black;
-}
 </style>
 </head>
 
@@ -376,9 +360,6 @@ body {
 </button>
   <button onclick="uploadImage()" title="Upload Image">
   <span class="material-icons">image</span>
-</button>
-  <button onclick="toggleTheme()" title="Toggle Theme">
-  <span class="material-icons">dark_mode</span>
 </button>
 </div>
 
@@ -872,9 +853,6 @@ document.getElementById("imageModal").onclick = function() {
   if (typing) typing.remove();
 }
 
-  function toggleTheme() {
-  document.body.classList.toggle("light-mode");
-}
 
 </script>
 
