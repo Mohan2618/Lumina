@@ -107,7 +107,7 @@ async def process(prompt: str = Form(...), image: UploadFile = File(None)):
     filename = f"static/{uuid.uuid4().hex}.jpg"
 
     if image is None:
-    return {"message": "Please upload an image for processing."}
+        return {"message": "Please upload an image for processing."}
 
     # ===== OBJECT DETECTION =====
     if intent == "detect":
