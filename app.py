@@ -97,10 +97,7 @@ async def home(request: Request):
 # Process Route
 # ==============================
 @app.post("/process")
-async def process(
-    prompt: str = Form(...),
-    image: UploadFile = File(...)
-):
+async def process(prompt: str = Form(...), image: UploadFile = File(None)):
 
     img = Image.open(image.file).convert("RGB")
     img_np = np.array(img)
@@ -108,6 +105,9 @@ async def process(
     intent = detect_intent(prompt)
 
     filename = f"static/{uuid.uuid4().hex}.jpg"
+
+    if image is None:
+    return {"message": "Please upload an image for processing."}
 
     # ===== OBJECT DETECTION =====
     if intent == "detect":
