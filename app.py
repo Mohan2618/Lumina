@@ -97,76 +97,74 @@ async def home(request: Request):
 # Process Route
 # ==============================
 @app.post("/process")
-async def process(prompt: str = Form(...), image: UploadFile = File(None)):
+async def process(
+    prompt: str = Form(...),
+    image: UploadFile = File(None)
+):
 
-    img = Image.open(image.file).convert("RGB")
-    img_np = np.array(img)
+    if image is None:
+        return {"message": "Please upload an image first."}
+
+    try:
+        img = Image.open(image.file).convert("RGB")
+        img_np = np.array(img)
+    except Exception as e:
+        return {"message": "Invalid image file."}
 
     intent = detect_intent(prompt)
 
     filename = f"static/{uuid.uuid4().hex}.jpg"
 
-    if image is None:
-        return {"message": "Please upload an image for processing."}
+    try:
 
-    # ===== OBJECT DETECTION =====
-    if intent == "detect":
-        results = det_model(img_np)
-        output_img = results[0].plot()
-        cv2.imwrite(filename, output_img)
+        if intent == "detect":
+            results = det_model(img_np)
+            output_img = results[0].plot()
+            cv2.imwrite(filename, output_img)
+            return {
+                "message": "I detected objects.",
+                "image": "/" + filename
+            }
 
-        return {
-            "message": "I detected objects in your image.",
-            "image": "/" + filename
-        }
+        elif intent == "classify":
+            img_t = transform(img).unsqueeze(0)
+            with torch.no_grad():
+                output = clf_model(img_t)
 
-    # ===== CLASSIFICATION =====
-    elif intent == "classify":
-        img_t = transform(img).unsqueeze(0)
+            probs = F.softmax(output[0], dim=0)
+            conf, pred = torch.max(probs, 0)
 
-        with torch.no_grad():
-            output = clf_model(img_t)
+            return {
+                "message": f"This looks like {labels[pred.item()]} "
+                           f"({round(conf.item()*100,2)}% confidence)."
+            }
 
-        probs = F.softmax(output[0], dim=0)
-        conf, pred = torch.max(probs, 0)
+        elif intent == "grayscale":
+            gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+            cv2.imwrite(filename, gray)
+            return {
+                "message": "Converted to grayscale.",
+                "image": "/" + filename
+            }
 
-        return {
-            "message": f"This looks like {labels[pred.item()]} "
-                       f"({round(conf.item()*100,2)}% confidence)."
-        }
+        elif intent == "edge":
+            edges = cv2.Canny(img_np, 100, 200)
+            cv2.imwrite(filename, edges)
+            return {
+                "message": "Edge detection applied.",
+                "image": "/" + filename
+            }
 
-    # ===== GRAYSCALE =====
-    elif intent == "grayscale":
-        gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-        cv2.imwrite(filename, gray)
+        elif intent == "blur":
+            blur = cv2.GaussianBlur(img_np, (15, 15), 0)
+            cv2.imwrite(filename, blur)
+            return {
+                "message": "Blur applied.",
+                "image": "/" + filename
+            }
 
-        return {
-            "message": "Converted your image to grayscale.",
-            "image": "/" + filename
-        }
+        else:
+            return {"message": "I couldn't understand the request."}
 
-    # ===== EDGE DETECTION =====
-    elif intent == "edge":
-        edges = cv2.Canny(img_np, 100, 200)
-        cv2.imwrite(filename, edges)
-
-        return {
-            "message": "Applied edge detection.",
-            "image": "/" + filename
-        }
-
-    # ===== BLUR =====
-    elif intent == "blur":
-        blur = cv2.GaussianBlur(img_np, (15, 15), 0)
-        cv2.imwrite(filename, blur)
-
-        return {
-            "message": "Applied blur effect.",
-            "image": "/" + filename
-        }
-
-    # ===== UNKNOWN =====
-    return {
-        "message": "Sorry, I couldn't understand your request. "
-                   "Try describing the image task differently."
-    }
+    except Exception as e:
+        return {"message": f"Processing error: {str(e)}"}
