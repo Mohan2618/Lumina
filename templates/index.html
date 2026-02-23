@@ -370,529 +370,536 @@ body {
 </div>
 
 <script>
-
-let chatStarted = false;
-let loggedIn = false;
-let currentChat = [];
-let allChats = JSON.parse(localStorage.getItem("berryChats")) || [];
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-
-/* ================= TOOLTIP HANDLING ================= */
-// Already using title="" attributes (native browser tooltip)
-
-/* ================= ICON TOGGLE ================= */
-function toggleIcon() {
-  const input = document.getElementById("promptInput");
-  const icon = document.getElementById("actionIcon");
-
-  if (input.value.trim() || attachedFiles.length > 0) {
-    icon.textContent = "arrow_upward";
-  } else {
-    icon.textContent = "graphic_eq";
+document.addEventListener("DOMContentLoaded", function() {
+  let chatStarted = false;
+  let loggedIn = false;
+  let currentChat = [];
+  let allChats = JSON.parse(localStorage.getItem("berryChats")) || [];
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+  
+  /* ================= TOOLTIP HANDLING ================= */
+  // Already using title="" attributes (native browser tooltip)
+  
+  /* ================= ICON TOGGLE ================= */
+  function toggleIcon() {
+    const input = document.getElementById("promptInput");
+    const icon = document.getElementById("actionIcon");
+  
+    if (input.value.trim() || attachedFiles.length > 0) {
+      icon.textContent = "arrow_upward";
+    } else {
+      icon.textContent = "graphic_eq";
+    }
   }
-}
-
-/* ================= CHAT MODE ================= */
-function startChatMode() {
-  if (!chatStarted) {
-    document.body.classList.add("chat-mode");
-    document.getElementById("watermark").style.display = "none";
-    document.getElementById("chatWrapper").style.display = "block"; // FIXED
-    chatStarted = true;
+  
+  /* ================= CHAT MODE ================= */
+  function startChatMode() {
+    if (!chatStarted) {
+      document.body.classList.add("chat-mode");
+      document.getElementById("watermark").style.display = "none";
+      document.getElementById("chatWrapper").style.display = "block"; // FIXED
+      chatStarted = true;
+    }
   }
-}
-
-  function openHistory() {
-  const panel = document.getElementById("historyPanel");
-  panel.style.display = "block";
-
-  const list = document.getElementById("historyList");
-  list.innerHTML = "";
-
-  const history = JSON.parse(localStorage.getItem("berryChats")) || [];
-
-  if (history.length === 0) {
-    list.innerHTML = "<p>No chats yet</p>";
-    return;
+  
+    function openHistory() {
+    const panel = document.getElementById("historyPanel");
+    panel.style.display = "block";
+  
+    const list = document.getElementById("historyList");
+    list.innerHTML = "";
+  
+    const history = JSON.parse(localStorage.getItem("berryChats")) || [];
+  
+    if (history.length === 0) {
+      list.innerHTML = "<p>No chats yet</p>";
+      return;
+    }
+  
+    history.forEach((chatHTML, index) => {
+      const item = document.createElement("div");
+      item.style.padding = "12px";
+      item.style.marginBottom = "10px";
+      item.style.background = "rgba(255,255,255,0.1)";
+      item.style.borderRadius = "8px";
+      item.style.cursor = "pointer";
+  
+      item.innerText = "Chat " + (index + 1);
+  
+      item.onclick = function() {
+        document.getElementById("chatArea").innerHTML = chatHTML;
+        startChatMode();
+        closeHistory();
+      };
+  
+      list.appendChild(item);
+    });
   }
-
-  history.forEach((chatHTML, index) => {
-    const item = document.createElement("div");
-    item.style.padding = "12px";
-    item.style.marginBottom = "10px";
-    item.style.background = "rgba(255,255,255,0.1)";
-    item.style.borderRadius = "8px";
-    item.style.cursor = "pointer";
-
-    item.innerText = "Chat " + (index + 1);
-
-    item.onclick = function() {
-      document.getElementById("chatArea").innerHTML = chatHTML;
-      startChatMode();
-      closeHistory();
-    };
-
-    list.appendChild(item);
-  });
-}
-
-
-  function loadChat(index) {
-  const chat = allChats[index];
-  currentChat = chat;
-
-  const chatArea = document.getElementById("chatArea");
-  chatArea.innerHTML = "";
-
-  chat.forEach(message => {
-    const msgDiv = document.createElement("div");
-    msgDiv.classList.add("chat-msg");
-
-    if (message.role === "user") {
-      msgDiv.classList.add("user-msg");
-
-      if (message.image) {
-        const img = document.createElement("img");
-        img.src = message.image;
-        img.style.maxWidth = "200px";
-        img.style.borderRadius = "12px";
-        msgDiv.appendChild(img);
+  
+  
+    function loadChat(index) {
+    const chat = allChats[index];
+    currentChat = chat;
+  
+    const chatArea = document.getElementById("chatArea");
+    chatArea.innerHTML = "";
+  
+    chat.forEach(message => {
+      const msgDiv = document.createElement("div");
+      msgDiv.classList.add("chat-msg");
+  
+      if (message.role === "user") {
+        msgDiv.classList.add("user-msg");
+  
+        if (message.image) {
+          const img = document.createElement("img");
+          img.src = message.image;
+          img.style.maxWidth = "200px";
+          img.style.borderRadius = "12px";
+          msgDiv.appendChild(img);
+        }
+  
+        const textDiv = document.createElement("div");
+        textDiv.innerText = message.content;
+        msgDiv.appendChild(textDiv);
+  
+      } else {
+        msgDiv.classList.add("bot-msg");
+        msgDiv.innerText = message.content;
       }
-
-      const textDiv = document.createElement("div");
-      textDiv.innerText = message.content;
-      msgDiv.appendChild(textDiv);
-
-    } else {
-      msgDiv.classList.add("bot-msg");
-      msgDiv.innerText = message.content;
+  
+      chatArea.appendChild(msgDiv);
+    });
+  
+    startChatMode();
+  }
+  
+    function closeHistory() {
+    document.getElementById("historyPanel").style.display = "none";
+  }
+  
+  /* ================= ADD MESSAGE ================= */
+  function addMessage(text, type) {
+    const msg = document.createElement("div");
+    msg.classList.add("chat-msg");
+    msg.classList.add(type === "user" ? "user-msg" : "bot-msg");
+    msg.innerText = text;
+  
+    const chat = document.getElementById("chatArea");
+    chat.appendChild(msg);
+    chat.scrollTop = chat.scrollHeight;
+  }
+  
+  /* ================= SEND MESSAGE ================= */
+  async function sendMessage() {
+    const input = document.getElementById("promptInput");
+    const text = input.value.trim();
+  
+    if (!text && attachedFiles.length === 0) return;
+  
+    startChatMode();
+  
+    const chatArea = document.getElementById("chatArea");
+  
+    // ======================
+    // USER TEXT MESSAGE
+    // ======================
+    if (text) {
+      const userTextDiv = document.createElement("div");
+      userTextDiv.classList.add("chat-msg", "user-msg");
+      userTextDiv.innerText = text;
+      chatArea.appendChild(userTextDiv);
     }
-
-    chatArea.appendChild(msgDiv);
-  });
-
-  startChatMode();
-}
-
-  function closeHistory() {
-  document.getElementById("historyPanel").style.display = "none";
-}
-
-/* ================= ADD MESSAGE ================= */
-function addMessage(text, type) {
-  const msg = document.createElement("div");
-  msg.classList.add("chat-msg");
-  msg.classList.add(type === "user" ? "user-msg" : "bot-msg");
-  msg.innerText = text;
-
-  const chat = document.getElementById("chatArea");
-  chat.appendChild(msg);
-  chat.scrollTop = chat.scrollHeight;
-}
-
-/* ================= SEND MESSAGE ================= */
-async function sendMessage() {
-  const input = document.getElementById("promptInput");
-  const text = input.value.trim();
-
-  if (!text && attachedFiles.length === 0) return;
-
-  startChatMode();
-
-  const chatArea = document.getElementById("chatArea");
-
-  // ======================
-  // USER TEXT MESSAGE
-  // ======================
-  if (text) {
-    const userTextDiv = document.createElement("div");
-    userTextDiv.classList.add("chat-msg", "user-msg");
-    userTextDiv.innerText = text;
-    chatArea.appendChild(userTextDiv);
-  }
-
-  // ======================
-  // USER IMAGE MESSAGE (Separate Bubble)
-  // ======================
-  if (attachedFiles.length > 0) {
-    const userImgDiv = document.createElement("div");
-    userImgDiv.classList.add("chat-msg", "user-msg");
-
-    const img = document.createElement("img");
-    img.src = attachedFiles[0];
-    img.classList.add("chat-image-large");
-
-    userImgDiv.appendChild(img);
-    chatArea.appendChild(userImgDiv);
-  }
-
-  chatArea.scrollTop = chatArea.scrollHeight;
-
-  // ======================
-  // PREPARE FORM DATA
-  // ======================
-  const formData = new FormData();
-  formData.append("prompt", text);
-
-  if (attachedFiles.length > 0) {
-    const blob = await fetch(attachedFiles[0]).then(r => r.blob());
-    formData.append("image", blob, "upload.jpg");
-  }
-
-  input.value = "";
-  attachedFiles = [];
-  renderAttachmentPreview();
-
-  showTyping();
-
-  // ======================
-  // CALL BACKEND
-  // ======================
-  const response = await fetch("/process", {
-    method: "POST",
-    body: formData
-  });
-
-  const data = await response.json();
-
-  removeTyping();
-
-  // ======================
-  // BOT TEXT RESPONSE
-  // ======================
-  if (data.message) {
-    const botText = document.createElement("div");
-    botText.classList.add("chat-msg", "bot-msg");
-    botText.innerText = data.message;
-    chatArea.appendChild(botText);
-  }
-
-  // ======================
-  // BOT IMAGE RESPONSE
-  // ======================
-  if (data.image) {
-    const botImgDiv = document.createElement("div");
-    botImgDiv.classList.add("chat-msg", "bot-msg");
-
-    const botImg = document.createElement("img");
-    botImg.src = data.image;
-    botImg.classList.add("chat-image-large");
-
-    botImgDiv.appendChild(botImg);
-    chatArea.appendChild(botImgDiv);
-  }
-
-  chatArea.scrollTop = chatArea.scrollHeight;
-
-  saveChatHistory();
-}
-
-  function saveChatHistory() {
-  const chatArea = document.getElementById("chatArea").innerHTML;
-
-  let history = JSON.parse(localStorage.getItem("berryChats")) || [];
-
-  history.push(chatArea);
-
-  localStorage.setItem("berryChats", JSON.stringify(history));
-}
-
-/* ================= NEW CHAT ================= */
-function newChat() {
-  document.getElementById("chatArea").innerHTML = "";
-  document.body.classList.remove("chat-mode");
-  document.getElementById("watermark").style.display = "block";
-  document.getElementById("chatWrapper").style.display = "none";
-  chatStarted = false;
-}
-
-/* ================= SEARCH CHAT ================= */
-function searchChat() {
-  const keyword = prompt("Search in chat:");
-  if (!keyword) return;
-
-  const messages = document.querySelectorAll(".chat-msg");
-  messages.forEach(msg => {
-    if (msg.innerText.toLowerCase().includes(keyword.toLowerCase())) {
-      msg.style.border = "2px solid yellow";
-    } else {
-      msg.style.border = "none";
+  
+    // ======================
+    // USER IMAGE MESSAGE (Separate Bubble)
+    // ======================
+    if (attachedFiles.length > 0) {
+      const userImgDiv = document.createElement("div");
+      userImgDiv.classList.add("chat-msg", "user-msg");
+  
+      const img = document.createElement("img");
+      img.src = attachedFiles[0];
+      img.classList.add("chat-image-large");
+  
+      userImgDiv.appendChild(img);
+      chatArea.appendChild(userImgDiv);
     }
-  });
+  
+    chatArea.scrollTop = chatArea.scrollHeight;
+  
+    // ======================
+    // PREPARE FORM DATA
+    // ======================
+    const formData = new FormData();
+    formData.append("prompt", text);
+  
+    if (attachedFiles.length > 0) {
+      const blob = await fetch(attachedFiles[0]).then(r => r.blob());
+      formData.append("image", blob, "upload.jpg");
+    }
+  
+    input.value = "";
+    attachedFiles = [];
+    renderAttachmentPreview();
+  
+    showTyping();
+  
+    // ======================
+    // CALL BACKEND
+    // ======================
+    const response = await fetch("/process", {
+      method: "POST",
+      body: formData
+    });
+  
+   if (!response.ok) {
+    const text = await response.text();
+    removeTyping();
+    alert("Server error:\n" + text);
+    return;
 }
 
-/* ================= IMAGE UPLOAD ================= */
-let attachedFiles = [];
-
-function uploadImage() {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "image/*";
-  input.multiple = true;
-
-  input.onchange = e => {
-    const files = Array.from(e.target.files);
-    if (!files.length) return;
-
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        attachedFiles.push(event.target.result);
+const data = await response.json();
+  
+    removeTyping();
+  
+    // ======================
+    // BOT TEXT RESPONSE
+    // ======================
+    if (data.message) {
+      const botText = document.createElement("div");
+      botText.classList.add("chat-msg", "bot-msg");
+      botText.innerText = data.message;
+      chatArea.appendChild(botText);
+    }
+  
+    // ======================
+    // BOT IMAGE RESPONSE
+    // ======================
+    if (data.image) {
+      const botImgDiv = document.createElement("div");
+      botImgDiv.classList.add("chat-msg", "bot-msg");
+  
+      const botImg = document.createElement("img");
+      botImg.src = data.image;
+      botImg.classList.add("chat-image-large");
+  
+      botImgDiv.appendChild(botImg);
+      chatArea.appendChild(botImgDiv);
+    }
+  
+    chatArea.scrollTop = chatArea.scrollHeight;
+  
+    saveChatHistory();
+  }
+  
+    function saveChatHistory() {
+    const chatArea = document.getElementById("chatArea").innerHTML;
+  
+    let history = JSON.parse(localStorage.getItem("berryChats")) || [];
+  
+    history.push(chatArea);
+  
+    localStorage.setItem("berryChats", JSON.stringify(history));
+  }
+  
+  /* ================= NEW CHAT ================= */
+  function newChat() {
+    document.getElementById("chatArea").innerHTML = "";
+    document.body.classList.remove("chat-mode");
+    document.getElementById("watermark").style.display = "block";
+    document.getElementById("chatWrapper").style.display = "none";
+    chatStarted = false;
+  }
+  
+  /* ================= SEARCH CHAT ================= */
+  function searchChat() {
+    const keyword = prompt("Search in chat:");
+    if (!keyword) return;
+  
+    const messages = document.querySelectorAll(".chat-msg");
+    messages.forEach(msg => {
+      if (msg.innerText.toLowerCase().includes(keyword.toLowerCase())) {
+        msg.style.border = "2px solid yellow";
+      } else {
+        msg.style.border = "none";
+      }
+    });
+  }
+  
+  /* ================= IMAGE UPLOAD ================= */
+  let attachedFiles = [];
+  
+  function uploadImage() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.multiple = true;
+  
+    input.onchange = e => {
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
+  
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          attachedFiles.push(event.target.result);
+          renderAttachmentPreview();
+          toggleIcon(); // switch to send mode
+        };
+        reader.readAsDataURL(file);
+      });
+    };
+  
+    input.click();
+  }
+  
+    const promptBox = document.querySelector(".prompt-container");
+  
+  /* ================= GLOBAL DRAG & DROP ================= */
+  
+  document.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    document.body.classList.add("dragover-screen");
+  });
+  
+  document.addEventListener("dragleave", (e) => {
+    e.preventDefault();
+    document.body.classList.remove("dragover-screen");
+  });
+  
+  document.addEventListener("drop", (e) => {
+    e.preventDefault();
+    document.body.classList.remove("dragover-screen");
+  
+    const files = Array.from(e.dataTransfer.files);
+    handleFiles(files);
+  });
+  
+    function renderAttachmentPreview() {
+    const preview = document.getElementById("attachmentPreview");
+    preview.innerHTML = "";
+  
+    attachedFiles.forEach((file, index) => {
+  
+      const wrapper = document.createElement("div");
+      wrapper.style.position = "relative";
+  
+      const img = document.createElement("img");
+      img.src = file;
+      img.onclick = () => openImageModal(file);
+      img.style.height = "60px";
+      img.style.borderRadius = "8px";
+  
+      const removeBtn = document.createElement("span");
+      removeBtn.innerHTML = "×";
+      removeBtn.style.position = "absolute";
+      removeBtn.style.top = "-6px";
+      removeBtn.style.right = "-6px";
+      removeBtn.style.background = "white";
+      removeBtn.style.borderRadius = "50%";
+      removeBtn.style.cursor = "pointer";
+      removeBtn.style.padding = "2px 6px";
+      removeBtn.onclick = () => {
+        attachedFiles.splice(index, 1);
         renderAttachmentPreview();
-        toggleIcon(); // switch to send mode
+        toggleIcon();
+      };
+  
+      wrapper.appendChild(img);
+      wrapper.appendChild(removeBtn);
+      preview.appendChild(wrapper);
+    });
+  }
+  
+  /* ================= MIC SIMULATION ================= */
+  function micAction() {
+    alert("Voice input feature coming soon 🎤");
+  }
+  
+  /* ================= AUTH SYSTEM ================= */
+  
+  let authMode = "signin";
+  
+  function signIn() {
+    authMode = "signin";
+    document.getElementById("authTitle").innerText = "Sign In";
+    document.getElementById("signupFields").style.display = "none";
+    document.getElementById("loginIdentifier").style.display = "block";
+    document.getElementById("authModal").style.display = "flex";
+    document.querySelector("button[onclick='forgotPassword()']").style.display = "block";
+  }
+  
+  function signUp() {
+    authMode = "signup";
+    document.getElementById("authTitle").innerText = "Sign Up";
+    document.getElementById("signupFields").style.display = "flex";
+    document.getElementById("loginIdentifier").style.display = "none";
+    document.getElementById("authModal").style.display = "flex";
+    document.querySelector("button[onclick='forgotPassword()']").style.display = "none";
+  }
+  
+  function closeAuth() {
+    document.getElementById("authModal").style.display = "none";
+  }
+  
+  function submitAuth() {
+    const emailPattern = /^[^ ]+@[^ ]+\.[a-z]{2,3}$/;
+  
+    if (authMode === "signup") {
+  
+      if (!firstName.value ||
+          !lastName.value ||
+          !dob.value ||
+          !email.value ||
+          !username.value ||
+          !password.value) {
+        alert("All fields are required.");
+        return;
+      }
+  
+      if (!emailPattern.test(email.value)) {
+        alert("Enter valid email.");
+        return;
+      }
+  
+      if (password.value.length < 6) {
+        alert("Password must be at least 6 characters.");
+        return;
+      }
+  
+      const user = {
+        firstName: firstName.value,
+        lastName: lastName.value,
+        dob: dob.value,
+        email: email.value,
+        username: username.value,
+        password: password.value
+      };
+  
+      localStorage.setItem("berryUser", JSON.stringify(user));
+      alert("Account created successfully!");
+      closeAuth();
+      return;
+    }
+  
+    // SIGN IN
+    const stored = JSON.parse(localStorage.getItem("berryUser"));
+    const identifier = loginIdentifier.value;
+  
+    if (!identifier || !password.value) {
+      alert("Enter credentials.");
+      return;
+    }
+  
+    if (!stored) {
+      alert("No account found.");
+      return;
+    }
+  
+    if ((stored.email === identifier || stored.username === identifier)
+        && stored.password === password.value) {
+  
+      document.getElementById("authButtons").style.display = "none";
+      document.getElementById("profile").style.display = "flex";
+      document.getElementById("profile").innerText =
+        stored.firstName.charAt(0).toUpperCase();
+      document.getElementById("profileName").innerText =
+        stored.firstName + " " + stored.lastName;
+  
+      closeAuth();
+    } else {
+      alert("Invalid credentials.");
+    }
+  }
+  
+  function forgotPassword() {
+    const stored = JSON.parse(localStorage.getItem("berryUser"));
+    if (!stored) {
+      alert("No account found.");
+      return;
+    }
+  
+    alert("Password is: " + stored.password);
+  }
+  
+  /* ================= PROFILE DROPDOWN ================= */
+  document.getElementById("profile").onclick = function(e) {
+    e.stopPropagation();
+    const menu = document.getElementById("profileMenu");
+    menu.style.display =
+      menu.style.display === "block" ? "none" : "block";
+  };
+  
+    document.addEventListener("click", function() {
+    document.getElementById("profileMenu").style.display = "none";
+  });
+  
+    function logout() {
+    document.getElementById("authButtons").style.display = "flex";
+    document.getElementById("profile").style.display = "none";
+  }
+  
+    function openHelp() {
+    alert("Help section coming soon.");
+  }
+  
+  function openSettings() {
+    alert("Settings panel coming soon.");
+  }
+  
+    function handleFiles(files) {
+    files.forEach(file => {
+  
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        alert("Only JPG, PNG, WEBP allowed.");
+        return;
+      }
+  
+      if (file.size > MAX_FILE_SIZE) {
+        alert("File exceeds 5MB limit.");
+        return;
+      }
+  
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        attachedFiles.push(e.target.result);
+        renderAttachmentPreview();
+        toggleIcon();
       };
       reader.readAsDataURL(file);
     });
+  }
+  
+  
+    function openImageModal(src) {
+    document.getElementById("modalImage").src = src;
+    document.getElementById("imageModal").style.display = "flex";
+  }
+  
+  document.getElementById("imageModal").onclick = function() {
+    this.style.display = "none";
   };
-
-  input.click();
-}
-
-  const promptBox = document.querySelector(".prompt-container");
-
-/* ================= GLOBAL DRAG & DROP ================= */
-
-document.addEventListener("dragover", (e) => {
-  e.preventDefault();
-  document.body.classList.add("dragover-screen");
+  
+    function showTyping() {
+    const typing = document.createElement("div");
+    typing.classList.add("chat-msg", "bot-msg");
+    typing.id = "typingIndicator";
+    typing.innerHTML = `
+      <div class="typing">
+        <span></span><span></span><span></span>
+      </div>
+    `;
+    document.getElementById("chatArea").appendChild(typing);
+  }
+  
+    function removeTyping() {
+    const typing = document.getElementById("typingIndicator");
+    if (typing) typing.remove();
+  }
 });
-
-document.addEventListener("dragleave", (e) => {
-  e.preventDefault();
-  document.body.classList.remove("dragover-screen");
-});
-
-document.addEventListener("drop", (e) => {
-  e.preventDefault();
-  document.body.classList.remove("dragover-screen");
-
-  const files = Array.from(e.dataTransfer.files);
-  handleFiles(files);
-});
-
-  function renderAttachmentPreview() {
-  const preview = document.getElementById("attachmentPreview");
-  preview.innerHTML = "";
-
-  attachedFiles.forEach((file, index) => {
-
-    const wrapper = document.createElement("div");
-    wrapper.style.position = "relative";
-
-    const img = document.createElement("img");
-    img.src = file;
-    img.onclick = () => openImageModal(file);
-    img.style.height = "60px";
-    img.style.borderRadius = "8px";
-
-    const removeBtn = document.createElement("span");
-    removeBtn.innerHTML = "×";
-    removeBtn.style.position = "absolute";
-    removeBtn.style.top = "-6px";
-    removeBtn.style.right = "-6px";
-    removeBtn.style.background = "white";
-    removeBtn.style.borderRadius = "50%";
-    removeBtn.style.cursor = "pointer";
-    removeBtn.style.padding = "2px 6px";
-    removeBtn.onclick = () => {
-      attachedFiles.splice(index, 1);
-      renderAttachmentPreview();
-      toggleIcon();
-    };
-
-    wrapper.appendChild(img);
-    wrapper.appendChild(removeBtn);
-    preview.appendChild(wrapper);
-  });
-}
-
-/* ================= MIC SIMULATION ================= */
-function micAction() {
-  alert("Voice input feature coming soon 🎤");
-}
-
-/* ================= AUTH SYSTEM ================= */
-
-let authMode = "signin";
-
-function signIn() {
-  authMode = "signin";
-  document.getElementById("authTitle").innerText = "Sign In";
-  document.getElementById("signupFields").style.display = "none";
-  document.getElementById("loginIdentifier").style.display = "block";
-  document.getElementById("authModal").style.display = "flex";
-  document.querySelector("button[onclick='forgotPassword()']").style.display = "block";
-}
-
-function signUp() {
-  authMode = "signup";
-  document.getElementById("authTitle").innerText = "Sign Up";
-  document.getElementById("signupFields").style.display = "flex";
-  document.getElementById("loginIdentifier").style.display = "none";
-  document.getElementById("authModal").style.display = "flex";
-  document.querySelector("button[onclick='forgotPassword()']").style.display = "none";
-}
-
-function closeAuth() {
-  document.getElementById("authModal").style.display = "none";
-}
-
-function submitAuth() {
-  const emailPattern = /^[^ ]+@[^ ]+\.[a-z]{2,3}$/;
-
-  if (authMode === "signup") {
-
-    if (!firstName.value ||
-        !lastName.value ||
-        !dob.value ||
-        !email.value ||
-        !username.value ||
-        !password.value) {
-      alert("All fields are required.");
-      return;
-    }
-
-    if (!emailPattern.test(email.value)) {
-      alert("Enter valid email.");
-      return;
-    }
-
-    if (password.value.length < 6) {
-      alert("Password must be at least 6 characters.");
-      return;
-    }
-
-    const user = {
-      firstName: firstName.value,
-      lastName: lastName.value,
-      dob: dob.value,
-      email: email.value,
-      username: username.value,
-      password: password.value
-    };
-
-    localStorage.setItem("berryUser", JSON.stringify(user));
-    alert("Account created successfully!");
-    closeAuth();
-    return;
-  }
-
-  // SIGN IN
-  const stored = JSON.parse(localStorage.getItem("berryUser"));
-  const identifier = loginIdentifier.value;
-
-  if (!identifier || !password.value) {
-    alert("Enter credentials.");
-    return;
-  }
-
-  if (!stored) {
-    alert("No account found.");
-    return;
-  }
-
-  if ((stored.email === identifier || stored.username === identifier)
-      && stored.password === password.value) {
-
-    document.getElementById("authButtons").style.display = "none";
-    document.getElementById("profile").style.display = "flex";
-    document.getElementById("profile").innerText =
-      stored.firstName.charAt(0).toUpperCase();
-    document.getElementById("profileName").innerText =
-      stored.firstName + " " + stored.lastName;
-
-    closeAuth();
-  } else {
-    alert("Invalid credentials.");
-  }
-}
-
-function forgotPassword() {
-  const stored = JSON.parse(localStorage.getItem("berryUser"));
-  if (!stored) {
-    alert("No account found.");
-    return;
-  }
-
-  alert("Password is: " + stored.password);
-}
-
-/* ================= PROFILE DROPDOWN ================= */
-document.getElementById("profile").onclick = function(e) {
-  e.stopPropagation();
-  const menu = document.getElementById("profileMenu");
-  menu.style.display =
-    menu.style.display === "block" ? "none" : "block";
-};
-
-  document.addEventListener("click", function() {
-  document.getElementById("profileMenu").style.display = "none";
-});
-
-  function logout() {
-  document.getElementById("authButtons").style.display = "flex";
-  document.getElementById("profile").style.display = "none";
-}
-
-  function openHelp() {
-  alert("Help section coming soon.");
-}
-
-function openSettings() {
-  alert("Settings panel coming soon.");
-}
-
-  function handleFiles(files) {
-  files.forEach(file => {
-
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      alert("Only JPG, PNG, WEBP allowed.");
-      return;
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      alert("File exceeds 5MB limit.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      attachedFiles.push(e.target.result);
-      renderAttachmentPreview();
-      toggleIcon();
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-
-  function openImageModal(src) {
-  document.getElementById("modalImage").src = src;
-  document.getElementById("imageModal").style.display = "flex";
-}
-
-document.getElementById("imageModal").onclick = function() {
-  this.style.display = "none";
-};
-
-  function showTyping() {
-  const typing = document.createElement("div");
-  typing.classList.add("chat-msg", "bot-msg");
-  typing.id = "typingIndicator";
-  typing.innerHTML = `
-    <div class="typing">
-      <span></span><span></span><span></span>
-    </div>
-  `;
-  document.getElementById("chatArea").appendChild(typing);
-}
-
-  function removeTyping() {
-  const typing = document.getElementById("typingIndicator");
-  if (typing) typing.remove();
-}
-
 
 </script>
 
