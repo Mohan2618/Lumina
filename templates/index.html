@@ -225,6 +225,12 @@ body {
   40% { transform: scale(1); }
 }
 
+  .chat-image-large {
+  max-width: 500px;
+  border-radius: 16px;
+  margin-top: 6px;
+}
+
 </style>
 </head>
 
@@ -404,16 +410,14 @@ function startChatMode() {
   const list = document.getElementById("historyList");
   list.innerHTML = "";
 
-  if (allChats.length === 0) {
+  const history = JSON.parse(localStorage.getItem("berryChats")) || [];
+
+  if (history.length === 0) {
     list.innerHTML = "<p>No chats yet</p>";
     return;
   }
 
-  allChats.forEach((chat, index) => {
-
-    // Find first user message
-    const firstMessage = chat.find(m => m.role === "user");
-
+  history.forEach((chatHTML, index) => {
     const item = document.createElement("div");
     item.style.padding = "12px";
     item.style.marginBottom = "10px";
@@ -421,12 +425,11 @@ function startChatMode() {
     item.style.borderRadius = "8px";
     item.style.cursor = "pointer";
 
-    item.innerText = firstMessage
-      ? firstMessage.content.substring(0, 30)
-      : "Chat " + (index + 1);
+    item.innerText = "Chat " + (index + 1);
 
     item.onclick = function() {
-      loadChat(index);
+      document.getElementById("chatArea").innerHTML = chatHTML;
+      startChatMode();
       closeHistory();
     };
 
@@ -489,7 +492,7 @@ function addMessage(text, type) {
 }
 
 /* ================= SEND MESSAGE ================= */
-function sendMessage() {
+async function sendMessage() {
   const input = document.getElementById("promptInput");
   const text = input.value.trim();
 
@@ -497,69 +500,106 @@ function sendMessage() {
 
   startChatMode();
 
-  const container = document.createElement("div");
-  container.classList.add("chat-msg", "user-msg");
+  const chatArea = document.getElementById("chatArea");
 
-  attachedFiles.forEach(file => {
-    const img = document.createElement("img");
-    img.src = file;
-    img.style.maxWidth = "200px";
-    img.style.borderRadius = "12px";
-    img.style.display = "block";
-    img.style.marginBottom = "8px";
-    container.appendChild(img);
-  });
-
+  // ======================
+  // USER TEXT MESSAGE
+  // ======================
   if (text) {
-    const msgText = document.createElement("div");
-    msgText.innerText = text;
-    container.appendChild(msgText);
+    const userTextDiv = document.createElement("div");
+    userTextDiv.classList.add("chat-msg", "user-msg");
+    userTextDiv.innerText = text;
+    chatArea.appendChild(userTextDiv);
   }
 
-  document.getElementById("chatArea").appendChild(container);
+  // ======================
+  // USER IMAGE MESSAGE (Separate Bubble)
+  // ======================
+  if (attachedFiles.length > 0) {
+    const userImgDiv = document.createElement("div");
+    userImgDiv.classList.add("chat-msg", "user-msg");
 
-  currentChat.push({
-    role: "user",
-    content: text,
-    files: [...attachedFiles]
-  });
+    const img = document.createElement("img");
+    img.src = attachedFiles[0];
+    img.classList.add("chat-image-large");
+
+    userImgDiv.appendChild(img);
+    chatArea.appendChild(userImgDiv);
+  }
+
+  chatArea.scrollTop = chatArea.scrollHeight;
+
+  // ======================
+  // PREPARE FORM DATA
+  // ======================
+  const formData = new FormData();
+  formData.append("prompt", text);
+
+  if (attachedFiles.length > 0) {
+    const blob = await fetch(attachedFiles[0]).then(r => r.blob());
+    formData.append("image", blob, "upload.jpg");
+  }
 
   input.value = "";
   attachedFiles = [];
   renderAttachmentPreview();
-  toggleIcon();
 
-  setTimeout(() => {
-    const botReply = "AI response for your input.";
-    addMessage(botReply, "bot");
+  showTyping();
 
-    currentChat.push({
-      role: "bot",
-      content: botReply
-    });
-  }, 400);
+  // ======================
+  // CALL BACKEND
+  // ======================
+  const response = await fetch("/process", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await response.json();
+
+  removeTyping();
+
+  // ======================
+  // BOT TEXT RESPONSE
+  // ======================
+  if (data.message) {
+    const botText = document.createElement("div");
+    botText.classList.add("chat-msg", "bot-msg");
+    botText.innerText = data.message;
+    chatArea.appendChild(botText);
+  }
+
+  // ======================
+  // BOT IMAGE RESPONSE
+  // ======================
+  if (data.image) {
+    const botImgDiv = document.createElement("div");
+    botImgDiv.classList.add("chat-msg", "bot-msg");
+
+    const botImg = document.createElement("img");
+    botImg.src = data.image;
+    botImg.classList.add("chat-image-large");
+
+    botImgDiv.appendChild(botImg);
+    chatArea.appendChild(botImgDiv);
+  }
+
+  chatArea.scrollTop = chatArea.scrollHeight;
+
+  saveChatHistory();
 }
 
   function saveChatHistory() {
-  const chatHTML = document.getElementById("chatArea").innerHTML;
+  const chatArea = document.getElementById("chatArea").innerHTML;
 
   let history = JSON.parse(localStorage.getItem("berryChats")) || [];
 
-  // Avoid duplicate saves
-  if (history.length === 0 || history[history.length - 1] !== chatHTML) {
-    history.push(chatHTML);
-    localStorage.setItem("berryChats", JSON.stringify(history));
-  }
+  history.push(chatArea);
+
+  localStorage.setItem("berryChats", JSON.stringify(history));
 }
 
 /* ================= NEW CHAT ================= */
 function newChat() {
-  if (currentChat.length > 0) {
-    allChats.push(currentChat);
-    localStorage.setItem("berryChats", JSON.stringify(allChats));
-  }
-
-  currentChat = [];
   document.getElementById("chatArea").innerHTML = "";
   document.body.classList.remove("chat-mode");
   document.getElementById("watermark").style.display = "block";
