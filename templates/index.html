@@ -199,6 +199,48 @@ body {
   left: 50%;
   transform: translateX(-50%);
 }
+
+  body.dragover-screen {
+  outline: 4px dashed white;
+}
+
+  .typing {
+  display: flex;
+  gap: 4px;
+}
+
+.typing span {
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+  animation: bounce 1.2s infinite;
+}
+
+.typing span:nth-child(2) { animation-delay: .2s; }
+.typing span:nth-child(3) { animation-delay: .4s; }
+
+@keyframes bounce {
+  0%,80%,100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+  .light-mode {
+  background: #f2f2f2;
+}
+
+.light-mode .prompt-container {
+  background: rgba(0,0,0,0.05);
+}
+
+.light-mode .user-msg {
+  background: #d1e7ff;
+}
+
+.light-mode .bot-msg {
+  background: #eeeeee;
+  color: black;
+}
 </style>
 </head>
 
@@ -335,6 +377,9 @@ body {
   <button onclick="uploadImage()" title="Upload Image">
   <span class="material-icons">image</span>
 </button>
+  <button onclick="toggleTheme()" title="Toggle Theme">
+  <span class="material-icons">dark_mode</span>
+</button>
 </div>
 
 <script>
@@ -343,6 +388,8 @@ let chatStarted = false;
 let loggedIn = false;
 let currentChat = [];
 let allChats = JSON.parse(localStorage.getItem("berryChats")) || [];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 /* ================= TOOLTIP HANDLING ================= */
 // Already using title="" attributes (native browser tooltip)
@@ -583,18 +630,21 @@ function uploadImage() {
 
   const promptBox = document.querySelector(".prompt-container");
 
-promptBox.addEventListener("dragover", (e) => {
+/* ================= GLOBAL DRAG & DROP ================= */
+
+document.addEventListener("dragover", (e) => {
   e.preventDefault();
-  promptBox.classList.add("dragover");
+  document.body.classList.add("dragover-screen");
 });
 
-promptBox.addEventListener("dragleave", () => {
-  promptBox.classList.remove("dragover");
+document.addEventListener("dragleave", (e) => {
+  e.preventDefault();
+  document.body.classList.remove("dragover-screen");
 });
 
-promptBox.addEventListener("drop", (e) => {
+document.addEventListener("drop", (e) => {
   e.preventDefault();
-  promptBox.classList.remove("dragover");
+  document.body.classList.remove("dragover-screen");
 
   const files = Array.from(e.dataTransfer.files);
   handleFiles(files);
@@ -611,6 +661,7 @@ promptBox.addEventListener("drop", (e) => {
 
     const img = document.createElement("img");
     img.src = file;
+    img.onclick = () => openImageModal(file);
     img.style.height = "60px";
     img.style.borderRadius = "8px";
 
@@ -771,6 +822,60 @@ function openSettings() {
   alert("Settings panel coming soon.");
 }
 
+  function handleFiles(files) {
+  files.forEach(file => {
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      alert("Only JPG, PNG, WEBP allowed.");
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      alert("File exceeds 5MB limit.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      attachedFiles.push(e.target.result);
+      renderAttachmentPreview();
+      toggleIcon();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+
+  function openImageModal(src) {
+  document.getElementById("modalImage").src = src;
+  document.getElementById("imageModal").style.display = "flex";
+}
+
+document.getElementById("imageModal").onclick = function() {
+  this.style.display = "none";
+};
+
+  function showTyping() {
+  const typing = document.createElement("div");
+  typing.classList.add("chat-msg", "bot-msg");
+  typing.id = "typingIndicator";
+  typing.innerHTML = `
+    <div class="typing">
+      <span></span><span></span><span></span>
+    </div>
+  `;
+  document.getElementById("chatArea").appendChild(typing);
+}
+
+  function removeTyping() {
+  const typing = document.getElementById("typingIndicator");
+  if (typing) typing.remove();
+}
+
+  function toggleTheme() {
+  document.body.classList.toggle("light-mode");
+}
+
 </script>
 
   <div id="authModal" style="
@@ -835,6 +940,22 @@ function openSettings() {
     ">Cancel</button>
 
   </div>
+</div>
+
+
+  <div id="imageModal" style="
+display:none;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.9);
+justify-content:center;
+align-items:center;
+z-index:2000;
+">
+  <img id="modalImage" style="max-width:90%; max-height:90%;">
 </div>
 
 </body>
