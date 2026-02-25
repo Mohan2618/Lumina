@@ -901,7 +901,25 @@ const data = await response.json();
     const typing = document.getElementById("typingIndicator");
     if (typing) typing.remove();
   }
+
+
+    /* ===== EXPOSE FUNCTIONS TO GLOBAL ===== */
+window.sendMessage = sendMessage;
+window.uploadImage = uploadImage;
+window.newChat = newChat;
+window.openHistory = openHistory;
+window.toggleIcon = toggleIcon;
+window.micAction = micAction;
+window.signIn = signIn;
+window.signUp = signUp;
+window.submitAuth = submitAuth;
+window.closeAuth = closeAuth;
+window.forgotPassword = forgotPassword;
+window.logout = logout;
+window.openHelp = openHelp;
+window.openSettings = openSettings;
 });
+
 </script>
 
   <div id="authModal" style="
