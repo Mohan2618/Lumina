@@ -10,3 +10,4 @@ python-multipart
 transformers
 accelerate
 sentencepiece
+requests
