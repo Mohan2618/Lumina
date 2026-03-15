@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, Form, Request
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -22,6 +23,16 @@ os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+tokenizer = AutoTokenizer.from_pretrained(
+    "microsoft/Phi-3-mini-4k-instruct"
+)
+
+llm_model = AutoModelForCausalLM.from_pretrained(
+    "microsoft/Phi-3-mini-4k-instruct",
+    torch_dtype=torch.float32,
+    device_map="cpu"
+)
+
 
 # ==============================
 # Load Classification Model
@@ -41,6 +52,63 @@ transform = transforms.Compose([
         std=[0.229, 0.224, 0.225]
     )
 ])
+
+def generate_chat_response(prompt):
+
+    system_prompt = """
+You are Lumina, an AI image processing assistant.
+
+You can:
+- answer general questions
+- help with image processing
+- explain computer vision
+
+You must refuse:
+- illegal activities
+- hacking
+- drugs
+- weapons
+- harmful instructions
+
+If a user asks illegal questions, reply:
+"I cannot assist with that request."
+"""
+
+    full_prompt = system_prompt + "\nUser: " + prompt + "\nAssistant:"
+
+    inputs = tokenizer(full_prompt, return_tensors="pt")
+
+    output = llm_model.generate(
+        **inputs,
+        max_new_tokens=150,
+        temperature=0.7
+    )
+
+    response = tokenizer.decode(output[0], skip_special_tokens=True)
+
+    return response.split("Assistant:")[-1].strip()
+
+
+    def is_illegal_prompt(prompt):
+
+    banned_words = [
+        "hack",
+        "explosive",
+        "bomb",
+        "drug",
+        "weapon",
+        "kill",
+        "terrorist",
+        "fraud"
+    ]
+
+    prompt = prompt.lower()
+
+    for word in banned_words:
+        if word in prompt:
+            return True
+
+    return False
 
 
 # ==============================
@@ -118,6 +186,12 @@ async def process(
     except:
         return {"message": "Invalid image file."}
 
+    # Safety check
+    if is_illegal_prompt(prompt):
+        return {
+            "message": "⚠️ I cannot assist with that request."
+        }
+    
     intent = detect_intent(prompt)
 
     filename = f"static/{uuid.uuid4().hex}.jpg"
@@ -226,10 +300,11 @@ async def process(
         # ======================
         # UNKNOWN PROMPT
         # ======================
-        else:
-            return {
-                "message": "I couldn't understand the request. Try commands like detect, classify, blur, edge, or grayscale."
-            }
+        response = generate_chat_response(prompt)
+
+        return {
+            "message": response
+        }
 
     except Exception as e:
 
