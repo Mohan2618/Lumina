@@ -17,12 +17,15 @@ import os
 
 app = FastAPI()
 
-# Create static folder
 os.makedirs("static", exist_ok=True)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+
+# ==============================
+# Load LLM
+# ==============================
 tokenizer = AutoTokenizer.from_pretrained(
     "microsoft/Phi-3-mini-4k-instruct"
 )
@@ -35,24 +38,8 @@ llm_model = AutoModelForCausalLM.from_pretrained(
 
 
 # ==============================
-# Load Classification Model
+# Chat Response Generator
 # ==============================
-clf_model = models.mobilenet_v2(
-    weights=models.MobileNet_V2_Weights.DEFAULT
-)
-clf_model.eval()
-
-labels = models.MobileNet_V2_Weights.DEFAULT.meta["categories"]
-
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
-    )
-])
-
 def generate_chat_response(prompt):
 
     system_prompt = """
@@ -70,7 +57,7 @@ You must refuse:
 - weapons
 - harmful instructions
 
-If a user asks illegal questions, reply:
+If a user asks illegal questions reply:
 "I cannot assist with that request."
 """
 
@@ -89,7 +76,10 @@ If a user asks illegal questions, reply:
     return response.split("Assistant:")[-1].strip()
 
 
-    def is_illegal_prompt(prompt):
+# ==============================
+# Safety Filter
+# ==============================
+def is_illegal_prompt(prompt):
 
     banned_words = [
         "hack",
@@ -112,7 +102,27 @@ If a user asks illegal questions, reply:
 
 
 # ==============================
-# Load YOLO Detection Model
+# Load Classification Model
+# ==============================
+clf_model = models.mobilenet_v2(
+    weights=models.MobileNet_V2_Weights.DEFAULT
+)
+clf_model.eval()
+
+labels = models.MobileNet_V2_Weights.DEFAULT.meta["categories"]
+
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225]
+    )
+])
+
+
+# ==============================
+# Load YOLO
 # ==============================
 det_model = YOLO("yolov8n.pt")
 det_model.to("cpu")
@@ -176,31 +186,26 @@ async def process(
     image: UploadFile = File(None)
 ):
 
+    # Safety filter
+    if is_illegal_prompt(prompt):
+        return {"message": "⚠️ I cannot assist with that request."}
+
     if image is None:
-        return {"message": "Please upload an image first."}
+        return {"message": generate_chat_response(prompt)}
 
     try:
         img = Image.open(image.file).convert("RGB")
         img_np = np.array(img)
-
     except:
         return {"message": "Invalid image file."}
 
-    # Safety check
-    if is_illegal_prompt(prompt):
-        return {
-            "message": "⚠️ I cannot assist with that request."
-        }
-    
     intent = detect_intent(prompt)
 
     filename = f"static/{uuid.uuid4().hex}.jpg"
 
     try:
 
-        # ======================
         # OBJECT DETECTION
-        # ======================
         if intent == "detect":
 
             results = det_model(img_np)
@@ -212,7 +217,6 @@ async def process(
             detected_objects = {}
 
             for box in r.boxes:
-
                 cls_id = int(box.cls[0])
                 label = det_model.names[cls_id]
 
@@ -223,10 +227,8 @@ async def process(
 
             if not detected_objects:
                 message = "I couldn't detect any objects."
-
             else:
                 message = "I detected the following objects:\n"
-
                 for obj, count in detected_objects.items():
                     message += f"- {count} {obj}\n"
 
@@ -235,10 +237,7 @@ async def process(
                 "image": "/" + filename
             }
 
-
-        # ======================
         # IMAGE CLASSIFICATION
-        # ======================
         elif intent == "classify":
 
             img_t = transform(img).unsqueeze(0)
@@ -254,10 +253,7 @@ async def process(
                            f"({round(conf.item()*100,2)}% confidence)."
             }
 
-
-        # ======================
         # GRAYSCALE
-        # ======================
         elif intent == "grayscale":
 
             gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
@@ -268,10 +264,7 @@ async def process(
                 "image": "/" + filename
             }
 
-
-        # ======================
-        # EDGE DETECTION
-        # ======================
+        # EDGE
         elif intent == "edge":
 
             edges = cv2.Canny(img_np, 100, 200)
@@ -282,10 +275,7 @@ async def process(
                 "image": "/" + filename
             }
 
-
-        # ======================
         # BLUR
-        # ======================
         elif intent == "blur":
 
             blur = cv2.GaussianBlur(img_np, (15, 15), 0)
@@ -296,18 +286,9 @@ async def process(
                 "image": "/" + filename
             }
 
-
-        # ======================
-        # UNKNOWN PROMPT
-        # ======================
-        response = generate_chat_response(prompt)
-
-        return {
-            "message": response
-        }
+        # GENERAL CHAT
+        else:
+            return {"message": generate_chat_response(prompt)}
 
     except Exception as e:
-
-        return {
-            "message": f"Processing error: {str(e)}"
-        }
+        return {"message": f"Processing error: {str(e)}"}
