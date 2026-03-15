@@ -49,39 +49,37 @@ det_model.to("cpu")
 # ==============================
 # Intent Detection
 # ==============================
-def detect_intent(prompt: str):
-    prompt = prompt.lower()
-    prompt = re.sub(r"[^\w\s]", "", prompt)
+if intent == "detect":
 
-    if any(word in prompt for word in [
-        "detect", "find objects", "locate",
-        "where are objects", "show objects"
-    ]):
-        return "detect"
+    results = det_model(img_np)
+    r = results[0]
 
-    if any(word in prompt for word in [
-        "classify", "identify", "recognize",
-        "what is in"
-    ]):
-        return "classify"
+    output_img = r.plot()
+    cv2.imwrite(filename, output_img)
 
-    if any(word in prompt for word in [
-        "grayscale", "black and white",
-        "convert to gray"
-    ]):
-        return "grayscale"
+    detected_objects = {}
 
-    if any(word in prompt for word in [
-        "edge", "outline", "boundary"
-    ]):
-        return "edge"
+    for box in r.boxes:
+        cls_id = int(box.cls[0])
+        label = det_model.names[cls_id]
 
-    if any(word in prompt for word in [
-        "blur", "smooth", "blurry"
-    ]):
-        return "blur"
+        if label not in detected_objects:
+            detected_objects[label] = 0
 
-    return "unknown"
+        detected_objects[label] += 1
+
+    if not detected_objects:
+        message = "I couldn't detect any objects."
+    else:
+        message = "I detected the following objects:\n"
+
+        for obj, count in detected_objects.items():
+            message += f"- {count} {obj}\n"
+
+    return {
+        "message": message,
+        "image": "/" + filename
+    }
 
 # ==============================
 # Home Route
