@@ -16,11 +16,12 @@ import os
 
 app = FastAPI()
 
-# Create static folder if not exists
+# Create static folder
 os.makedirs("static", exist_ok=True)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
 
 # ==============================
 # Load Classification Model
@@ -29,6 +30,7 @@ clf_model = models.mobilenet_v2(
     weights=models.MobileNet_V2_Weights.DEFAULT
 )
 clf_model.eval()
+
 labels = models.MobileNet_V2_Weights.DEFAULT.meta["categories"]
 
 transform = transforms.Compose([
@@ -40,56 +42,62 @@ transform = transforms.Compose([
     )
 ])
 
+
 # ==============================
 # Load YOLO Detection Model
 # ==============================
-det_model = YOLO("yolov8n.pt", task="detect")
+det_model = YOLO("yolov8n.pt")
 det_model.to("cpu")
+
 
 # ==============================
 # Intent Detection
 # ==============================
-if intent == "detect":
+def detect_intent(prompt: str):
 
-    results = det_model(img_np)
-    r = results[0]
+    prompt = prompt.lower()
+    prompt = re.sub(r"[^\w\s]", "", prompt)
 
-    output_img = r.plot()
-    cv2.imwrite(filename, output_img)
+    if any(word in prompt for word in [
+        "detect", "find objects", "locate",
+        "show objects", "where are objects"
+    ]):
+        return "detect"
 
-    detected_objects = {}
+    if any(word in prompt for word in [
+        "classify", "identify", "recognize"
+    ]):
+        return "classify"
 
-    for box in r.boxes:
-        cls_id = int(box.cls[0])
-        label = det_model.names[cls_id]
+    if any(word in prompt for word in [
+        "grayscale", "black and white", "gray"
+    ]):
+        return "grayscale"
 
-        if label not in detected_objects:
-            detected_objects[label] = 0
+    if any(word in prompt for word in [
+        "edge", "outline", "boundary"
+    ]):
+        return "edge"
 
-        detected_objects[label] += 1
+    if any(word in prompt for word in [
+        "blur", "smooth", "blurry"
+    ]):
+        return "blur"
 
-    if not detected_objects:
-        message = "I couldn't detect any objects."
-    else:
-        message = "I detected the following objects:\n"
+    return "unknown"
 
-        for obj, count in detected_objects.items():
-            message += f"- {count} {obj}\n"
-
-    return {
-        "message": message,
-        "image": "/" + filename
-    }
 
 # ==============================
 # Home Route
 # ==============================
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
+
     return templates.TemplateResponse(
         "index.html",
         {"request": request}
     )
+
 
 # ==============================
 # Process Route
@@ -106,7 +114,8 @@ async def process(
     try:
         img = Image.open(image.file).convert("RGB")
         img_np = np.array(img)
-    except Exception as e:
+
+    except:
         return {"message": "Invalid image file."}
 
     intent = detect_intent(prompt)
@@ -115,17 +124,51 @@ async def process(
 
     try:
 
+        # ======================
+        # OBJECT DETECTION
+        # ======================
         if intent == "detect":
+
             results = det_model(img_np)
-            output_img = results[0].plot()
+            r = results[0]
+
+            output_img = r.plot()
             cv2.imwrite(filename, output_img)
+
+            detected_objects = {}
+
+            for box in r.boxes:
+
+                cls_id = int(box.cls[0])
+                label = det_model.names[cls_id]
+
+                if label not in detected_objects:
+                    detected_objects[label] = 0
+
+                detected_objects[label] += 1
+
+            if not detected_objects:
+                message = "I couldn't detect any objects."
+
+            else:
+                message = "I detected the following objects:\n"
+
+                for obj, count in detected_objects.items():
+                    message += f"- {count} {obj}\n"
+
             return {
-                "message": "I detected objects.",
+                "message": message,
                 "image": "/" + filename
             }
 
+
+        # ======================
+        # IMAGE CLASSIFICATION
+        # ======================
         elif intent == "classify":
+
             img_t = transform(img).unsqueeze(0)
+
             with torch.no_grad():
                 output = clf_model(img_t)
 
@@ -137,32 +180,59 @@ async def process(
                            f"({round(conf.item()*100,2)}% confidence)."
             }
 
+
+        # ======================
+        # GRAYSCALE
+        # ======================
         elif intent == "grayscale":
+
             gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
             cv2.imwrite(filename, gray)
+
             return {
-                "message": "Converted to grayscale.",
+                "message": "Converted the image to grayscale.",
                 "image": "/" + filename
             }
 
+
+        # ======================
+        # EDGE DETECTION
+        # ======================
         elif intent == "edge":
+
             edges = cv2.Canny(img_np, 100, 200)
             cv2.imwrite(filename, edges)
+
             return {
                 "message": "Edge detection applied.",
                 "image": "/" + filename
             }
 
+
+        # ======================
+        # BLUR
+        # ======================
         elif intent == "blur":
+
             blur = cv2.GaussianBlur(img_np, (15, 15), 0)
             cv2.imwrite(filename, blur)
+
             return {
-                "message": "Blur applied.",
+                "message": "Blur effect applied.",
                 "image": "/" + filename
             }
 
+
+        # ======================
+        # UNKNOWN PROMPT
+        # ======================
         else:
-            return {"message": "I couldn't understand the request."}
+            return {
+                "message": "I couldn't understand the request. Try commands like detect, classify, blur, edge, or grayscale."
+            }
 
     except Exception as e:
-        return {"message": f"Processing error: {str(e)}"}
+
+        return {
+            "message": f"Processing error: {str(e)}"
+        }
