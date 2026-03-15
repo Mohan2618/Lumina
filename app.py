@@ -1,5 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, Form, Request
-from transformers import AutoTokenizer, AutoModelForCausalLM
+import requests
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -23,54 +23,35 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 
-# ==============================
-# Load LLM
-# ==============================
-tokenizer = AutoTokenizer.from_pretrained(
-    "microsoft/Phi-3-mini-4k-instruct"
-)
-
-llm_model = AutoModelForCausalLM.from_pretrained(
-    "microsoft/Phi-3-mini-4k-instruct",
-    torch_dtype=torch.float32,
-    device_map="cpu"
-)
 
 
 # ==============================
 # Chat Response Generator
 # ==============================
+HF_TOKEN = os.getenv("HF_TOKEN")
+
+API_URL = "https://api-inference.huggingface.co/models/microsoft/Phi-3-mini-4k-instruct"
+
+headers = {
+    "Authorization": f"Bearer {HF_TOKEN}"
+}
+
+
 def generate_chat_response(prompt):
 
-    messages = [
-        {
-            "role": "system",
-            "content": "You are Lumina, an AI assistant specialized in image processing and computer vision. Respond clearly and briefly."
-        },
-        {
-            "role": "user",
-            "content": prompt
-        }
-    ]
+    payload = {
+        "inputs": f"You are Lumina, an AI image processing assistant.\nUser: {prompt}\nAssistant:"
+    }
 
-    text = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True
-    )
+    response = requests.post(API_URL, headers=headers, json=payload)
 
-    inputs = tokenizer(text, return_tensors="pt")
+    result = response.json()
 
-    outputs = llm_model.generate(
-        **inputs,
-        max_new_tokens=120,
-        temperature=0.7,
-        do_sample=True
-    )
+    if isinstance(result, list):
+        text = result[0]["generated_text"]
+        return text.split("Assistant:")[-1].strip()
 
-    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-    return response.split("assistant")[-1].strip()
+    return "Sorry, I couldn't generate a response."
 
 
 # ==============================
