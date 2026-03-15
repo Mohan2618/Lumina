@@ -42,38 +42,35 @@ llm_model = AutoModelForCausalLM.from_pretrained(
 # ==============================
 def generate_chat_response(prompt):
 
-    system_prompt = """
-You are Lumina, an AI image processing assistant.
+    messages = [
+        {
+            "role": "system",
+            "content": "You are Lumina, an AI assistant specialized in image processing and computer vision. Respond clearly and briefly."
+        },
+        {
+            "role": "user",
+            "content": prompt
+        }
+    ]
 
-You can:
-- answer general questions
-- help with image processing
-- explain computer vision
-
-You must refuse:
-- illegal activities
-- hacking
-- drugs
-- weapons
-- harmful instructions
-
-If a user asks illegal questions reply:
-"I cannot assist with that request."
-"""
-
-    full_prompt = system_prompt + "\nUser: " + prompt + "\nAssistant:"
-
-    inputs = tokenizer(full_prompt, return_tensors="pt")
-
-    output = llm_model.generate(
-        **inputs,
-        max_new_tokens=150,
-        temperature=0.7
+    text = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True
     )
 
-    response = tokenizer.decode(output[0], skip_special_tokens=True)
+    inputs = tokenizer(text, return_tensors="pt")
 
-    return response.split("Assistant:")[-1].strip()
+    outputs = llm_model.generate(
+        **inputs,
+        max_new_tokens=120,
+        temperature=0.7,
+        do_sample=True
+    )
+
+    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+    return response.split("assistant")[-1].strip()
 
 
 # ==============================
