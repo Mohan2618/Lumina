@@ -562,15 +562,39 @@ async function sendMessage() {
       method: "POST",
       body: formData
     });
+
+  console.log("Server response:", data);
   
    if (!response.ok) {
-    const text = await response.text();
-    removeTyping();
-    alert("Server error:\n" + text);
-    return;
+  const text = await response.text();
+
+  removeTyping();
+
+  generating = false;
+  document.getElementById("actionIcon").textContent = "arrow_upward";
+
+  alert("Server error:\n" + text);
+  return;
+}
+let data;
+
+try {
+  data = await response.json();
+} catch (err) {
+
+  removeTyping();
+
+  generating = false;
+  document.getElementById("actionIcon").textContent = "arrow_upward";
+
+  if (!data || (!data.message && !data.image)) {
+  addMessage("⚠️ No response from AI.", "bot");
+  return;
 }
 
-const data = await response.json();
+  addMessage("⚠️ Invalid response from server.", "bot");
+  return;
+}
   
     removeTyping();
     generating = false;
@@ -604,7 +628,9 @@ const data = await response.json();
       chatArea.appendChild(botImgDiv);
     }
   
-    chatArea.scrollTop = chatArea.scrollHeight;
+   setTimeout(() => {
+  chatArea.scrollTop = chatArea.scrollHeight;
+}, 50);
   
     saveChatHistory();
   }
