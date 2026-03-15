@@ -15,7 +15,6 @@ from transformers import BlipProcessor, BlipForConditionalGeneration
 
 import uuid
 import os
-import time
 
 app = FastAPI()
 
@@ -31,7 +30,7 @@ last_image = None
 
 
 # ===============================
-# HUGGINGFACE LLM API
+# HUGGINGFACE CHAT API
 # ===============================
 HF_TOKEN = os.getenv("HF_TOKEN")
 
@@ -42,96 +41,71 @@ headers = {
 }
 
 
-def call_llm(prompt):
+def generate_chat_response(prompt):
 
     payload = {
-        "inputs": prompt,
+        "inputs": f"User: {prompt}\nAssistant:",
         "parameters": {
             "max_new_tokens": 120,
             "temperature": 0.7
         }
     }
 
-    for _ in range(3):
+    try:
 
-        response = requests.post(API_URL, headers=headers, json=payload)
+        response = requests.post(
+            API_URL,
+            headers=headers,
+            json=payload,
+            timeout=15
+        )
+
         data = response.json()
 
         if isinstance(data, list):
-            return data[0]["generated_text"]
 
-        if isinstance(data, dict) and "error" in data:
-            if "loading" in data["error"].lower():
-                time.sleep(4)
-                continue
+            text = data[0]["generated_text"]
 
-    return ""
+            if "Assistant:" in text:
+                text = text.split("Assistant:")[-1]
+
+            return text.strip()
+
+        return "AI is currently loading. Please try again."
+
+    except requests.exceptions.Timeout:
+        return "⚠️ AI response timeout."
+
+    except Exception:
+        return "⚠️ AI service unavailable."
 
 
 # ===============================
-# ROUTER (AI decides tool)
+# FAST INTENT ROUTER
 # ===============================
 def route_prompt(prompt):
 
-    router_prompt = f"""
-You are an AI router.
+    p = prompt.lower()
 
-Decide the user's intent.
-
-Return ONLY one word:
-
-detect
-classify
-grayscale
-edge
-blur
-describe
-chat
-
-User prompt: {prompt}
-"""
-
-    result = call_llm(router_prompt).lower()
-
-    if "detect" in result:
+    if "detect" in p or "object" in p:
         return "detect"
 
-    if "classify" in result:
+    if "classify" in p or "identify" in p:
         return "classify"
 
-    if "grayscale" in result:
-        return "grayscale"
-
-    if "edge" in result:
-        return "edge"
-
-    if "blur" in result:
+    if "blur" in p:
         return "blur"
 
-    if "describe" in result:
+    if "edge" in p:
+        return "edge"
+
+    if "gray" in p or "grayscale" in p:
+        return "grayscale"
+
+    if "describe" in p or "caption" in p:
         return "describe"
 
     return "chat"
-
-
-# ===============================
-# CHAT RESPONSE
-# ===============================
-def generate_chat_response(prompt):
-
-    chat_prompt = f"""
-You are Lumina, an AI image processing assistant.
-
-User: {prompt}
-Assistant:
-"""
-
-    text = call_llm(chat_prompt)
-
-    if "Assistant:" in text:
-        text = text.split("Assistant:")[-1]
-
-    return text.strip()
 
 
 # ===============================
@@ -159,7 +133,7 @@ transform = transforms.Compose([
     )
 ])
 
-# BLIP Caption Model
+# BLIP Caption
 processor = BlipProcessor.from_pretrained(
     "Salesforce/blip-image-captioning-base"
 )
@@ -229,9 +203,7 @@ async def process(
 
     try:
 
-        # ===============================
         # OBJECT DETECTION
-        # ===============================
         if tool == "detect":
 
             results = det_model(img_np)
@@ -243,13 +215,11 @@ async def process(
             cv2.imwrite(filename, output)
 
             return {
-                "message": "Objects detected in the image.",
+                "message": "Objects detected.",
                 "image": "/" + filename
             }
 
-        # ===============================
-        # CLASSIFICATION
-        # ===============================
+        # IMAGE CLASSIFICATION
         elif tool == "classify":
 
             img_t = transform(img).unsqueeze(0)
@@ -265,9 +235,7 @@ async def process(
                 "message": f"This looks like {labels[pred.item()]} ({round(conf.item()*100,2)}% confidence)."
             }
 
-        # ===============================
         # GRAYSCALE
-        # ===============================
         elif tool == "grayscale":
 
             gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
@@ -279,9 +247,7 @@ async def process(
                 "image": "/" + filename
             }
 
-        # ===============================
-        # EDGE DETECTION
-        # ===============================
+        # EDGE
         elif tool == "edge":
 
             edges = cv2.Canny(img_np, 100, 200)
@@ -293,9 +259,7 @@ async def process(
                 "image": "/" + filename
             }
 
-        # ===============================
         # BLUR
-        # ===============================
         elif tool == "blur":
 
             blur = cv2.GaussianBlur(img_np, (15, 15), 0)
@@ -307,9 +271,7 @@ async def process(
                 "image": "/" + filename
             }
 
-        # ===============================
-        # DESCRIBE IMAGE
-        # ===============================
+        # DESCRIBE
         elif tool == "describe":
 
             caption = describe_image(img)
@@ -318,9 +280,7 @@ async def process(
                 "message": f"This image appears to show: {caption}"
             }
 
-        # ===============================
         # CHAT
-        # ===============================
         else:
 
             return {
