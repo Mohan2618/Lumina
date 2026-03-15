@@ -22,11 +22,12 @@ os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-
+# Memory for previous image
+last_image = None
 
 
 # ==============================
-# Chat Response Generator
+# HuggingFace LLM API
 # ==============================
 HF_TOKEN = os.getenv("HF_TOKEN")
 
@@ -40,18 +41,31 @@ headers = {
 def generate_chat_response(prompt):
 
     payload = {
-        "inputs": f"You are Lumina, an AI image processing assistant.\nUser: {prompt}\nAssistant:"
+        "inputs": f"You are Lumina, an AI image processing assistant.\nUser: {prompt}\nAssistant:",
+        "parameters": {
+            "max_new_tokens": 120,
+            "temperature": 0.7
+        }
     }
 
-    response = requests.post(API_URL, headers=headers, json=payload)
+    try:
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
+        data = response.json()
 
-    result = response.json()
+        if isinstance(data, list):
+            text = data[0].get("generated_text", "")
+            return text.split("Assistant:")[-1].strip()
 
-    if isinstance(result, list):
-        text = result[0]["generated_text"]
-        return text.split("Assistant:")[-1].strip()
+        if isinstance(data, dict) and "generated_text" in data:
+            return data["generated_text"]
 
-    return "Sorry, I couldn't generate a response."
+        if isinstance(data, dict) and "error" in data:
+            return "The AI model is loading, please try again in a moment."
+
+        return "I couldn't generate a response."
+
+    except Exception:
+        return "AI service temporarily unavailable."
 
 
 # ==============================
@@ -60,14 +74,9 @@ def generate_chat_response(prompt):
 def is_illegal_prompt(prompt):
 
     banned_words = [
-        "hack",
-        "explosive",
-        "bomb",
-        "drug",
-        "weapon",
-        "kill",
-        "terrorist",
-        "fraud"
+        "hack", "explosive", "bomb",
+        "drug", "weapon", "kill",
+        "terrorist", "fraud"
     ]
 
     prompt = prompt.lower()
@@ -85,6 +94,7 @@ def is_illegal_prompt(prompt):
 clf_model = models.mobilenet_v2(
     weights=models.MobileNet_V2_Weights.DEFAULT
 )
+
 clf_model.eval()
 
 labels = models.MobileNet_V2_Weights.DEFAULT.meta["categories"]
@@ -164,18 +174,33 @@ async def process(
     image: UploadFile = File(None)
 ):
 
-    # Safety filter
+    global last_image
+
     if is_illegal_prompt(prompt):
         return {"message": "⚠️ I cannot assist with that request."}
 
-    if image is None:
-        return {"message": generate_chat_response(prompt)}
+    # User uploaded image
+    if image is not None:
 
-    try:
-        img = Image.open(image.file).convert("RGB")
-        img_np = np.array(img)
-    except:
-        return {"message": "Invalid image file."}
+        try:
+            img = Image.open(image.file).convert("RGB")
+            img_np = np.array(img)
+
+            last_image = img_np
+
+        except:
+            return {"message": "Invalid image file."}
+
+    # No image uploaded but previous image exists
+    elif last_image is not None:
+
+        img_np = last_image
+        img = Image.fromarray(img_np)
+
+    # No image context → normal chat
+    else:
+
+        return {"message": generate_chat_response(prompt)}
 
     intent = detect_intent(prompt)
 
@@ -183,7 +208,9 @@ async def process(
 
     try:
 
+        # ======================
         # OBJECT DETECTION
+        # ======================
         if intent == "detect":
 
             results = det_model(img_np)
@@ -195,6 +222,7 @@ async def process(
             detected_objects = {}
 
             for box in r.boxes:
+
                 cls_id = int(box.cls[0])
                 label = det_model.names[cls_id]
 
@@ -205,8 +233,10 @@ async def process(
 
             if not detected_objects:
                 message = "I couldn't detect any objects."
+
             else:
                 message = "I detected the following objects:\n"
+
                 for obj, count in detected_objects.items():
                     message += f"- {count} {obj}\n"
 
@@ -215,7 +245,9 @@ async def process(
                 "image": "/" + filename
             }
 
+        # ======================
         # IMAGE CLASSIFICATION
+        # ======================
         elif intent == "classify":
 
             img_t = transform(img).unsqueeze(0)
@@ -227,11 +259,12 @@ async def process(
             conf, pred = torch.max(probs, 0)
 
             return {
-                "message": f"This looks like {labels[pred.item()]} "
-                           f"({round(conf.item()*100,2)}% confidence)."
+                "message": f"This looks like {labels[pred.item()]} ({round(conf.item()*100,2)}% confidence)."
             }
 
+        # ======================
         # GRAYSCALE
+        # ======================
         elif intent == "grayscale":
 
             gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
@@ -242,7 +275,9 @@ async def process(
                 "image": "/" + filename
             }
 
+        # ======================
         # EDGE
+        # ======================
         elif intent == "edge":
 
             edges = cv2.Canny(img_np, 100, 200)
@@ -253,7 +288,9 @@ async def process(
                 "image": "/" + filename
             }
 
+        # ======================
         # BLUR
+        # ======================
         elif intent == "blur":
 
             blur = cv2.GaussianBlur(img_np, (15, 15), 0)
@@ -264,9 +301,17 @@ async def process(
                 "image": "/" + filename
             }
 
-        # GENERAL CHAT
+        # ======================
+        # GENERAL CHAT WITH IMAGE CONTEXT
+        # ======================
         else:
-            return {"message": generate_chat_response(prompt)}
+
+            response = generate_chat_response(
+                f"The user uploaded an image previously. User question: {prompt}"
+            )
+
+            return {"message": response}
 
     except Exception as e:
+
         return {"message": f"Processing error: {str(e)}"}
