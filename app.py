@@ -1,9 +1,9 @@
 from fastapi import FastAPI, UploadFile, File, Form, Request
-import requests
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+import requests
 import numpy as np
 import cv2
 from PIL import Image
@@ -12,7 +12,6 @@ import torch.nn.functional as F
 from torchvision import models, transforms
 from ultralytics import YOLO
 import uuid
-import re
 import os
 
 app = FastAPI()
@@ -26,9 +25,9 @@ templates = Jinja2Templates(directory="templates")
 last_image = None
 
 
-# ==============================
+# ===============================
 # HuggingFace LLM API
-# ==============================
+# ===============================
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 API_URL = "https://api-inference.huggingface.co/models/TinyLlama/TinyLlama-1.1B-Chat-v1.0"
@@ -38,60 +37,93 @@ headers = {
 }
 
 
-def generate_chat_response(prompt):
+def call_llm(prompt):
 
     payload = {
-        "inputs": f"You are Lumina, an AI image processing assistant.\nUser: {prompt}\nAssistant:",
+        "inputs": prompt,
         "parameters": {
-            "max_new_tokens": 120,
+            "max_new_tokens": 150,
             "temperature": 0.7
         }
     }
 
-    for _ in range(3):  # retry up to 3 times
-        response = requests.post(API_URL, headers=headers, json=payload)
-        data = response.json()
+    response = requests.post(API_URL, headers=headers, json=payload)
 
-        # normal response
-        if isinstance(data, list):
-            text = data[0].get("generated_text", "")
-            return text.split("Assistant:")[-1].strip()
+    data = response.json()
 
-        # model still loading
-        if isinstance(data, dict) and "error" in data:
-            if "loading" in data["error"].lower():
-                import time
-                time.sleep(4)
-                continue
+    if isinstance(data, list):
+        return data[0]["generated_text"]
 
-        return "Sorry, I couldn't generate a response."
-
-    return "The AI is currently busy. Please try again."
+    return ""
 
 
-# ==============================
-# Safety Filter
-# ==============================
-def is_illegal_prompt(prompt):
+# ===============================
+# AI Router (decides tool)
+# ===============================
+def route_prompt(prompt):
 
-    banned_words = [
-        "hack", "explosive", "bomb",
-        "drug", "weapon", "kill",
-        "terrorist", "fraud"
-    ]
+    router_prompt = f"""
+You are an AI router.
 
-    prompt = prompt.lower()
+Decide if the user wants image processing or normal chat.
 
-    for word in banned_words:
-        if word in prompt:
-            return True
+Return ONE word:
 
-    return False
+detect
+classify
+grayscale
+edge
+blur
+chat
+
+User prompt: {prompt}
+"""
+
+    result = call_llm(router_prompt)
+
+    result = result.lower()
+
+    if "detect" in result:
+        return "detect"
+
+    if "classify" in result:
+        return "classify"
+
+    if "grayscale" in result:
+        return "grayscale"
+
+    if "edge" in result:
+        return "edge"
+
+    if "blur" in result:
+        return "blur"
+
+    return "chat"
 
 
-# ==============================
-# Load Classification Model
-# ==============================
+# ===============================
+# Chat response
+# ===============================
+def generate_chat_response(prompt):
+
+    chat_prompt = f"""
+You are Lumina, an AI assistant for image processing and computer vision.
+
+User: {prompt}
+Assistant:
+"""
+
+    text = call_llm(chat_prompt)
+
+    if "Assistant:" in text:
+        text = text.split("Assistant:")[-1]
+
+    return text.strip()
+
+
+# ===============================
+# Load Models
+# ===============================
 clf_model = models.mobilenet_v2(
     weights=models.MobileNet_V2_Weights.DEFAULT
 )
@@ -110,55 +142,13 @@ transform = transforms.Compose([
 ])
 
 
-# ==============================
-# Load YOLO
-# ==============================
 det_model = YOLO("yolov8n.pt")
 det_model.to("cpu")
 
 
-# ==============================
-# Intent Detection
-# ==============================
-def decide_tool(prompt):
-
-    system_prompt = """
-You are an AI controller for an image processing chatbot.
-
-Decide which tool to use based on the user's prompt.
-
-Available tools:
-
-detect_objects
-classify_image
-grayscale
-edge_detection
-blur_image
-chat
-
-Return ONLY the tool name.
-
-User prompt:
-"""
-
-    payload = {
-        "inputs": system_prompt + prompt,
-        "parameters": {"max_new_tokens": 20}
-    }
-
-    response = requests.post(API_URL, headers=headers, json=payload)
-    result = response.json()
-
-    if isinstance(result, list):
-        decision = result[0]["generated_text"].split("\n")[-1].strip()
-        return decision
-
-    return "chat"
-
-
-# ==============================
-# Home Route
-# ==============================
+# ===============================
+# Home
+# ===============================
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
 
@@ -168,9 +158,9 @@ async def home(request: Request):
     )
 
 
-# ==============================
-# Process Route
-# ==============================
+# ===============================
+# Process
+# ===============================
 @app.post("/process")
 async def process(
     prompt: str = Form(...),
@@ -179,79 +169,44 @@ async def process(
 
     global last_image
 
-    if is_illegal_prompt(prompt):
-        return {"message": "⚠️ I cannot assist with that request."}
+    # load image if uploaded
+    if image:
 
-    # User uploaded image
-    if image is not None:
+        img = Image.open(image.file).convert("RGB")
+        img_np = np.array(img)
 
-        try:
-            img = Image.open(image.file).convert("RGB")
-            img_np = np.array(img)
+        last_image = img_np
 
-            last_image = img_np
-
-        except:
-            return {"message": "Invalid image file."}
-
-    # No image uploaded but previous image exists
     elif last_image is not None:
 
         img_np = last_image
         img = Image.fromarray(img_np)
 
-    # No image context → normal chat
     else:
 
         return {"message": generate_chat_response(prompt)}
 
-    intent = decide_tool(prompt)
+    tool = route_prompt(prompt)
 
     filename = f"static/{uuid.uuid4().hex}.jpg"
 
     try:
 
-        # ======================
-        # OBJECT DETECTION
-        # ======================
-        if intent == "detect_objects":
+        if tool == "detect":
 
             results = det_model(img_np)
             r = results[0]
 
-            output_img = r.plot()
-            cv2.imwrite(filename, output_img)
+            output = r.plot()
 
-            detected_objects = {}
-
-            for box in r.boxes:
-
-                cls_id = int(box.cls[0])
-                label = det_model.names[cls_id]
-
-                if label not in detected_objects:
-                    detected_objects[label] = 0
-
-                detected_objects[label] += 1
-
-            if not detected_objects:
-                message = "I couldn't detect any objects."
-
-            else:
-                message = "I detected the following objects:\n"
-
-                for obj, count in detected_objects.items():
-                    message += f"- {count} {obj}\n"
+            cv2.imwrite(filename, output)
 
             return {
-                "message": message,
+                "message": "Detected objects in the image.",
                 "image": "/" + filename
             }
 
-        # ======================
-        # IMAGE CLASSIFICATION
-        # ======================
-        elif intent == "classify_image":
+        elif tool == "classify":
 
             img_t = transform(img).unsqueeze(0)
 
@@ -259,31 +214,28 @@ async def process(
                 output = clf_model(img_t)
 
             probs = F.softmax(output[0], dim=0)
+
             conf, pred = torch.max(probs, 0)
 
             return {
                 "message": f"This looks like {labels[pred.item()]} ({round(conf.item()*100,2)}% confidence)."
             }
 
-        # ======================
-        # GRAYSCALE
-        # ======================
-        elif intent == "grayscale":
+        elif tool == "grayscale":
 
             gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+
             cv2.imwrite(filename, gray)
 
             return {
-                "message": "Converted the image to grayscale.",
+                "message": "Converted to grayscale.",
                 "image": "/" + filename
             }
 
-        # ======================
-        # EDGE
-        # ======================
-        elif intent == "edge_detection":
+        elif tool == "edge":
 
             edges = cv2.Canny(img_np, 100, 200)
+
             cv2.imwrite(filename, edges)
 
             return {
@@ -291,29 +243,20 @@ async def process(
                 "image": "/" + filename
             }
 
-        # ======================
-        # BLUR
-        # ======================
-        elif intent == "blur_image":
+        elif tool == "blur":
 
             blur = cv2.GaussianBlur(img_np, (15, 15), 0)
+
             cv2.imwrite(filename, blur)
 
             return {
-                "message": "Blur effect applied.",
+                "message": "Blur applied.",
                 "image": "/" + filename
             }
 
-        # ======================
-        # GENERAL CHAT WITH IMAGE CONTEXT
-        # ======================
         else:
 
-            response = generate_chat_response(prompt)
-
-            return {
-        "message": response
-    }
+            return {"message": generate_chat_response(prompt)}
 
     except Exception as e:
 
