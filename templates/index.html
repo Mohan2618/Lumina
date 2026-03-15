@@ -350,7 +350,7 @@ body {
     </button>
 
     <button class="send-btn" onclick="sendMessage()">
-      <span class="material-icons" id="actionIcon">graphic_eq</span>
+      <span class="material-icons" id="actionIcon">arrow_upward</span>
     </button>
 
   </div>
@@ -494,7 +494,14 @@ body {
   }
   
   /* ================= SEND MESSAGE ================= */
-  async function sendMessage() {
+ let generating = false;
+
+async function sendMessage() {
+
+  if (generating) return;
+
+  generating = true;
+  document.getElementById("actionIcon").textContent = "stop";
     const input = document.getElementById("promptInput");
     const text = input.value.trim();
   
@@ -566,6 +573,8 @@ body {
 const data = await response.json();
   
     removeTyping();
+    generating = false;
+    document.getElementById("actionIcon").textContent = "arrow_upward";
   
     // ======================
     // BOT TEXT RESPONSE
@@ -573,7 +582,10 @@ const data = await response.json();
     if (data.message) {
       const botText = document.createElement("div");
       botText.classList.add("chat-msg", "bot-msg");
-      botText.innerText = data.message;
+      botText.innerHTML = data.message
+  .replace(/```python/g, "<pre><code>")
+  .replace(/```/g, "</code></pre>")
+  .replace(/\n/g, "<br>");
       chatArea.appendChild(botText);
     }
   
