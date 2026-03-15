@@ -31,7 +31,7 @@ last_image = None
 # ==============================
 HF_TOKEN = os.getenv("HF_TOKEN")
 
-API_URL = "https://api-inference.huggingface.co/models/microsoft/Phi-3-mini-4k-instruct"
+API_URL = "https://api-inference.huggingface.co/models/TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
 headers = {
     "Authorization": f"Bearer {HF_TOKEN}"
@@ -48,24 +48,25 @@ def generate_chat_response(prompt):
         }
     }
 
-    try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
+    for _ in range(3):  # retry up to 3 times
+        response = requests.post(API_URL, headers=headers, json=payload)
         data = response.json()
 
+        # normal response
         if isinstance(data, list):
             text = data[0].get("generated_text", "")
             return text.split("Assistant:")[-1].strip()
 
-        if isinstance(data, dict) and "generated_text" in data:
-            return data["generated_text"]
-
+        # model still loading
         if isinstance(data, dict) and "error" in data:
-            return "The AI model is loading, please try again in a moment."
+            if "loading" in data["error"].lower():
+                import time
+                time.sleep(4)
+                continue
 
-        return "I couldn't generate a response."
+        return "Sorry, I couldn't generate a response."
 
-    except Exception:
-        return "AI service temporarily unavailable."
+    return "The AI is currently busy. Please try again."
 
 
 # ==============================
