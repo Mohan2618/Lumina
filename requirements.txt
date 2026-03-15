@@ -7,3 +7,6 @@ pillow
 ultralytics
 jinja2
 python-multipart
+transformers
+accelerate
+sentencepiece
