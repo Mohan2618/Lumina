@@ -119,38 +119,40 @@ det_model.to("cpu")
 # ==============================
 # Intent Detection
 # ==============================
-def detect_intent(prompt: str):
+def decide_tool(prompt):
 
-    prompt = prompt.lower()
-    prompt = re.sub(r"[^\w\s]", "", prompt)
+    system_prompt = """
+You are an AI controller for an image processing chatbot.
 
-    if any(word in prompt for word in [
-        "detect", "find objects", "locate",
-        "show objects", "where are objects"
-    ]):
-        return "detect"
+Decide which tool to use based on the user's prompt.
 
-    if any(word in prompt for word in [
-        "classify", "identify", "recognize"
-    ]):
-        return "classify"
+Available tools:
 
-    if any(word in prompt for word in [
-        "grayscale", "black and white", "gray"
-    ]):
-        return "grayscale"
+detect_objects
+classify_image
+grayscale
+edge_detection
+blur_image
+chat
 
-    if any(word in prompt for word in [
-        "edge", "outline", "boundary"
-    ]):
-        return "edge"
+Return ONLY the tool name.
 
-    if any(word in prompt for word in [
-        "blur", "smooth", "blurry"
-    ]):
-        return "blur"
+User prompt:
+"""
 
-    return "unknown"
+    payload = {
+        "inputs": system_prompt + prompt,
+        "parameters": {"max_new_tokens": 20}
+    }
+
+    response = requests.post(API_URL, headers=headers, json=payload)
+    result = response.json()
+
+    if isinstance(result, list):
+        decision = result[0]["generated_text"].split("\n")[-1].strip()
+        return decision
+
+    return "chat"
 
 
 # ==============================
@@ -202,7 +204,7 @@ async def process(
 
         return {"message": generate_chat_response(prompt)}
 
-    intent = detect_intent(prompt)
+    intent = decide_tool(prompt)
 
     filename = f"static/{uuid.uuid4().hex}.jpg"
 
@@ -211,7 +213,7 @@ async def process(
         # ======================
         # OBJECT DETECTION
         # ======================
-        if intent == "detect":
+        if intent == "detect_objects":
 
             results = det_model(img_np)
             r = results[0]
@@ -248,7 +250,7 @@ async def process(
         # ======================
         # IMAGE CLASSIFICATION
         # ======================
-        elif intent == "classify":
+        elif intent == "classify_image":
 
             img_t = transform(img).unsqueeze(0)
 
@@ -278,7 +280,7 @@ async def process(
         # ======================
         # EDGE
         # ======================
-        elif intent == "edge":
+        elif intent == "edge_detection":
 
             edges = cv2.Canny(img_np, 100, 200)
             cv2.imwrite(filename, edges)
@@ -291,7 +293,7 @@ async def process(
         # ======================
         # BLUR
         # ======================
-        elif intent == "blur":
+        elif intent == "blur_image":
 
             blur = cv2.GaussianBlur(img_np, (15, 15), 0)
             cv2.imwrite(filename, blur)
@@ -306,11 +308,11 @@ async def process(
         # ======================
         else:
 
-            response = generate_chat_response(
-                f"The user uploaded an image previously. User question: {prompt}"
-            )
+            response = generate_chat_response(prompt)
 
-            return {"message": response}
+            return {
+        "message": response
+    }
 
     except Exception as e:
 
