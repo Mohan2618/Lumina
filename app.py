@@ -3,26 +3,79 @@ import base64
 import io
 import os
 import re
+import json
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 import cv2
+import anthropic
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
 
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+#  ANTHROPIC CLIENT
+# ─────────────────────────────────────────────────────────────
+client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
+
+SYSTEM_PROMPT = """You are Lumina, a friendly and expert AI image processing assistant.
+
+You can:
+1. Describe and analyze images in rich detail (objects, colors, mood, quality, composition, text, etc.)
+2. Answer ANY question about images or general topics naturally
+3. Suggest and apply image processing operations
+4. Remember and refer back to previous messages in the conversation
+
+When the user asks you to perform an image operation, give a friendly explanation AND include a special tag at the very end:
+<OP>{"intent": "operation_name", "params": {}}</OP>
+
+Available operations:
+- rotate: params: {"angle": 90}
+- flip: params: {"axis": "horizontal" or "vertical"}
+- resize: params: {"width": 512, "height": 512}
+- resize_pct: params: {"pct": 50}
+- crop: params: {"box": [x1,y1,x2,y2] or null}
+- thumbnail: params: {}
+- grayscale: params: {}
+- invert: params: {}
+- sepia: params: {}
+- blur: params: {"radius": 2}
+- sharpen: params: {}
+- edge: params: {}
+- emboss: params: {}
+- contrast: params: {"factor": 1.6}
+- brightness: params: {"factor": 1.4}
+- saturation: params: {"factor": 1.5}
+- hue: params: {}
+- pixelate: params: {"size": 10}
+- noise: params: {}
+- vignette: params: {}
+- cartoon: params: {}
+- watercolor: params: {}
+- clahe: params: {}
+- denoise: params: {}
+- xray_enhance: params: {}
+- segment: params: {}
+- morphology: params: {"op": "dilate" or "erode"}
+- sobel: params: {}
+- canny: params: {}
+- info: params: {}
+
+Rules:
+- For descriptions/questions about images: reply naturally, NO <OP> tag
+- For operations: reply with friendly explanation + <OP> tag at the end
+- If no image is uploaded and an operation is requested, ask them to upload one
+- Always be conversational, warm, and helpful
+- Remember context from earlier in the conversation"""
+
+
+# ─────────────────────────────────────────────────────────────
 #  HELPERS
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 
-def pil_to_base64(img: Image.Image, fmt="PNG") -> str:
+def pil_to_base64(img: Image.Image) -> str:
     buf = io.BytesIO()
-    img.save(buf, format=fmt)
+    img.save(buf, format="PNG")
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
-
-def base64_to_pil(b64: str) -> Image.Image:
-    if "," in b64:
-        b64 = b64.split(",", 1)[1]
-    return Image.open(io.BytesIO(base64.b64decode(b64)))
 
 def file_to_pil(file) -> Image.Image:
     return Image.open(file.stream).convert("RGB")
@@ -33,396 +86,235 @@ def pil_to_cv2(img: Image.Image):
 def cv2_to_pil(arr) -> Image.Image:
     return Image.fromarray(cv2.cvtColor(arr, cv2.COLOR_BGR2RGB))
 
-# ─────────────────────────────────────────────
-#  INTENT PARSER  (rule-based, no API key needed)
-# ─────────────────────────────────────────────
+def img_to_b64_raw(img: Image.Image) -> str:
+    """Raw base64 JPEG for Anthropic API (no data: prefix)."""
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=82)
+    return base64.b64encode(buf.getvalue()).decode()
 
-def parse_intent(prompt: str):
-    p = prompt.lower().strip()
 
-    # --- Basic Operations ---
-    if re.search(r'\brotate\b', p):
-        angle = 90
-        m = re.search(r'(\d+)\s*deg', p)
-        if m: angle = int(m.group(1))
-        elif 'left'  in p: angle = -90
-        elif '180'   in p: angle = 180
-        return ('rotate', {'angle': angle})
+# ─────────────────────────────────────────────────────────────
+#  CLAUDE API CALL  (with full conversation memory)
+# ─────────────────────────────────────────────────────────────
 
-    if re.search(r'\bflip\b|\bmirror\b', p):
-        axis = 'horizontal' if 'horizontal' in p or 'left' in p or 'right' in p else 'vertical'
-        return ('flip', {'axis': axis})
+def call_claude(conversation_history: list, user_text: str, image_pil=None) -> str:
+    """
+    conversation_history: previous turns [{role, content}, ...]
+    Appends the new user message and calls Claude.
+    Returns Claude's reply as a string.
+    """
+    new_content = []
 
-    if re.search(r'\bresize\b|\bscale\b', p):
-        w = h = None
-        m = re.search(r'(\d+)\s*[x×]\s*(\d+)', p)
-        if m: w, h = int(m.group(1)), int(m.group(2))
-        mw = re.search(r'width[^\d]*(\d+)', p)
-        mh = re.search(r'height[^\d]*(\d+)', p)
-        if mw: w = int(mw.group(1))
-        if mh: h = int(mh.group(1))
-        pct = re.search(r'(\d+)\s*%', p)
-        if pct: return ('resize_pct', {'pct': int(pct.group(1))})
-        return ('resize', {'width': w or 512, 'height': h or 512})
+    if image_pil:
+        new_content.append({
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": "image/jpeg",
+                "data": img_to_b64_raw(image_pil)
+            }
+        })
 
-    if re.search(r'\bcrop\b', p):
-        nums = re.findall(r'\d+', p)
-        if len(nums) >= 4:
-            box = tuple(int(n) for n in nums[:4])
-        else:
-            box = None
-        return ('crop', {'box': box})
+    new_content.append({
+        "type": "text",
+        "text": user_text if user_text else "Please describe and analyze this image in detail."
+    })
 
-    if re.search(r'\bthumbnail\b', p):
-        return ('thumbnail', {})
+    messages = list(conversation_history) + [{"role": "user", "content": new_content}]
 
-    # --- Color / Filter Operations ---
-    if re.search(r'\bgrayscale\b|\bgrey\b|\bgray\b|\bblack.?and.?white\b|\bb&w\b', p):
-        return ('grayscale', {})
+    response = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=1024,
+        system=SYSTEM_PROMPT,
+        messages=messages
+    )
 
-    if re.search(r'\binvert\b|\bnegative\b', p):
-        return ('invert', {})
+    return response.content[0].text
 
-    if re.search(r'\bsepia\b', p):
-        return ('sepia', {})
 
-    if re.search(r'\bblur\b|\bsmooth\b', p):
-        radius = 2
-        m = re.search(r'radius[^\d]*(\d+)', p)
-        if m: radius = int(m.group(1))
-        return ('blur', {'radius': radius})
+# ─────────────────────────────────────────────────────────────
+#  PARSE OPERATION TAG FROM CLAUDE RESPONSE
+# ─────────────────────────────────────────────────────────────
 
-    if re.search(r'\bsharpen\b|\bsharp\b', p):
-        return ('sharpen', {})
+def extract_op(reply: str):
+    """
+    Looks for <OP>{...}</OP> tag in Claude's reply.
+    Returns (clean_reply, intent, params).
+    """
+    match = re.search(r'<OP>(.*?)</OP>', reply, re.DOTALL)
+    if not match:
+        return reply, None, {}
 
-    if re.search(r'\bedge\b|\bdetect\b', p):
-        return ('edge', {})
+    clean_reply = reply[:match.start()].strip()
+    try:
+        op_data = json.loads(match.group(1))
+        return clean_reply, op_data.get("intent"), op_data.get("params", {})
+    except Exception:
+        return clean_reply, None, {}
 
-    if re.search(r'\bemboss\b', p):
-        return ('emboss', {})
 
-    if re.search(r'\bcontrast\b', p):
-        factor = 1.5
-        m = re.search(r'([\d.]+)', p)
-        if m: factor = float(m.group(1))
-        if 'increase' in p or 'enhance' in p or 'boost' in p: factor = max(factor, 1.5)
-        if 'decrease' in p or 'reduce'  in p or 'lower'  in p: factor = min(factor, 0.5)
-        return ('contrast', {'factor': factor})
-
-    if re.search(r'\bbrightness\b|\bbright\b', p):
-        factor = 1.5
-        if 'decrease' in p or 'reduce' in p or 'dark' in p: factor = 0.5
-        m = re.search(r'([\d.]+)', p)
-        if m: factor = float(m.group(1))
-        return ('brightness', {'factor': factor})
-
-    if re.search(r'\bsaturation\b|\bsaturate\b|\bvibrance\b', p):
-        factor = 1.5
-        if 'decrease' in p or 'reduce' in p: factor = 0.5
-        return ('saturation', {'factor': factor})
-
-    if re.search(r'\bhue\b', p):
-        return ('hue', {})
-
-    if re.search(r'\bpixelate\b|\bpixel\b', p):
-        size = 10
-        m = re.search(r'(\d+)', p)
-        if m: size = int(m.group(1))
-        return ('pixelate', {'size': size})
-
-    if re.search(r'\bnoise\b|\bgrain\b', p):
-        return ('noise', {})
-
-    if re.search(r'\bvignette\b', p):
-        return ('vignette', {})
-
-    if re.search(r'\bcartoon\b|\bsketch\b|\bdraw\b', p):
-        return ('cartoon', {})
-
-    if re.search(r'\bwatercolor\b', p):
-        return ('watercolor', {})
-
-    # --- Medical / Enhancement ---
-    if re.search(r'\bclahe\b|\bhistogram\b|\bequali', p):
-        return ('clahe', {})
-
-    if re.search(r'\bdenoise\b|\bdistort\b|\bnoise remov', p):
-        return ('denoise', {})
-
-    if re.search(r'\bxray\b|x-ray|x ray', p):
-        return ('xray_enhance', {})
-
-    if re.search(r'\bsegment\b|\bthreshold\b|\botsu\b', p):
-        return ('segment', {})
-
-    if re.search(r'\bmorph\b|\bdilate\b|\berode\b', p):
-        op = 'dilate' if 'dilate' in p else 'erode'
-        return ('morphology', {'op': op})
-
-    if re.search(r'\bsobel\b|\bgradient\b', p):
-        return ('sobel', {})
-
-    if re.search(r'\bcanny\b', p):
-        return ('canny', {})
-
-    # --- Info ---
-    if re.search(r'\bsize\b|\bdimension\b|\bwidth\b|\bheight\b|\binfo\b|\bdetail\b', p):
-        return ('info', {})
-
-    return ('chat', {})
-
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 #  IMAGE PROCESSORS
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 
 def process_image(img: Image.Image, intent: str, params: dict):
-    """Apply the requested operation and return (result_img, description)."""
+    """Apply requested operation. Returns (result_img or None, description)."""
 
-    # ── Basic ──────────────────────────────────
     if intent == 'rotate':
         angle = params.get('angle', 90)
-        result = img.rotate(-angle, expand=True)
-        return result, f"✅ Rotated image by {angle}°."
+        return img.rotate(-angle, expand=True), f"✅ Rotated {angle}°."
 
     if intent == 'flip':
         axis = params.get('axis', 'horizontal')
-        result = ImageOps.mirror(img) if axis == 'horizontal' else ImageOps.flip(img)
-        return result, f"✅ Flipped image {axis}ly."
+        r = ImageOps.mirror(img) if axis == 'horizontal' else ImageOps.flip(img)
+        return r, f"✅ Flipped {axis}ly."
 
     if intent == 'resize':
-        w, h = params.get('width', 512), params.get('height', 512)
-        result = img.resize((w, h), Image.LANCZOS)
-        return result, f"✅ Resized to {w}×{h} px."
+        w, h = int(params.get('width', 512)), int(params.get('height', 512))
+        return img.resize((w, h), Image.LANCZOS), f"✅ Resized to {w}×{h}px."
 
     if intent == 'resize_pct':
         pct = params.get('pct', 50) / 100
         nw, nh = int(img.width * pct), int(img.height * pct)
-        result = img.resize((nw, nh), Image.LANCZOS)
-        return result, f"✅ Resized to {pct*100:.0f}% → {nw}×{nh} px."
+        return img.resize((nw, nh), Image.LANCZOS), f"✅ Resized to {pct*100:.0f}% ({nw}×{nh}px)."
 
     if intent == 'crop':
         box = params.get('box')
-        if box is None:
-            w, h = img.size
-            box = (w//4, h//4, 3*w//4, 3*h//4)
-        result = img.crop(box)
-        return result, f"✅ Cropped to box {box}."
+        if not box:
+            w, h = img.size; box = [w//4, h//4, 3*w//4, 3*h//4]
+        return img.crop(tuple(int(x) for x in box)), f"✅ Cropped."
 
     if intent == 'thumbnail':
-        result = img.copy()
-        result.thumbnail((256, 256), Image.LANCZOS)
-        return result, "✅ Created 256×256 thumbnail."
+        r = img.copy(); r.thumbnail((256, 256), Image.LANCZOS)
+        return r, "✅ Thumbnail (256×256) created."
 
-    # ── Color / Filters ────────────────────────
     if intent == 'grayscale':
-        result = ImageOps.grayscale(img).convert("RGB")
-        return result, "✅ Converted to grayscale."
+        return ImageOps.grayscale(img).convert("RGB"), "✅ Converted to grayscale."
 
     if intent == 'invert':
-        result = ImageOps.invert(img)
-        return result, "✅ Inverted (negative) image."
+        return ImageOps.invert(img), "✅ Inverted (negative effect)."
 
     if intent == 'sepia':
         gray = np.array(ImageOps.grayscale(img))
-        sepia = np.stack([
-            np.clip(gray * 1.08, 0, 255),
-            np.clip(gray * 0.85, 0, 255),
-            np.clip(gray * 0.66, 0, 255)
-        ], axis=2).astype(np.uint8)
-        return Image.fromarray(sepia), "✅ Applied sepia tone."
+        s = np.stack([np.clip(gray*1.08,0,255), np.clip(gray*0.85,0,255), np.clip(gray*0.66,0,255)], axis=2).astype(np.uint8)
+        return Image.fromarray(s), "✅ Sepia tone applied."
 
     if intent == 'blur':
-        radius = params.get('radius', 2)
-        result = img.filter(ImageFilter.GaussianBlur(radius=radius))
-        return result, f"✅ Applied Gaussian blur (radius={radius})."
+        r = params.get('radius', 2)
+        return img.filter(ImageFilter.GaussianBlur(radius=r)), f"✅ Gaussian blur (radius={r}) applied."
 
     if intent == 'sharpen':
-        result = img.filter(ImageFilter.UnsharpMask(radius=2, percent=150, threshold=3))
-        return result, "✅ Sharpened image."
+        return img.filter(ImageFilter.UnsharpMask(radius=2, percent=150, threshold=3)), "✅ Sharpened."
 
     if intent == 'edge':
-        result = img.filter(ImageFilter.FIND_EDGES)
-        return result, "✅ Applied edge detection."
+        return img.filter(ImageFilter.FIND_EDGES), "✅ Edge detection applied."
 
     if intent == 'emboss':
-        result = img.filter(ImageFilter.EMBOSS)
-        return result, "✅ Applied emboss effect."
+        return img.filter(ImageFilter.EMBOSS), "✅ Emboss effect applied."
 
     if intent == 'contrast':
-        factor = params.get('factor', 1.5)
-        result = ImageEnhance.Contrast(img).enhance(factor)
-        return result, f"✅ Contrast adjusted (factor={factor:.1f})."
+        f = float(params.get('factor', 1.6))
+        return ImageEnhance.Contrast(img).enhance(f), f"✅ Contrast enhanced (×{f:.1f})."
 
     if intent == 'brightness':
-        factor = params.get('factor', 1.5)
-        result = ImageEnhance.Brightness(img).enhance(factor)
-        return result, f"✅ Brightness adjusted (factor={factor:.1f})."
+        f = float(params.get('factor', 1.4))
+        return ImageEnhance.Brightness(img).enhance(f), f"✅ Brightness adjusted (×{f:.1f})."
 
     if intent == 'saturation':
-        factor = params.get('factor', 1.5)
-        result = ImageEnhance.Color(img).enhance(factor)
-        return result, f"✅ Saturation adjusted (factor={factor:.1f})."
+        f = float(params.get('factor', 1.5))
+        return ImageEnhance.Color(img).enhance(f), f"✅ Saturation adjusted (×{f:.1f})."
 
     if intent == 'hue':
-        hsv = cv2.cvtColor(pil_to_cv2(img), cv2.COLOR_BGR2HSV).astype(np.float32)
-        hsv[:, :, 0] = (hsv[:, :, 0] + 30) % 180
-        result = cv2_to_pil(cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR))
-        return result, "✅ Hue shifted by 30°."
+        cv_img = pil_to_cv2(img)
+        hsv = cv2.cvtColor(cv_img, cv2.COLOR_BGR2HSV).astype(np.float32)
+        hsv[:,:,0] = (hsv[:,:,0] + 30) % 180
+        return cv2_to_pil(cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)), "✅ Hue shifted by 30°."
 
     if intent == 'pixelate':
-        size = params.get('size', 10)
-        small = img.resize((img.width // size, img.height // size), Image.NEAREST)
-        result = small.resize(img.size, Image.NEAREST)
-        return result, f"✅ Pixelated (block size={size})."
+        sz = max(2, int(params.get('size', 10)))
+        small = img.resize((max(1,img.width//sz), max(1,img.height//sz)), Image.NEAREST)
+        return small.resize(img.size, Image.NEAREST), f"✅ Pixelated (block={sz}px)."
 
     if intent == 'noise':
-        arr = np.array(img, dtype=np.float32)
-        noise_arr = arr + np.random.normal(0, 25, arr.shape)
-        result = Image.fromarray(np.clip(noise_arr, 0, 255).astype(np.uint8))
-        return result, "✅ Added random noise/grain."
+        arr = np.array(img, dtype=np.float32) + np.random.normal(0, 25, np.array(img).shape)
+        return Image.fromarray(np.clip(arr,0,255).astype(np.uint8)), "✅ Noise/grain added."
 
     if intent == 'vignette':
         cv_img = pil_to_cv2(img)
         rows, cols = cv_img.shape[:2]
-        kern_x = cv2.getGaussianKernel(cols, cols * 0.5)
-        kern_y = cv2.getGaussianKernel(rows, rows * 0.5)
-        kernel = kern_y * kern_x.T
-        mask = kernel / kernel.max()
-        result_arr = (cv_img * mask[:, :, np.newaxis]).astype(np.uint8)
-        return cv2_to_pil(result_arr), "✅ Applied vignette effect."
+        kx = cv2.getGaussianKernel(cols, cols*0.5)
+        ky = cv2.getGaussianKernel(rows, rows*0.5)
+        mask = ky * kx.T; mask = mask / mask.max()
+        return cv2_to_pil((cv_img * mask[:,:,np.newaxis]).astype(np.uint8)), "✅ Vignette applied."
 
     if intent == 'cartoon':
         cv_img = pil_to_cv2(img)
         gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
-        edges = cv2.adaptiveThreshold(
-            cv2.medianBlur(gray, 7), 255,
-            cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 9
-        )
+        edges = cv2.adaptiveThreshold(cv2.medianBlur(gray,7),255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,9,9)
         color = cv2.bilateralFilter(cv_img, 9, 300, 300)
-        result_arr = cv2.bitwise_and(color, color, mask=edges)
-        return cv2_to_pil(result_arr), "✅ Applied cartoon/sketch effect."
+        return cv2_to_pil(cv2.bitwise_and(color, color, mask=edges)), "✅ Cartoon effect applied."
 
     if intent == 'watercolor':
         cv_img = pil_to_cv2(img)
-        result_arr = cv2.stylization(cv_img, sigma_s=60, sigma_r=0.45)
-        return cv2_to_pil(result_arr), "✅ Applied watercolor effect."
+        return cv2_to_pil(cv2.stylization(cv_img, sigma_s=60, sigma_r=0.45)), "✅ Watercolor effect applied."
 
-    # ── Medical / Advanced ──────────────────────
     if intent == 'clahe':
         cv_img = pil_to_cv2(img)
         lab = cv2.cvtColor(cv_img, cv2.COLOR_BGR2LAB)
         l, a, b = cv2.split(lab)
-        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
-        lab_merged = cv2.merge([clahe.apply(l), a, b])
-        result = cv2_to_pil(cv2.cvtColor(lab_merged, cv2.COLOR_LAB2BGR))
-        return result, "✅ Applied CLAHE (Contrast Limited Adaptive Histogram Equalization) — great for medical images."
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+        merged = cv2.merge([clahe.apply(l), a, b])
+        return cv2_to_pil(cv2.cvtColor(merged, cv2.COLOR_LAB2BGR)), "✅ CLAHE histogram equalization applied."
 
     if intent == 'denoise':
         cv_img = pil_to_cv2(img)
-        result_arr = cv2.fastNlMeansDenoisingColored(cv_img, None, 10, 10, 7, 21)
-        return cv2_to_pil(result_arr), "✅ Denoised image using Non-Local Means algorithm."
+        return cv2_to_pil(cv2.fastNlMeansDenoisingColored(cv_img,None,10,10,7,21)), "✅ Denoised (Non-Local Means)."
 
     if intent == 'xray_enhance':
         gray = np.array(ImageOps.grayscale(img))
-        clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8, 8))
+        clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8,8))
         enhanced = clahe.apply(gray)
         sharpened = cv2.filter2D(enhanced, -1, np.array([[-1,-1,-1],[-1,9,-1],[-1,-1,-1]]))
-        result = Image.fromarray(sharpened).convert("RGB")
-        return result, "✅ Enhanced X-Ray/medical image with CLAHE + sharpening."
+        return Image.fromarray(sharpened).convert("RGB"), "✅ X-Ray / medical image enhanced."
 
     if intent == 'segment':
         gray = np.array(ImageOps.grayscale(img))
-        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        result = Image.fromarray(thresh).convert("RGB")
-        return result, "✅ Segmented image using Otsu thresholding."
+        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        return Image.fromarray(thresh).convert("RGB"), "✅ Otsu segmentation applied."
 
     if intent == 'morphology':
         op = params.get('op', 'dilate')
         gray = np.array(ImageOps.grayscale(img))
-        kernel = np.ones((5, 5), np.uint8)
-        if op == 'dilate':
-            out = cv2.dilate(gray, kernel, iterations=1)
-            msg = "✅ Applied morphological dilation."
-        else:
-            out = cv2.erode(gray, kernel, iterations=1)
-            msg = "✅ Applied morphological erosion."
-        return Image.fromarray(out).convert("RGB"), msg
+        k = np.ones((5,5), np.uint8)
+        out = cv2.dilate(gray, k) if op == 'dilate' else cv2.erode(gray, k)
+        return Image.fromarray(out).convert("RGB"), f"✅ Morphological {op} applied."
 
     if intent == 'sobel':
         gray = np.array(ImageOps.grayscale(img))
         gx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
         gy = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
-        mag = np.sqrt(gx**2 + gy**2)
-        mag = np.clip(mag / mag.max() * 255, 0, 255).astype(np.uint8)
-        return Image.fromarray(mag).convert("RGB"), "✅ Applied Sobel gradient (edge magnitude)."
+        mag = np.sqrt(gx**2+gy**2)
+        mag = np.clip(mag/mag.max()*255,0,255).astype(np.uint8)
+        return Image.fromarray(mag).convert("RGB"), "✅ Sobel gradient applied."
 
     if intent == 'canny':
         gray = np.array(ImageOps.grayscale(img))
-        edges = cv2.Canny(gray, 50, 150)
-        return Image.fromarray(edges).convert("RGB"), "✅ Applied Canny edge detection."
+        return Image.fromarray(cv2.Canny(gray,50,150)).convert("RGB"), "✅ Canny edge detection applied."
 
     if intent == 'info':
         w, h = img.size
-        mode = img.mode
         arr = np.array(img)
-        mean_r, mean_g, mean_b = arr[:,:,0].mean(), arr[:,:,1].mean(), arr[:,:,2].mean()
-        return None, (
-            f"📊 **Image Info:**\n"
-            f"- Size: {w} × {h} px\n"
-            f"- Mode: {mode}\n"
-            f"- Avg R: {mean_r:.1f} | G: {mean_g:.1f} | B: {mean_b:.1f}\n"
-            f"- Total pixels: {w*h:,}"
-        )
+        mr, mg, mb = arr[:,:,0].mean(), arr[:,:,1].mean(), arr[:,:,2].mean()
+        return None, (f"📊 **Image Info:**\n"
+                      f"Size: {w}×{h}px | Mode: {img.mode}\n"
+                      f"Avg RGB: ({mr:.0f}, {mg:.0f}, {mb:.0f}) | Total pixels: {w*h:,}")
 
     return None, None
 
-# ─────────────────────────────────────────────
-#  CHAT FALLBACK (rule-based)
-# ─────────────────────────────────────────────
 
-CHAT_REPLIES = {
-    r'hello|hi|hey': "👋 Hello! I'm Lumina, your AI image processing assistant. Upload an image and tell me what to do!",
-    r'who are you|what are you': "🌟 I'm **Lumina** — an AI-powered image processing chatbot. I can rotate, flip, resize, crop, apply filters, enhance medical images, and much more!",
-    r'what can you do|help|features|capabilities': (
-        "🎨 **Here's what I can do:**\n\n"
-        "**Basic Operations:**\n"
-        "• Rotate, flip, resize, crop, thumbnail\n\n"
-        "**Filters & Color:**\n"
-        "• Grayscale, sepia, invert, blur, sharpen\n"
-        "• Contrast, brightness, saturation, hue\n"
-        "• Cartoon, watercolor, emboss, edge detection\n"
-        "• Vignette, pixelate, noise\n\n"
-        "**Medical / Advanced:**\n"
-        "• CLAHE histogram equalization\n"
-        "• Denoise (Non-Local Means)\n"
-        "• X-Ray enhancement\n"
-        "• Segmentation (Otsu thresholding)\n"
-        "• Morphology (dilate/erode)\n"
-        "• Sobel gradient, Canny edge\n\n"
-        "Just upload an image and ask!"
-    ),
-    r'thank': "😊 You're welcome! Let me know if you need anything else.",
-    r'bye|goodbye': "👋 Goodbye! Come back anytime for more image processing!",
-}
-
-def get_chat_reply(prompt: str) -> str:
-    p = prompt.lower()
-    for pattern, reply in CHAT_REPLIES.items():
-        if re.search(pattern, p):
-            return reply
-    return (
-        "🤔 I'm not sure what you'd like me to do. "
-        "Try uploading an image and asking something like:\n"
-        "• *'Rotate 90 degrees'*\n"
-        "• *'Make it grayscale'*\n"
-        "• *'Increase contrast'*\n"
-        "• *'Apply CLAHE'*\n"
-        "• *'What can you do?'*"
-    )
-
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 #  ROUTES
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 
 @app.route("/")
 def index():
@@ -432,33 +324,70 @@ def index():
 @app.route("/process", methods=["POST"])
 def process():
     try:
-        prompt  = request.form.get("prompt", "").strip()
-        file    = request.files.get("image")
+        prompt       = request.form.get("prompt", "").strip()
+        history_raw  = request.form.get("history", "[]")
+        file         = request.files.get("image")
 
-        # ── No image attached ──────────────────
-        if file is None or file.filename == "":
-            reply = get_chat_reply(prompt)
-            return jsonify({"message": reply})
+        try:
+            conversation_history = json.loads(history_raw)
+        except Exception:
+            conversation_history = []
 
-        # ── Image provided ─────────────────────
-        img = file_to_pil(file)
-        intent, params = parse_intent(prompt)
+        image_pil = None
+        if file and file.filename:
+            image_pil = file_to_pil(file)
 
-        if intent == 'chat':
-            reply = get_chat_reply(prompt)
-            return jsonify({"message": reply})
+        # ── Call Claude with full conversation history ──────────
+        claude_reply = call_claude(conversation_history, prompt, image_pil)
 
-        result_img, description = process_image(img, intent, params)
+        # ── Extract any operation tag ───────────────────────────
+        clean_reply, intent, params = extract_op(claude_reply)
 
-        if result_img is None:
-            # info-only (no output image)
-            return jsonify({"message": description})
+        result_image_b64 = None
 
-        return jsonify({
-            "message": description,
-            "image": pil_to_base64(result_img)
+        if intent:
+            if image_pil:
+                result_img, _ = process_image(image_pil, intent, params or {})
+                if result_img:
+                    result_image_b64 = pil_to_base64(result_img)
+            else:
+                clean_reply += "\n\n📎 Please upload an image first so I can apply this operation!"
+
+        # ── Update conversation history ─────────────────────────
+        user_content = []
+        if image_pil:
+            user_content.append({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": "image/jpeg",
+                    "data": img_to_b64_raw(image_pil)
+                }
+            })
+        user_content.append({
+            "type": "text",
+            "text": prompt if prompt else "Analyze this image."
         })
 
+        updated_history = list(conversation_history) + [
+            {"role": "user",      "content": user_content},
+            {"role": "assistant", "content": clean_reply}
+        ]
+
+        # Keep last 20 turns (10 exchanges) to avoid token limits
+        if len(updated_history) > 20:
+            updated_history = updated_history[-20:]
+
+        return jsonify({
+            "message": clean_reply,
+            "image":   result_image_b64,
+            "history": updated_history
+        })
+
+    except anthropic.AuthenticationError:
+        return jsonify({"message": "⚠️ API key error. Please add your ANTHROPIC_API_KEY in Hugging Face Space → Settings → Secrets."}), 200
+    except anthropic.APIConnectionError:
+        return jsonify({"message": "⚠️ Could not reach the AI service. Please try again shortly."}), 200
     except Exception as e:
         return jsonify({"message": f"⚠️ Error: {str(e)}"}), 500
 
