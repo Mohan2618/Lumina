@@ -25,10 +25,13 @@ body {
 }
 .logo-wrap { display: flex; align-items: center; gap: 10px; }
 .logo-icon {
-  width: 36px; height: 36px; border-radius: 10px;
-  background: linear-gradient(135deg, #6a7bd1, #41e1ae);
-  display: flex; align-items: center; justify-content: center; font-size: 20px;
-  box-shadow: 0 4px 14px rgba(65,225,174,0.5);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: contain;
+  background: transparent;
+  box-shadow: 0 0 14px rgba(64, 196, 255, 0.8);
+  border: 1px solid rgba(0, 176, 255, 0.4);
 }
 .logo-text { font-size: 22px; font-weight: 700; color: white; letter-spacing: 0.5px; }
 .logo-text span { color: #41e1ae; }
@@ -72,7 +75,7 @@ body {
 }
 @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 .user-msg { align-self: flex-end; background: rgba(255,255,255,0.88); color: #1a1a2e; border-bottom-right-radius: 4px; }
-.bot-msg  { align-self: flex-start; background: var(--glass-dark); color: white; border-bottom-left-radius: 4px; backdrop-filter: blur(8px); }
+.bot-msg { align-self: flex-start; background: var(--glass-dark); color: white; border-bottom-left-radius: 4px; backdrop-filter: blur(8px); }
 .bot-msg code { background: rgba(255,255,255,0.15); padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; }
 .bot-msg strong { color: #41e1ae; }
 .chat-image-large { max-width: 100%; max-height: 380px; border-radius: 14px; margin-top: 8px; display: block; cursor: zoom-in; object-fit: contain; }
@@ -142,7 +145,7 @@ body {
 }
 .history-item:hover { background: rgba(255,255,255,0.15); }
 .history-item .title { font-size: 13px; font-weight: 600; flex: 1; word-break: break-word; }
-.history-item .date  { font-size: 11px; opacity: 0.5; white-space: nowrap; margin-top: 2px; }
+.history-item .date { font-size: 11px; opacity: 0.5; white-space: nowrap; margin-top: 2px; }
 .history-item .del-btn { background: transparent; border: none; color: rgba(255,255,255,0.4); cursor: pointer; font-size: 16px; }
 .history-item .del-btn:hover { color: #ff6b6b; }
 .profile-menu {
@@ -181,31 +184,34 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 </style>
 </head>
 <body>
-
 <header class="topbar">
   <div class="logo-wrap">
-    <div class="logo-icon">🌟</div>
+    <!-- 
+      CHANGE ONLY THIS LINE according to the exact filename you uploaded to Hugging Face
+      Examples:
+      src="logo.png"
+      src="lumina-logo.png"
+      src="images/logo.png"
+      src="assets/lumina.png"
+    -->
+    <img src="" alt="Lumina" class="logo-icon">
     <span class="logo-text">Lumi<span>na</span></span>
   </div>
   <div class="auth-buttons" id="authButtons">
     <button class="btn-outline" onclick="signIn()">Sign In</button>
-    <button class="btn-fill"    onclick="signUp()">Sign Up</button>
+    <button class="btn-fill" onclick="signUp()">Sign Up</button>
   </div>
   <div class="profile-avatar" id="profileAvatar" onclick="toggleProfileMenu(event)">A</div>
 </header>
-
 <div class="profile-menu" id="profileMenu">
   <div class="menu-header"><strong id="profileName">User</strong><br><span style="font-size:12px;opacity:0.6;">Free Plan</span></div>
   <div class="menu-item" onclick="openHelp()"><span class="material-icons">help_outline</span> Help</div>
   <div class="menu-item" onclick="newChat()"><span class="material-icons">add_circle_outline</span> New Chat</div>
   <div class="menu-item" onclick="logout()"><span class="material-icons">logout</span> Log Out</div>
 </div>
-
-<div class="watermark"     id="watermark">Lumina</div>
+<div class="watermark" id="watermark">Lumina</div>
 <div class="home-subtitle" id="homeSubtitle">Upload an image and ask me anything ✨</div>
-
 <div id="chatWrapper"><div id="chatArea"></div></div>
-
 <div class="prompt-wrap">
   <div class="prompt-container" id="promptContainer">
     <div id="attachmentPreview"></div>
@@ -221,13 +227,11 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     </div>
   </div>
 </div>
-
 <div class="bottom-tools">
-  <button onclick="newChat()"      title="New Chat">     <span class="material-icons">edit_note</span></button>
-  <button onclick="openHistory()"  title="Chat History"> <span class="material-icons">history</span></button>
+  <button onclick="newChat()" title="New Chat"> <span class="material-icons">edit_note</span></button>
+  <button onclick="openHistory()" title="Chat History"> <span class="material-icons">history</span></button>
   <button onclick="triggerUpload()" title="Upload Image"><span class="material-icons">image</span></button>
 </div>
-
 <div class="history-panel" id="historyPanel">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
     <h3 style="font-size:17px;">Chat History</h3>
@@ -235,76 +239,62 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   </div>
   <div id="historyList"></div>
 </div>
-
 <div class="modal-overlay" id="authModal">
   <div class="modal-box">
     <h3 id="authTitle">Sign In</h3>
     <div id="signupFields" style="display:none;flex-direction:column;gap:10px;">
       <input class="modal-input" id="firstName" placeholder="First Name">
-      <input class="modal-input" id="lastName"  placeholder="Last Name">
+      <input class="modal-input" id="lastName" placeholder="Last Name">
       <input class="modal-input" id="dob" type="date">
-      <input class="modal-input" id="email"     placeholder="Email">
-      <input class="modal-input" id="username"  placeholder="Username">
+      <input class="modal-input" id="email" placeholder="Email">
+      <input class="modal-input" id="username" placeholder="Username">
     </div>
     <input class="modal-input" id="loginIdentifier" placeholder="Email or Username">
     <input class="modal-input" id="password" type="password" placeholder="Password">
     <button class="modal-btn-primary" onclick="submitAuth()">Submit</button>
-    <button class="modal-btn-text"    onclick="forgotPassword()" id="forgotBtn">Forgot Password?</button>
-    <button class="modal-btn-text"    onclick="closeAuth()">Cancel</button>
+    <button class="modal-btn-text" onclick="forgotPassword()" id="forgotBtn">Forgot Password?</button>
+    <button class="modal-btn-text" onclick="closeAuth()">Cancel</button>
   </div>
 </div>
-
 <div class="lightbox" id="lightbox" onclick="this.style.display='none'">
   <img id="lightboxImg" alt="Preview">
 </div>
-
 <input type="file" id="fileInput" accept="image/*" multiple style="display:none"
   onchange="handleFileInputChange(event)">
-
 <script>
 (function () {
   'use strict';
-
-  /* ── ONE-TIME CLEANUP: remove old chats that stored base64 images ── */
   (function purgeOldImageChats() {
     try {
       const keys = Object.keys(localStorage);
       keys.forEach(key => {
         if (key.startsWith('lumina_chat_') || key === 'berryChats') {
           const val = localStorage.getItem(key) || '';
-          // If it contains base64 image data, delete it
           if (val.includes('data:image') || val.includes('base64')) {
             localStorage.removeItem(key);
           }
         }
       });
-      // Also clean up old Berry-era keys
       if (localStorage.getItem('berryChats')) localStorage.removeItem('berryChats');
     } catch(e) {}
   })();
-
-  let chatStarted   = false;
-  let generating    = false;
+  let chatStarted = false;
+  let generating = false;
   let attachedFiles = [];
-  let conversationHistory = [];   // TEXT ONLY — no image data
+  let conversationHistory = [];
   let currentChatTitle = null;
-  let currentChatKey   = null;
-
-  const MAX_SIZE  = 10 * 1024 * 1024;
-  const ALLOWED   = ['image/jpeg','image/png','image/webp','image/gif','image/bmp'];
-  const LS_INDEX  = 'lumina_index';
+  let currentChatKey = null;
+  const MAX_SIZE = 10 * 1024 * 1024;
+  const ALLOWED = ['image/jpeg','image/png','image/webp','image/gif','image/bmp'];
+  const LS_INDEX = 'lumina_index';
   const LS_PREFIX = 'lumina_chat_';
-
-  /* ── CHAT MODE ── */
   function startChatMode() {
     if (chatStarted) return;
     chatStarted = true;
-    document.getElementById('watermark').style.display    = 'none';
+    document.getElementById('watermark').style.display = 'none';
     document.getElementById('homeSubtitle').style.display = 'none';
-    document.getElementById('chatWrapper').style.display  = 'block';
+    document.getElementById('chatWrapper').style.display = 'block';
   }
-
-  /* ── ADD MESSAGE ── */
   function addMsg(content, role, isHTML=false) {
     const div = document.createElement('div');
     div.classList.add('chat-msg', role==='user' ? 'user-msg' : 'bot-msg');
@@ -312,7 +302,6 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     document.getElementById('chatArea').appendChild(div);
     scrollChat(); return div;
   }
-
   function addImageMsg(src, role) {
     const div = document.createElement('div');
     div.classList.add('chat-msg', role==='user' ? 'user-msg' : 'bot-msg');
@@ -323,13 +312,10 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     document.getElementById('chatArea').appendChild(div);
     scrollChat();
   }
-
   function scrollChat() {
     const w = document.getElementById('chatWrapper');
     setTimeout(() => { w.scrollTop = w.scrollHeight; }, 60);
   }
-
-  /* ── TYPING ── */
   function showTyping() {
     const div = document.createElement('div');
     div.classList.add('chat-msg','bot-msg'); div.id = 'typing';
@@ -337,67 +323,49 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     document.getElementById('chatArea').appendChild(div); scrollChat();
   }
   function removeTyping() { const t=document.getElementById('typing'); if(t) t.remove(); }
-
-  /* ── FORMAT ── */
   function formatReply(text) {
     return text
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g,     '<em>$1</em>')
-      .replace(/`([^`]+)`/g,     '<code>$1</code>')
-      .replace(/\n/g,            '<br>');
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\n/g, '<br>');
   }
-
-  /* ── SEND ── */
   window.sendMessage = async function () {
     if (generating) return;
-    const input   = document.getElementById('promptInput');
-    const text    = input.value.trim();
+    const input = document.getElementById('promptInput');
+    const text = input.value.trim();
     const hasFiles = attachedFiles.length > 0;
     if (!text && !hasFiles) return;
-
     generating = true;
     document.getElementById('actionIcon').textContent = 'stop';
     startChatMode();
-
     if (!currentChatTitle) {
       currentChatTitle = text || 'Image uploaded';
-      currentChatKey   = LS_PREFIX + Date.now();
+      currentChatKey = LS_PREFIX + Date.now();
     }
-
-    if (text)     addMsg(text, 'user');
+    if (text) addMsg(text, 'user');
     if (hasFiles) attachedFiles.forEach(f => addImageMsg(f, 'user'));
-
     const promptText = text;
     const fileToSend = attachedFiles[0] || null;
-    input.value  = '';
+    input.value = '';
     attachedFiles = [];
     renderPreviews();
     showTyping();
-
     try {
       const fd = new FormData();
-      fd.append('prompt',  promptText);
-      // Send TEXT-ONLY history — no image data to avoid 413
+      fd.append('prompt', promptText);
       fd.append('history', JSON.stringify(conversationHistory));
-
       if (fileToSend) {
         const blob = await (await fetch(fileToSend)).blob();
         fd.append('image', blob, 'upload.jpg');
       }
-
       const res = await fetch('/process', { method:'POST', body:fd });
       removeTyping();
-
       if (!res.ok) { addMsg('⚠️ Server error: ' + await res.text(), 'bot'); return; }
-
       const data = await res.json();
-
-      // Update text-only history from server response
       if (data.history) conversationHistory = data.history;
-
       if (data.message) addMsg(formatReply(data.message), 'bot', true);
-      if (data.image)   addImageMsg(data.image, 'bot');
-
+      if (data.image) addImageMsg(data.image, 'bot');
       saveChatHistory();
     } catch (err) {
       removeTyping();
@@ -407,43 +375,32 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
       document.getElementById('actionIcon').textContent = 'arrow_upward';
     }
   };
-
-  /* ── NEW CHAT ── */
   window.newChat = function () {
-    document.getElementById('chatArea').innerHTML         = '';
-    document.getElementById('chatWrapper').style.display  = 'none';
-    document.getElementById('watermark').style.display    = 'block';
+    document.getElementById('chatArea').innerHTML = '';
+    document.getElementById('chatWrapper').style.display = 'none';
+    document.getElementById('watermark').style.display = 'block';
     document.getElementById('homeSubtitle').style.display = 'block';
     chatStarted = false; attachedFiles = []; conversationHistory = [];
     currentChatTitle = null; currentChatKey = null;
     renderPreviews();
     document.getElementById('profileMenu').style.display = 'none';
   };
-
-  /* ── SAVE HISTORY  (NO images — text labels only) ── */
   function saveChatHistory() {
     if (!currentChatKey || !currentChatTitle) return;
-
-    // Strip ALL img tags — never store base64 in localStorage
-    const rawHTML   = document.getElementById('chatArea').innerHTML;
+    const rawHTML = document.getElementById('chatArea').innerHTML;
     const cleanHTML = rawHTML.replace(/<img[^>]*>/gi,
       '<span style="color:rgba(255,255,255,0.45);font-size:12px;">[image]</span>');
-
     const chatData = {
-      title:   currentChatTitle,
-      html:    cleanHTML,
+      title: currentChatTitle,
+      html: cleanHTML,
       history: conversationHistory,
-      ts:      Date.now()
+      ts: Date.now()
     };
-
     const serialized = JSON.stringify(chatData);
-    // If single chat is still too large, skip saving silently
     if (serialized.length > 200000) return;
-
     try {
       localStorage.setItem(currentChatKey, serialized);
     } catch(e) {
-      // Storage full — wipe ALL old lumina/berry chats and retry once
       try {
         Object.keys(localStorage).forEach(k => {
           if (k.startsWith('lumina_chat_') || k.startsWith('berry')) {
@@ -452,28 +409,20 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
         });
         localStorage.removeItem(LS_INDEX);
         localStorage.setItem(currentChatKey, serialized);
-      } catch(e2) {
-        // Give up silently — chat still works, just won't be saved
-        return;
-      }
+      } catch(e2) {}
     }
-
     const idx = getChatIndex().filter(c => c.key !== currentChatKey);
     const trimmed = idx.slice(-19);
     trimmed.push({ key: currentChatKey, title: currentChatTitle, ts: Date.now() });
     updateChatIndex(trimmed);
   }
-
-  function getChatIndex()     { try { return JSON.parse(localStorage.getItem(LS_INDEX)||'[]'); } catch { return []; } }
+  function getChatIndex() { try { return JSON.parse(localStorage.getItem(LS_INDEX)||'[]'); } catch { return []; } }
   function updateChatIndex(a) { localStorage.setItem(LS_INDEX, JSON.stringify(a)); }
-
-  /* ── HISTORY PANEL ── */
   window.openHistory = function () {
     document.getElementById('historyPanel').style.display = 'block';
     renderHistoryList();
   };
   window.closeHistory = function () { document.getElementById('historyPanel').style.display = 'none'; };
-
   function renderHistoryList() {
     const list = document.getElementById('historyList');
     list.innerHTML = '';
@@ -493,57 +442,47 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
       list.appendChild(item);
     });
   }
-
   window.deleteChat = function (e, key) {
     e.stopPropagation(); localStorage.removeItem(key);
     updateChatIndex(getChatIndex().filter(c => c.key !== key));
     renderHistoryList();
   };
-
   function loadChat(key) {
     const raw = localStorage.getItem(key); if (!raw) return;
     try {
       const data = JSON.parse(raw);
       document.getElementById('chatArea').innerHTML = data.html || '';
       conversationHistory = data.history || [];
-      currentChatTitle    = data.title   || null;
-      currentChatKey      = key;
+      currentChatTitle = data.title || null;
+      currentChatKey = key;
       document.querySelectorAll('.chat-image-large').forEach(img => { img.onclick = () => openLightbox(img.src); });
       startChatMode(); closeHistory(); scrollChat();
     } catch(e) { console.error(e); }
   }
-
-  /* ── UPLOAD ── */
   window.triggerUpload = function () { document.getElementById('fileInput').click(); };
   window.handleFileInputChange = function (e) { handleFiles(Array.from(e.target.files)); e.target.value = ''; };
-
   function handleFiles(files) {
     files.forEach(file => {
       if (!ALLOWED.includes(file.type)) { alert('Only images allowed (JPG, PNG, WEBP, GIF, BMP).'); return; }
-      if (file.size > MAX_SIZE)         { alert('File exceeds 10MB limit.'); return; }
+      if (file.size > MAX_SIZE) { alert('File exceeds 10MB limit.'); return; }
       const reader = new FileReader();
       reader.onload = ev => { attachedFiles.push(ev.target.result); renderPreviews(); };
       reader.readAsDataURL(file);
     });
   }
-
   function renderPreviews() {
     const box = document.getElementById('attachmentPreview'); box.innerHTML = '';
     attachedFiles.forEach((src,i) => {
       const wrap = document.createElement('div'); wrap.className = 'attach-thumb';
-      const img  = document.createElement('img'); img.src = src; img.onclick = () => openLightbox(src);
-      const rm   = document.createElement('div'); rm.className = 'attach-remove'; rm.innerHTML = '×';
+      const img = document.createElement('img'); img.src = src; img.onclick = () => openLightbox(src);
+      const rm = document.createElement('div'); rm.className = 'attach-remove'; rm.innerHTML = '×';
       rm.onclick = () => { attachedFiles.splice(i,1); renderPreviews(); };
       wrap.appendChild(img); wrap.appendChild(rm); box.appendChild(wrap);
     });
   }
-
-  /* ── DRAG & DROP ── */
   document.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dragging-over'); });
   document.addEventListener('dragleave', e => { if(!e.relatedTarget) document.body.classList.remove('dragging-over'); });
   document.addEventListener('drop', e => { e.preventDefault(); document.body.classList.remove('dragging-over'); handleFiles(Array.from(e.dataTransfer.files)); });
-
-  /* ── MIC ── */
   window.micAction = function () {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { alert('Voice input requires Chrome or Edge.'); return; }
@@ -551,27 +490,23 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     rec.onresult = e => { document.getElementById('promptInput').value = e.results[0][0].transcript; };
     rec.start();
   };
-
-  /* ── LIGHTBOX ── */
   function openLightbox(src) { document.getElementById('lightboxImg').src = src; document.getElementById('lightbox').style.display = 'flex'; }
-
-  /* ── AUTH ── */
   let authMode = 'signin';
   window.signIn = function () {
     authMode = 'signin';
-    document.getElementById('authTitle').innerText           = 'Sign In';
-    document.getElementById('signupFields').style.display    = 'none';
+    document.getElementById('authTitle').innerText = 'Sign In';
+    document.getElementById('signupFields').style.display = 'none';
     document.getElementById('loginIdentifier').style.display = 'block';
-    document.getElementById('forgotBtn').style.display       = 'block';
-    document.getElementById('authModal').style.display       = 'flex';
+    document.getElementById('forgotBtn').style.display = 'block';
+    document.getElementById('authModal').style.display = 'flex';
   };
   window.signUp = function () {
     authMode = 'signup';
-    document.getElementById('authTitle').innerText           = 'Create Account';
-    document.getElementById('signupFields').style.display    = 'flex';
+    document.getElementById('authTitle').innerText = 'Create Account';
+    document.getElementById('signupFields').style.display = 'flex';
     document.getElementById('loginIdentifier').style.display = 'none';
-    document.getElementById('forgotBtn').style.display       = 'none';
-    document.getElementById('authModal').style.display       = 'flex';
+    document.getElementById('forgotBtn').style.display = 'none';
+    document.getElementById('authModal').style.display = 'flex';
   };
   window.closeAuth = function () { document.getElementById('authModal').style.display = 'none'; };
   window.submitAuth = function () {
@@ -603,9 +538,9 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     alert('Your password: '+s.password);
   };
   window.logout = function () {
-    document.getElementById('authButtons').style.display   = 'flex';
+    document.getElementById('authButtons').style.display = 'flex';
     document.getElementById('profileAvatar').style.display = 'none';
-    document.getElementById('profileMenu').style.display   = 'none';
+    document.getElementById('profileMenu').style.display = 'none';
   };
   window.toggleProfileMenu = function (e) {
     e.stopPropagation();
@@ -613,15 +548,11 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     m.style.display = m.style.display==='block' ? 'none' : 'block';
   };
   document.addEventListener('click', () => { document.getElementById('profileMenu').style.display='none'; });
-
   window.openHelp = function () {
     alert('Lumina – What I can do:\n\nDescribe: Describe this image, What\'s in this photo?\nBasic: Rotate, flip, resize, crop\nFilters: Grayscale, sepia, blur, sharpen, cartoon, watercolor\nColor: Contrast, brightness, saturation, hue\nMedical: CLAHE, denoise, X-ray enhance, segmentation\nAdvanced: Edge detection, Canny, Sobel, morphology\n\nJust upload and ask!');
   };
-
-  /* ── UTILS ── */
   function truncate(s,n) { return s.length>n ? s.slice(0,n)+'…' : s; }
   function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
 })();
 </script>
 </body>
