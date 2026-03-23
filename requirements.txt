@@ -2,5 +2,5 @@ flask>=2.3.0
 Pillow>=10.0.0
 numpy>=1.24.0
 opencv-python-headless>=4.8.0
-anthropic>=0.25.0
+google-generativeai>=0.7.0
 gunicorn>=21.0.0
