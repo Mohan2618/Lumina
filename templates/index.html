@@ -53,18 +53,10 @@ body {
   font-size: clamp(60px,12vw,110px); font-weight: 800; letter-spacing: 6px;
   color: rgba(255,255,255,0.09); pointer-events: none; user-select: none;
 }
-.home-subtitle-container {
-  position: absolute; top: 56%; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; justify-content: center; gap: 12px;
-  pointer-events: none; white-space: nowrap;
-}
 .home-subtitle {
+  position: absolute; top: 56%; left: 50%; transform: translateX(-50%);
   color: rgba(255,255,255,0.5); font-size: 15px; text-align: center;
-}
-.central-logo-img {
-  width: 28px; height: 28px; object-fit: contain;
-  /* Applying filter for visibility, just like the navigation icons */
-  filter: drop-shadow(0 4px 14px rgba(65,225,174,0.5)); 
+  pointer-events: none; white-space: nowrap;
 }
 #chatWrapper {
   position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
@@ -209,13 +201,8 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   <div class="menu-item" onclick="logout()"><span class="material-icons">logout</span> Log Out</div>
 </div>
 
-<div class="watermark" id="watermark">Lumina</div>
-
-<div class="home-subtitle-container" id="homeSubtitleContainer">
-  <div class="home-subtitle">Upload an image and ask me anything ✨</div>
-  <img src="https://www.brandcrowd.com/share/c19b90d4-2d3c-4fcd-8142-bd550066e8b4/image.png" 
-       class="central-logo-img" alt="Lumina Logo">
-</div>
+<div class="watermark"     id="watermark">Lumina</div>
+<div class="home-subtitle" id="homeSubtitle">Upload an image and ask me anything ✨</div>
 
 <div id="chatWrapper"><div id="chatArea"></div></div>
 
@@ -278,10 +265,28 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 (function () {
   'use strict';
 
+  /* ── ONE-TIME CLEANUP: remove old chats that stored base64 images ── */
+  (function purgeOldImageChats() {
+    try {
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('lumina_chat_') || key === 'berryChats') {
+          const val = localStorage.getItem(key) || '';
+          // If it contains base64 image data, delete it
+          if (val.includes('data:image') || val.includes('base64')) {
+            localStorage.removeItem(key);
+          }
+        }
+      });
+      // Also clean up old Berry-era keys
+      if (localStorage.getItem('berryChats')) localStorage.removeItem('berryChats');
+    } catch(e) {}
+  })();
+
   let chatStarted   = false;
   let generating    = false;
   let attachedFiles = [];
-  let conversationHistory = [];
+  let conversationHistory = [];   // TEXT ONLY — no image data
   let currentChatTitle = null;
   let currentChatKey   = null;
 
@@ -290,14 +295,16 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   const LS_INDEX  = 'lumina_index';
   const LS_PREFIX = 'lumina_chat_';
 
+  /* ── CHAT MODE ── */
   function startChatMode() {
     if (chatStarted) return;
     chatStarted = true;
     document.getElementById('watermark').style.display    = 'none';
-    document.getElementById('homeSubtitleContainer').style.display = 'none';
+    document.getElementById('homeSubtitle').style.display = 'none';
     document.getElementById('chatWrapper').style.display  = 'block';
   }
 
+  /* ── ADD MESSAGE ── */
   function addMsg(content, role, isHTML=false) {
     const div = document.createElement('div');
     div.classList.add('chat-msg', role==='user' ? 'user-msg' : 'bot-msg');
@@ -322,6 +329,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     setTimeout(() => { w.scrollTop = w.scrollHeight; }, 60);
   }
 
+  /* ── TYPING ── */
   function showTyping() {
     const div = document.createElement('div');
     div.classList.add('chat-msg','bot-msg'); div.id = 'typing';
@@ -330,6 +338,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   }
   function removeTyping() { const t=document.getElementById('typing'); if(t) t.remove(); }
 
+  /* ── FORMAT ── */
   function formatReply(text) {
     return text
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -338,6 +347,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
       .replace(/\n/g,            '<br>');
   }
 
+  /* ── SEND ── */
   window.sendMessage = async function () {
     if (generating) return;
     const input   = document.getElementById('promptInput');
@@ -367,6 +377,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     try {
       const fd = new FormData();
       fd.append('prompt',  promptText);
+      // Send TEXT-ONLY history — no image data to avoid 413
       fd.append('history', JSON.stringify(conversationHistory));
 
       if (fileToSend) {
@@ -380,7 +391,10 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
       if (!res.ok) { addMsg('⚠️ Server error: ' + await res.text(), 'bot'); return; }
 
       const data = await res.json();
+
+      // Update text-only history from server response
       if (data.history) conversationHistory = data.history;
+
       if (data.message) addMsg(formatReply(data.message), 'bot', true);
       if (data.image)   addImageMsg(data.image, 'bot');
 
@@ -394,33 +408,66 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     }
   };
 
+  /* ── NEW CHAT ── */
   window.newChat = function () {
     document.getElementById('chatArea').innerHTML         = '';
     document.getElementById('chatWrapper').style.display  = 'none';
     document.getElementById('watermark').style.display    = 'block';
-    document.getElementById('homeSubtitleContainer').style.display = 'flex';
+    document.getElementById('homeSubtitle').style.display = 'block';
     chatStarted = false; attachedFiles = []; conversationHistory = [];
     currentChatTitle = null; currentChatKey = null;
     renderPreviews();
     document.getElementById('profileMenu').style.display = 'none';
   };
 
+  /* ── SAVE HISTORY  (NO images — text labels only) ── */
   function saveChatHistory() {
     if (!currentChatKey || !currentChatTitle) return;
+
+    // Strip ALL img tags — never store base64 in localStorage
     const rawHTML   = document.getElementById('chatArea').innerHTML;
-    const cleanHTML = rawHTML.replace(/<img[^>]*>/gi, '<span style="color:rgba(255,255,255,0.45);font-size:12px;">[image]</span>');
-    const chatData = { title: currentChatTitle, html: cleanHTML, history: conversationHistory, ts: Date.now() };
+    const cleanHTML = rawHTML.replace(/<img[^>]*>/gi,
+      '<span style="color:rgba(255,255,255,0.45);font-size:12px;">[image]</span>');
+
+    const chatData = {
+      title:   currentChatTitle,
+      html:    cleanHTML,
+      history: conversationHistory,
+      ts:      Date.now()
+    };
+
+    const serialized = JSON.stringify(chatData);
+    // If single chat is still too large, skip saving silently
+    if (serialized.length > 200000) return;
+
     try {
-      localStorage.setItem(currentChatKey, JSON.stringify(chatData));
-      const idx = getChatIndex().filter(c => c.key !== currentChatKey);
-      idx.push({ key: currentChatKey, title: currentChatTitle, ts: Date.now() });
-      updateChatIndex(idx.slice(-19));
-    } catch(e) {}
+      localStorage.setItem(currentChatKey, serialized);
+    } catch(e) {
+      // Storage full — wipe ALL old lumina/berry chats and retry once
+      try {
+        Object.keys(localStorage).forEach(k => {
+          if (k.startsWith('lumina_chat_') || k.startsWith('berry')) {
+            localStorage.removeItem(k);
+          }
+        });
+        localStorage.removeItem(LS_INDEX);
+        localStorage.setItem(currentChatKey, serialized);
+      } catch(e2) {
+        // Give up silently — chat still works, just won't be saved
+        return;
+      }
+    }
+
+    const idx = getChatIndex().filter(c => c.key !== currentChatKey);
+    const trimmed = idx.slice(-19);
+    trimmed.push({ key: currentChatKey, title: currentChatTitle, ts: Date.now() });
+    updateChatIndex(trimmed);
   }
 
   function getChatIndex()     { try { return JSON.parse(localStorage.getItem(LS_INDEX)||'[]'); } catch { return []; } }
   function updateChatIndex(a) { localStorage.setItem(LS_INDEX, JSON.stringify(a)); }
 
+  /* ── HISTORY PANEL ── */
   window.openHistory = function () {
     document.getElementById('historyPanel').style.display = 'block';
     renderHistoryList();
@@ -461,16 +508,19 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
       conversationHistory = data.history || [];
       currentChatTitle    = data.title   || null;
       currentChatKey      = key;
+      document.querySelectorAll('.chat-image-large').forEach(img => { img.onclick = () => openLightbox(img.src); });
       startChatMode(); closeHistory(); scrollChat();
-    } catch(e) {}
+    } catch(e) { console.error(e); }
   }
 
+  /* ── UPLOAD ── */
   window.triggerUpload = function () { document.getElementById('fileInput').click(); };
   window.handleFileInputChange = function (e) { handleFiles(Array.from(e.target.files)); e.target.value = ''; };
 
   function handleFiles(files) {
     files.forEach(file => {
-      if (!ALLOWED.includes(file.type)) { alert('Only images allowed.'); return; }
+      if (!ALLOWED.includes(file.type)) { alert('Only images allowed (JPG, PNG, WEBP, GIF, BMP).'); return; }
+      if (file.size > MAX_SIZE)         { alert('File exceeds 10MB limit.'); return; }
       const reader = new FileReader();
       reader.onload = ev => { attachedFiles.push(ev.target.result); renderPreviews(); };
       reader.readAsDataURL(file);
@@ -481,45 +531,97 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     const box = document.getElementById('attachmentPreview'); box.innerHTML = '';
     attachedFiles.forEach((src,i) => {
       const wrap = document.createElement('div'); wrap.className = 'attach-thumb';
-      const img  = document.createElement('img'); img.src = src;
+      const img  = document.createElement('img'); img.src = src; img.onclick = () => openLightbox(src);
       const rm   = document.createElement('div'); rm.className = 'attach-remove'; rm.innerHTML = '×';
       rm.onclick = () => { attachedFiles.splice(i,1); renderPreviews(); };
       wrap.appendChild(img); wrap.appendChild(rm); box.appendChild(wrap);
     });
   }
 
+  /* ── DRAG & DROP ── */
   document.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dragging-over'); });
   document.addEventListener('dragleave', e => { if(!e.relatedTarget) document.body.classList.remove('dragging-over'); });
   document.addEventListener('drop', e => { e.preventDefault(); document.body.classList.remove('dragging-over'); handleFiles(Array.from(e.dataTransfer.files)); });
 
+  /* ── MIC ── */
   window.micAction = function () {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { alert('Voice input requires Chrome/Edge.'); return; }
+    if (!SR) { alert('Voice input requires Chrome or Edge.'); return; }
     const rec = new SR(); rec.lang = 'en-US';
     rec.onresult = e => { document.getElementById('promptInput').value = e.results[0][0].transcript; };
     rec.start();
   };
 
+  /* ── LIGHTBOX ── */
   function openLightbox(src) { document.getElementById('lightboxImg').src = src; document.getElementById('lightbox').style.display = 'flex'; }
 
-  /* Auth Logic (Minimal) */
-  window.signIn = function () { document.getElementById('authModal').style.display = 'flex'; };
-  window.signUp = function () { document.getElementById('authModal').style.display = 'flex'; };
-  window.closeAuth = function () { document.getElementById('authModal').style.display = 'none'; };
-  window.submitAuth = function () { 
-    document.getElementById('authButtons').style.display = 'none';
-    document.getElementById('profileAvatar').style.display = 'flex';
-    closeAuth(); 
+  /* ── AUTH ── */
+  let authMode = 'signin';
+  window.signIn = function () {
+    authMode = 'signin';
+    document.getElementById('authTitle').innerText           = 'Sign In';
+    document.getElementById('signupFields').style.display    = 'none';
+    document.getElementById('loginIdentifier').style.display = 'block';
+    document.getElementById('forgotBtn').style.display       = 'block';
+    document.getElementById('authModal').style.display       = 'flex';
   };
-  window.logout = function () { location.reload(); };
+  window.signUp = function () {
+    authMode = 'signup';
+    document.getElementById('authTitle').innerText           = 'Create Account';
+    document.getElementById('signupFields').style.display    = 'flex';
+    document.getElementById('loginIdentifier').style.display = 'none';
+    document.getElementById('forgotBtn').style.display       = 'none';
+    document.getElementById('authModal').style.display       = 'flex';
+  };
+  window.closeAuth = function () { document.getElementById('authModal').style.display = 'none'; };
+  window.submitAuth = function () {
+    const pw = document.getElementById('password').value;
+    if (authMode === 'signup') {
+      const fn=document.getElementById('firstName').value, ln=document.getElementById('lastName').value;
+      const em=document.getElementById('email').value, un=document.getElementById('username').value;
+      const db=document.getElementById('dob').value;
+      if (!fn||!ln||!em||!un||!pw||!db) { alert('All fields required.'); return; }
+      if (!/^[^@]+@[^@]+\.[a-z]{2,}$/i.test(em)) { alert('Invalid email.'); return; }
+      if (pw.length<6) { alert('Password min 6 chars.'); return; }
+      localStorage.setItem('luminaUser',JSON.stringify({firstName:fn,lastName:ln,email:em,username:un,password:pw}));
+      alert('Account created! You can now sign in.'); closeAuth(); return;
+    }
+    const id=document.getElementById('loginIdentifier').value;
+    const stored=JSON.parse(localStorage.getItem('luminaUser')||'null');
+    if (!stored) { alert('No account found. Please sign up first.'); return; }
+    if ((stored.email===id||stored.username===id)&&stored.password===pw) {
+      document.getElementById('authButtons').style.display = 'none';
+      const av=document.getElementById('profileAvatar');
+      av.style.display='flex'; av.innerText=stored.firstName.charAt(0).toUpperCase();
+      document.getElementById('profileName').innerText=stored.firstName+' '+stored.lastName;
+      closeAuth();
+    } else { alert('Invalid credentials.'); }
+  };
+  window.forgotPassword = function () {
+    const s=JSON.parse(localStorage.getItem('luminaUser')||'null');
+    if (!s) { alert('No account found.'); return; }
+    alert('Your password: '+s.password);
+  };
+  window.logout = function () {
+    document.getElementById('authButtons').style.display   = 'flex';
+    document.getElementById('profileAvatar').style.display = 'none';
+    document.getElementById('profileMenu').style.display   = 'none';
+  };
   window.toggleProfileMenu = function (e) {
     e.stopPropagation();
-    const m = document.getElementById('profileMenu');
+    const m=document.getElementById('profileMenu');
     m.style.display = m.style.display==='block' ? 'none' : 'block';
   };
+  document.addEventListener('click', () => { document.getElementById('profileMenu').style.display='none'; });
 
+  window.openHelp = function () {
+    alert('Lumina – What I can do:\n\nDescribe: Describe this image, What\'s in this photo?\nBasic: Rotate, flip, resize, crop\nFilters: Grayscale, sepia, blur, sharpen, cartoon, watercolor\nColor: Contrast, brightness, saturation, hue\nMedical: CLAHE, denoise, X-ray enhance, segmentation\nAdvanced: Edge detection, Canny, Sobel, morphology\n\nJust upload and ask!');
+  };
+
+  /* ── UTILS ── */
   function truncate(s,n) { return s.length>n ? s.slice(0,n)+'…' : s; }
-  function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
 })();
 </script>
 </body>
