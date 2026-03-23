@@ -1,6 +1,5 @@
 FROM python:3.10-slim
 
-# System dependencies for OpenCV
 RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     libsm6 \
@@ -16,7 +15,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Hugging Face Spaces runs on port 7860
 EXPOSE 7860
 
 ENV FLASK_ENV=production
