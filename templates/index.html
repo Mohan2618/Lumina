@@ -104,6 +104,20 @@ body {
 .bot-msg code { background: rgba(255,255,255,0.15); padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; }
 .bot-msg strong { color: #41e1ae; }
 .chat-image-large { max-width: 100%; max-height: 380px; border-radius: 14px; margin-top: 8px; display: block; cursor: zoom-in; object-fit: contain; }
+
+/* Image action buttons */
+.img-actions {
+  display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;
+}
+.img-action-btn {
+  display: flex; align-items: center; gap: 4px;
+  padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.1); color: white; font-size: 12px; cursor: pointer;
+  transition: background 0.15s; backdrop-filter: blur(4px);
+}
+.img-action-btn:hover { background: rgba(255,255,255,0.2); }
+.img-action-btn .material-icons { font-size: 14px; }
+
 /* Medical badge */
 .medical-badge {
   display: inline-flex; align-items: center; gap: 5px;
@@ -170,7 +184,7 @@ body {
 /* ── HISTORY PANEL ── */
 .history-panel {
   display: none; position: fixed; right: 0; top: 0; width: 300px; height: 100%;
-  background: rgba(10,10,30,0.78); backdrop-filter: blur(16px);
+  background: rgba(10,10,30,0.82); backdrop-filter: blur(16px);
   padding: 20px 16px; overflow-y: auto; color: white; z-index: 900;
   border-left: 1px solid rgba(255,255,255,0.12);
 }
@@ -184,10 +198,16 @@ body {
 .history-item .date { font-size: 11px; opacity: 0.5; white-space: nowrap; margin-top: 2px; }
 .history-item .del-btn { background: transparent; border: none; color: rgba(255,255,255,0.4); cursor: pointer; font-size: 16px; }
 .history-item .del-btn:hover { color: #ff6b6b; }
+.history-search {
+  width: 100%; padding: 8px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08); color: white; font-size: 13px; outline: none;
+  margin-bottom: 12px;
+}
+.history-search::placeholder { color: rgba(255,255,255,0.4); }
 /* ── PROFILE MENU ── */
 .profile-menu {
   display: none; position: fixed; top: 68px; right: 18px; width: 240px;
-  background: rgba(10,10,30,0.78); backdrop-filter: blur(20px); border-radius: 14px;
+  background: rgba(10,10,30,0.82); backdrop-filter: blur(20px); border-radius: 14px;
   padding: 14px; color: white; z-index: 1000; border: 1px solid rgba(255,255,255,0.15);
 }
 .profile-menu .menu-header { padding: 8px 0 12px; border-bottom: 1px solid rgba(255,255,255,0.15); margin-bottom: 6px; }
@@ -197,7 +217,7 @@ body {
 }
 .profile-menu .menu-item:hover { background: rgba(255,255,255,0.1); }
 .profile-menu .menu-item .material-icons { font-size: 20px; opacity: 0.8; }
-/* ── AUTH MODAL (enhanced) ── */
+/* ── AUTH MODAL ── */
 .modal-overlay {
   display: none; position: fixed; inset: 0; backdrop-filter: blur(12px);
   background: rgba(0,0,0,0.3); justify-content: center; align-items: center; z-index: 2000;
@@ -220,7 +240,6 @@ body {
 .input-field-wrap { display: flex; flex-direction: column; gap: 4px; }
 .field-hint { font-size: 11px; color: rgba(255,255,255,0.55); padding-left: 4px; }
 .field-error { font-size: 11px; color: var(--err); padding-left: 4px; display: none; }
-/* Password strength meter */
 .pw-strength-wrap { display: flex; flex-direction: column; gap: 4px; }
 .pw-bars { display: flex; gap: 4px; }
 .pw-bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.2); transition: background 0.3s; }
@@ -229,15 +248,12 @@ body {
 .pw-req { font-size: 11px; display: flex; align-items: center; gap: 4px; }
 .pw-req.met { color: var(--ok); }
 .pw-req.unmet { color: rgba(255,255,255,0.45); }
-/* Password eye toggle */
 .pw-wrap { position: relative; }
 .pw-wrap .modal-input { padding-right: 42px; }
 .pw-eye {
   position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-  cursor: pointer; color: rgba(255,255,255,0.6); font-size: 20px;
-  user-select: none;
+  cursor: pointer; color: rgba(255,255,255,0.6); font-size: 20px; user-select: none;
 }
-/* OTP */
 .otp-grid { display: flex; gap: 8px; justify-content: center; }
 .otp-digit {
   width: 44px; height: 52px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,0.3);
@@ -262,15 +278,11 @@ body {
 }
 .modal-alert.error { background: rgba(255,107,107,0.2); border: 1px solid rgba(255,107,107,0.5); color: #ffaaaa; }
 .modal-alert.success { background: rgba(107,203,119,0.2); border: 1px solid rgba(107,203,119,0.5); color: #aaffbb; }
-/* Rate limit badge */
-.rate-limit-timer {
-  text-align: center; font-size: 12px; color: var(--warn);
-  display: none;
-}
+.rate-limit-timer { text-align: center; font-size: 12px; color: var(--warn); display: none; }
 /* ── MEDICAL PANEL ── */
 .medical-panel {
   display: none; position: fixed; left: 0; top: 0; width: 300px; height: 100%;
-  background: rgba(10,10,30,0.85); backdrop-filter: blur(16px);
+  background: rgba(10,10,30,0.88); backdrop-filter: blur(16px);
   padding: 20px 16px; overflow-y: auto; color: white; z-index: 900;
   border-right: 1px solid rgba(255,107,107,0.2);
 }
@@ -299,6 +311,30 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15);
 }
 .toast.show { opacity: 1; }
+/* Share modal */
+.share-modal {
+  display: none; position: fixed; inset: 0; backdrop-filter: blur(12px);
+  background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 3000;
+}
+.share-box {
+  width: 380px; padding: 24px; background: rgba(20,20,50,0.95);
+  border: 1px solid rgba(255,255,255,0.2); border-radius: 18px;
+  backdrop-filter: blur(20px); color: white;
+}
+.share-box h3 { margin-bottom: 14px; font-size: 18px; }
+.share-link-input {
+  width: 100%; padding: 10px 14px; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.1);
+  color: white; font-size: 13px; outline: none; margin-bottom: 12px;
+}
+.share-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+.share-btn {
+  flex: 1; min-width: 100px; padding: 9px; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1);
+  color: white; font-size: 13px; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; gap: 6px; transition: background 0.15s;
+}
+.share-btn:hover { background: rgba(255,255,255,0.2); }
 </style>
 </head>
 <body>
@@ -326,6 +362,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   <div class="menu-item" onclick="openHelp()"><span class="material-icons">help_outline</span> Help</div>
   <div class="menu-item" onclick="openOpsPanel()"><span class="material-icons">auto_awesome</span> Operations</div>
   <div class="menu-item" onclick="newChat()"><span class="material-icons">add_circle_outline</span> New Chat</div>
+  <div class="menu-item" onclick="shareCurrentChat()"><span class="material-icons">share</span> Share Chat</div>
   <div class="menu-item" onclick="showChangePassword()"><span class="material-icons">lock</span> Change Password</div>
   <div class="menu-item" onclick="logout()"><span class="material-icons">logout</span> Log Out</div>
 </div>
@@ -364,10 +401,11 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 
 <!-- ── HISTORY PANEL ── -->
 <div class="history-panel" id="historyPanel">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
     <h3 style="font-size:17px;">Chat History</h3>
     <span class="material-icons" style="cursor:pointer;" onclick="closeHistory()">close</span>
   </div>
+  <input class="history-search" id="historySearch" placeholder="🔍 Search chats…" oninput="renderHistoryList(this.value)">
   <div id="historyList"></div>
 </div>
 
@@ -386,6 +424,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     <span class="op-chip medical" onclick="quickOp('fundus enhance')">Fundus/Retina</span>
     <span class="op-chip medical" onclick="quickOp('analyze skin')">Skin Analysis</span>
     <span class="op-chip medical" onclick="quickOp('analyze wound')">Wound Analysis</span>
+    <span class="op-chip medical" onclick="quickOp('analyze ECG electrocardiogram')">ECG Analysis</span>
     <span class="op-chip medical" onclick="quickOp('clahe enhance')">CLAHE</span>
     <span class="op-chip medical" onclick="quickOp('denoise image')">Denoise</span>
     <span class="op-chip medical" onclick="quickOp('segment image')">Segmentation</span>
@@ -467,14 +506,9 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 <div class="modal-overlay" id="authModal">
   <div class="modal-box" id="authBox">
     <h3 id="authTitle">Sign In</h3>
-
-    <!-- Alert -->
     <div class="modal-alert" id="authAlert"></div>
-
-    <!-- Rate limit -->
     <div class="rate-limit-timer" id="rateLimitMsg">⏳ Too many attempts. Please wait <span id="rateLimitCountdown">30</span>s</div>
 
-    <!-- SIGNUP FIELDS -->
     <div id="signupSection" style="display:none;flex-direction:column;gap:10px;">
       <div style="display:flex;gap:10px;">
         <div class="input-field-wrap" style="flex:1">
@@ -502,19 +536,16 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
       </div>
     </div>
 
-    <!-- LOGIN IDENTIFIER -->
     <div class="input-field-wrap" id="loginIdentifierWrap">
       <input class="modal-input" id="loginIdentifier" placeholder="Email or Username">
       <span class="field-error" id="identifierErr">Required</span>
     </div>
 
-    <!-- PASSWORD -->
     <div class="input-field-wrap">
       <div class="pw-wrap">
         <input class="modal-input" id="password" type="password" placeholder="Password" oninput="onPasswordInput()">
         <span class="pw-eye material-icons" onclick="togglePwEye('password','eyeIcon1')" id="eyeIcon1">visibility</span>
       </div>
-      <!-- Signup: strength meter -->
       <div id="pwStrengthWrap" style="display:none;" class="pw-strength-wrap">
         <div class="pw-bars">
           <div class="pw-bar" id="bar1"></div><div class="pw-bar" id="bar2"></div>
@@ -532,7 +563,6 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
       <span class="field-error" id="passwordErr">Required</span>
     </div>
 
-    <!-- CONFIRM PASSWORD (signup only) -->
     <div class="input-field-wrap" id="confirmPwWrap" style="display:none;">
       <div class="pw-wrap">
         <input class="modal-input" id="confirmPassword" type="password" placeholder="Confirm Password" oninput="validateConfirmPw()">
@@ -541,7 +571,6 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
       <span class="field-error" id="confirmPwErr">Passwords don't match</span>
     </div>
 
-    <!-- Terms (signup) -->
     <div id="termsWrap" style="display:none;">
       <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
         <input type="checkbox" id="agreeTerms" style="margin-top:2px;flex-shrink:0;">
@@ -644,6 +673,20 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   </div>
 </div>
 
+<!-- ── SHARE MODAL ── -->
+<div class="share-modal" id="shareModal" onclick="if(event.target===this)this.style.display='none'">
+  <div class="share-box">
+    <h3>🔗 Share Chat</h3>
+    <p style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:12px;">Share this conversation with anyone</p>
+    <input class="share-link-input" id="shareLinkInput" readonly onclick="this.select()">
+    <div class="share-btns">
+      <button class="share-btn" onclick="copyShareLink()"><span class="material-icons" style="font-size:16px;">content_copy</span> Copy Link</button>
+      <button class="share-btn" onclick="copyShareText()"><span class="material-icons" style="font-size:16px;">chat</span> Copy Text</button>
+      <button class="share-btn" onclick="document.getElementById('shareModal').style.display='none'"><span class="material-icons" style="font-size:16px;">close</span> Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── LIGHTBOX ── -->
 <div class="lightbox" id="lightbox" onclick="this.style.display='none'">
   <img id="lightboxImg" alt="Preview">
@@ -663,12 +706,8 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 (function purgeOldImageChats() {
   try {
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('lumina_chat_') || key === 'berryChats') {
-        const val = localStorage.getItem(key) || '';
-        if (val.includes('data:image') || val.includes('base64')) localStorage.removeItem(key);
-      }
+      if (key === 'berryChats') localStorage.removeItem(key);
     });
-    if (localStorage.getItem('berryChats')) localStorage.removeItem('berryChats');
   } catch(e) {}
 })();
 
@@ -679,16 +718,17 @@ let currentChatTitle=null, currentChatKey=null;
 let authMode='signin';
 let loginAttempts=0, lockUntil=0;
 let otpCode='', otpExpiry=0, otpTimerInt=null;
+let currentUser=null; // track logged-in user
 const MAX_SIZE=10*1024*1024;
 const ALLOWED=['image/jpeg','image/png','image/webp','image/gif','image/bmp'];
-const LS_INDEX='lumina_index', LS_PREFIX='lumina_chat_', LS_USER='luminaUser_v2';
+const LS_INDEX='lumina_index_v2', LS_PREFIX='lumina_chat_v2_', LS_USER='luminaUser_v2';
 const MAX_LOGIN_ATTEMPTS=5, LOCK_DURATION=30;
 
 // ── TOAST ─────────────────────────────────────────────────
 function toast(msg, dur=2500) {
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),dur);
+  setTimeout(()=>t.classList.remove('show'), dur);
 }
 
 // ── CHAT HELPERS ──────────────────────────────────────────
@@ -698,6 +738,7 @@ function startChatMode() {
   document.getElementById('homeSubtitle').style.display='none';
   document.getElementById('chatWrapper').style.display='block';
 }
+
 function addMsg(content, role, isHTML=false) {
   const div=document.createElement('div');
   div.classList.add('chat-msg', role==='user'?'user-msg':'bot-msg');
@@ -705,17 +746,57 @@ function addMsg(content, role, isHTML=false) {
   document.getElementById('chatArea').appendChild(div);
   scrollChat(); return div;
 }
+
 function addImageMsg(src, role) {
   const div=document.createElement('div');
   div.classList.add('chat-msg', role==='user'?'user-msg':'bot-msg');
   const img=document.createElement('img'); img.src=src; img.className='chat-image-large';
   img.onclick=()=>openLightbox(src);
   div.appendChild(img);
+  // Add action buttons for bot images
+  if (role === 'bot') {
+    const actions=document.createElement('div');
+    actions.className='img-actions';
+    actions.innerHTML=`
+      <button class="img-action-btn" onclick="downloadImage('${src}')">
+        <span class="material-icons">download</span> Download
+      </button>
+      <button class="img-action-btn" onclick="openLightbox('${src}')">
+        <span class="material-icons">zoom_in</span> Full View
+      </button>
+      <button class="img-action-btn" onclick="copyImageToClipboard('${src}')">
+        <span class="material-icons">content_copy</span> Copy
+      </button>`;
+    div.appendChild(actions);
+  }
   document.getElementById('chatArea').appendChild(div); scrollChat();
 }
+
+// ── IMAGE DOWNLOAD ─────────────────────────────────────────
+window.downloadImage = function(src) {
+  const a=document.createElement('a');
+  a.href=src;
+  a.download='lumina_' + Date.now() + '.png';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  toast('Image downloaded! 📥');
+};
+
+window.copyImageToClipboard = async function(src) {
+  try {
+    const res=await fetch(src);
+    const blob=await res.blob();
+    await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+    toast('Image copied to clipboard! 📋');
+  } catch(e) {
+    // Fallback: open in new tab
+    window.open(src, '_blank');
+    toast('Opened in new tab — right-click to copy!');
+  }
+};
+
 function scrollChat() {
   const w=document.getElementById('chatWrapper');
-  setTimeout(()=>{w.scrollTop=w.scrollHeight;},60);
+  setTimeout(()=>{w.scrollTop=w.scrollHeight;}, 60);
 }
 function showTyping() {
   const div=document.createElement('div');
@@ -786,7 +867,7 @@ window.promptGenerate = function() {
   closeOpsPanel();
   const p=prompt('Enter a text prompt to generate an image:');
   if (p && p.trim()) {
-    document.getElementById('promptInput').value='generate '+p.trim();
+    document.getElementById('promptInput').value='generate ' + p.trim();
     sendMessage();
   }
 };
@@ -804,54 +885,104 @@ window.newChat = function() {
 };
 
 // ── HISTORY ───────────────────────────────────────────────
+function getChatKey() {
+  // Use user-specific keys when logged in
+  const prefix = currentUser ? `lumina_chat_${currentUser.username}_` : LS_PREFIX;
+  return prefix;
+}
+function getIndexKey() {
+  return currentUser ? `lumina_index_${currentUser.username}` : LS_INDEX;
+}
+
 function saveChatHistory() {
-  if (!currentChatKey||!currentChatTitle) return;
+  if (!currentChatKey || !currentChatTitle) return;
   const rawHTML=document.getElementById('chatArea').innerHTML;
-  const cleanHTML=rawHTML.replace(/<img[^>]*>/gi,'<span style="color:rgba(255,255,255,0.45);font-size:12px;">[image]</span>');
+  // Strip base64 images from stored HTML to save space
+  const cleanHTML=rawHTML.replace(/src="data:image[^"]+"/gi, 'src=""').replace(/<img[^>]*src=""[^>]*>/gi, '<span style="color:rgba(255,255,255,0.45);font-size:12px;">[image]</span>');
   const chatData={title:currentChatTitle,html:cleanHTML,history:conversationHistory,ts:Date.now()};
+  
+  // Limit history size — strip image data from history parts
+  const leanHistory = (chatData.history||[]).map(turn => ({
+    ...turn,
+    parts: (turn.parts||[]).map(p => {
+      if (typeof p === 'object' && p.mime_type) return {mime_type:p.mime_type, data:'[stripped]'};
+      return p;
+    })
+  }));
+  chatData.history = leanHistory;
+  
   const serialized=JSON.stringify(chatData);
-  if (serialized.length>200000) return;
-  try {
-    localStorage.setItem(currentChatKey,serialized);
-  } catch(e) {
+  if (serialized.length > 300000) {
+    // Too large — save without history
+    chatData.history = [];
+    const small = JSON.stringify(chatData);
+    try { localStorage.setItem(currentChatKey, small); } catch(e) {}
+  } else {
     try {
-      Object.keys(localStorage).forEach(k=>{
-        if (k.startsWith('lumina_chat_')||k.startsWith('berry')) localStorage.removeItem(k);
-      });
-      localStorage.removeItem(LS_INDEX);
-      localStorage.setItem(currentChatKey,serialized);
-    } catch(e2) {}
+      localStorage.setItem(currentChatKey, serialized);
+    } catch(e) {
+      // Quota exceeded — prune oldest chats
+      const idx = getChatIndex();
+      if (idx.length > 0) {
+        const oldest = idx[0];
+        localStorage.removeItem(oldest.key);
+        updateChatIndex(idx.slice(1));
+        try { localStorage.setItem(currentChatKey, serialized); } catch(e2) {}
+      }
+    }
   }
-  const idx=getChatIndex().filter(c=>c.key!==currentChatKey).slice(-19);
+  const idx=getChatIndex().filter(c=>c.key!==currentChatKey).slice(-49);
   idx.push({key:currentChatKey,title:currentChatTitle,ts:Date.now()});
   updateChatIndex(idx);
 }
-function getChatIndex() { try { return JSON.parse(localStorage.getItem(LS_INDEX)||'[]'); } catch { return []; } }
-function updateChatIndex(a) { localStorage.setItem(LS_INDEX,JSON.stringify(a)); }
-window.openHistory=function(){ document.getElementById('historyPanel').style.display='block'; renderHistoryList(); };
+
+function getChatIndex() {
+  try { return JSON.parse(localStorage.getItem(getIndexKey())||'[]'); } catch { return []; }
+}
+function updateChatIndex(a) {
+  localStorage.setItem(getIndexKey(), JSON.stringify(a));
+}
+
+window.openHistory=function(){
+  document.getElementById('historyPanel').style.display='block';
+  document.getElementById('historySearch').value='';
+  renderHistoryList('');
+};
 window.closeHistory=function(){ document.getElementById('historyPanel').style.display='none'; };
-function renderHistoryList() {
+
+function renderHistoryList(query='') {
   const list=document.getElementById('historyList'); list.innerHTML='';
-  const idx=getChatIndex().slice().sort((a,b)=>b.ts-a.ts);
-  if (!idx.length) { list.innerHTML='<p style="opacity:.55;font-size:13px;">No saved chats yet.</p>'; return; }
+  let idx=getChatIndex().slice().sort((a,b)=>b.ts-a.ts);
+  if (query) {
+    const q=query.toLowerCase();
+    idx=idx.filter(e=>e.title.toLowerCase().includes(q));
+  }
+  if (!idx.length) {
+    list.innerHTML=`<p style="opacity:.55;font-size:13px;">${query?'No matching chats.':'No saved chats yet.'}</p>`;
+    return;
+  }
   idx.forEach(entry=>{
     const item=document.createElement('div'); item.className='history-item';
-    const date=new Date(entry.ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    const date=new Date(entry.ts).toLocaleDateString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
     item.innerHTML=`
       <div style="flex:1;min-width:0;">
         <div class="title">${escapeHtml(truncate(entry.title,42))}</div>
         <div class="date">${date}</div>
       </div>
-      <button class="del-btn" onclick="deleteChat(event,'${entry.key}')">×</button>`;
-    item.addEventListener('click',e=>{ if (e.target.classList.contains('del-btn')) return; loadChat(entry.key); });
+      <button class="del-btn" title="Delete">×</button>`;
+    item.querySelector('.del-btn').onclick=(e)=>{ e.stopPropagation(); deleteChat(entry.key); };
+    item.addEventListener('click',()=>loadChat(entry.key));
     list.appendChild(item);
   });
 }
-window.deleteChat=function(e,key){
-  e.stopPropagation(); localStorage.removeItem(key);
+
+function deleteChat(key) {
+  localStorage.removeItem(key);
   updateChatIndex(getChatIndex().filter(c=>c.key!==key));
-  renderHistoryList();
-};
+  renderHistoryList(document.getElementById('historySearch').value);
+  toast('Chat deleted.');
+}
+
 function loadChat(key) {
   const raw=localStorage.getItem(key); if (!raw) return;
   try {
@@ -864,6 +995,50 @@ function loadChat(key) {
     startChatMode(); closeHistory(); scrollChat();
   } catch(e) { console.error(e); }
 }
+
+// ── SHARE CHAT ─────────────────────────────────────────────
+window.shareCurrentChat = function() {
+  document.getElementById('profileMenu').style.display='none';
+  if (!chatStarted) { toast('Start a chat first to share!'); return; }
+  // Encode chat as base64 in URL
+  const shareData = {
+    title: currentChatTitle || 'Lumina Chat',
+    html: document.getElementById('chatArea').innerHTML
+      .replace(/src="data:image[^"]+"/gi, 'src=""'),
+    ts: Date.now()
+  };
+  try {
+    const encoded = btoa(encodeURIComponent(JSON.stringify({title: shareData.title, ts: shareData.ts})));
+    const shareId = encoded.slice(0, 20) + '_' + Date.now();
+    // Store in localStorage for local sharing
+    localStorage.setItem('lumina_share_' + shareId, JSON.stringify(shareData));
+    const shareUrl = window.location.origin + '/share/' + shareId + '#' + btoa(JSON.stringify(shareData)).slice(0, 200);
+    document.getElementById('shareLinkInput').value = shareUrl;
+    document.getElementById('shareModal').style.display='flex';
+  } catch(e) {
+    toast('Could not generate share link.');
+  }
+};
+
+window.copyShareLink = function() {
+  const input = document.getElementById('shareLinkInput');
+  input.select();
+  navigator.clipboard.writeText(input.value).then(()=>toast('Share link copied! 🔗')).catch(()=>{
+    document.execCommand('copy');
+    toast('Share link copied! 🔗');
+  });
+};
+
+window.copyShareText = function() {
+  const messages = [];
+  document.querySelectorAll('.chat-msg').forEach(msg => {
+    const role = msg.classList.contains('user-msg') ? 'You' : 'Lumina';
+    const text = msg.innerText || msg.textContent;
+    if (text.trim()) messages.push(role + ': ' + text.trim());
+  });
+  const text = `--- Lumina Chat ---\n${currentChatTitle||'Chat'}\n\n` + messages.join('\n\n');
+  navigator.clipboard.writeText(text).then(()=>toast('Chat text copied! 📋')).catch(()=>toast('Could not copy.'));
+};
 
 // ── FILE UPLOAD ───────────────────────────────────────────
 window.triggerUpload=function(){ document.getElementById('fileInput').click(); };
@@ -897,7 +1072,7 @@ window.micAction=function(){
   if (!SR) { toast('Voice input requires Chrome or Edge.'); return; }
   const rec=new SR(); rec.lang='en-US';
   rec.onresult=e=>{ document.getElementById('promptInput').value=e.results[0][0].transcript; };
-  rec.start();
+  rec.start(); toast('Listening…');
 };
 
 // ── LIGHTBOX ─────────────────────────────────────────────
@@ -924,7 +1099,6 @@ function checkPasswordStrength(pw) {
 }
 function renderStrength(pw, barPrefix, labelId) {
   const {checks,score}=checkPasswordStrength(pw);
-  const bars=['bar','bar','bar','bar','bar'];
   const colors=['#ff4444','#ff8844','#ffcc44','#88cc44','#44cc77'];
   const labels=['Very Weak','Weak','Fair','Strong','Very Strong'];
   for (let i=1;i<=5;i++){
@@ -1011,9 +1185,7 @@ function showFieldError(errId, show=true) {
   const el=document.getElementById(errId);
   if (el) el.style.display=show?'block':'none';
 }
-window.clearFieldError=function(input){
-  input.classList.remove('input-error');
-};
+window.clearFieldError=function(input){ input.classList.remove('input-error'); };
 window.validateEmailField=function(){
   const val=document.getElementById('email').value;
   const ok=/^[^@]+@[^@]+\.[a-z]{2,}$/i.test(val);
@@ -1055,9 +1227,7 @@ function recordFailedAttempt() {
   loginAttempts++;
   if (loginAttempts>=MAX_LOGIN_ATTEMPTS) {
     lockUntil=Date.now()+LOCK_DURATION*1000; loginAttempts=0;
-    const countdown=setInterval(()=>{
-      if (!isRateLimited()) clearInterval(countdown);
-    },1000);
+    const countdown=setInterval(()=>{ if (!isRateLimited()) clearInterval(countdown); },1000);
   }
 }
 
@@ -1080,20 +1250,17 @@ window.submitAuth = async function() {
     if (!dob){ document.getElementById('dob').classList.add('input-error'); showFieldError('dobErr'); ok=false; }
     else {
       const age=(Date.now()-new Date(dob).getTime())/(365.25*24*3600*1000);
-      if (age<13){ document.getElementById('dob').classList.add('input-error'); showFieldError('dobErr','Must be 13+'); ok=false; }
+      if (age<13){ document.getElementById('dob').classList.add('input-error'); showFieldError('dobErr'); ok=false; }
     }
     if (!agree){ showAuthAlert('You must agree to the Terms of Service.'); ok=false; }
     if (!ok) return;
-    // Check password strength
     const {score}=checkPasswordStrength(pw);
     if (score<3){ showAuthAlert('Password is too weak. Please meet all requirements.'); return; }
     if (pw!==document.getElementById('confirmPassword').value){ showAuthAlert('Passwords do not match.'); return; }
-    // Hash via server
     try {
       const r=await fetch('/api/auth/hash-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
       const d=await r.json();
       if (!r.ok){ showAuthAlert(d.error+(d.details?'\n'+d.details.join(', '):''),'error'); return; }
-      // Check duplicate
       const existing=JSON.parse(localStorage.getItem(LS_USER)||'null');
       if (existing && (existing.email===em||existing.username===un)){
         showAuthAlert('An account with this email or username already exists.'); return;
@@ -1117,7 +1284,10 @@ window.submitAuth = async function() {
     const d=await r.json();
     if (d.valid && (stored.email===id||stored.username===id)){
       loginAttempts=0; lockUntil=0;
-      closeAuth(); loginUser(stored);
+      closeAuth();
+      // ── KEY FIX: Clear pre-login chat, start fresh session ──
+      clearChatForLogin();
+      loginUser(stored);
     } else {
       recordFailedAttempt();
       const remaining=MAX_LOGIN_ATTEMPTS-loginAttempts;
@@ -1125,7 +1295,24 @@ window.submitAuth = async function() {
     }
   } catch(e){ showAuthAlert('Server error. Please try again.'); }
 };
-function loginUser(user){
+
+// ── CLEAR CHAT ON LOGIN/LOGOUT ─────────────────────────────
+function clearChatForLogin() {
+  // Reset chat state completely when user logs in
+  document.getElementById('chatArea').innerHTML='';
+  document.getElementById('chatWrapper').style.display='none';
+  document.getElementById('watermark').style.display='block';
+  document.getElementById('homeSubtitle').style.display='block';
+  chatStarted=false;
+  attachedFiles=[];
+  conversationHistory=[];
+  currentChatTitle=null;
+  currentChatKey=null;
+  renderPreviews();
+}
+
+function loginUser(user) {
+  currentUser = user;
   document.getElementById('authButtons').style.display='none';
   const av=document.getElementById('profileAvatar');
   av.style.display='flex'; av.innerText=user.firstName.charAt(0).toUpperCase();
@@ -1151,10 +1338,8 @@ window.sendOTP=function(){
   if (!stored||(stored.email!==id&&stored.username!==id)){
     showForgotAlert('No account found with that email or username.'); return;
   }
-  // Generate 6-digit OTP
   otpCode=String(Math.floor(100000+Math.random()*900000));
   otpExpiry=Date.now()+5*60*1000;
-  // In production: send via email. Here we simulate.
   showForgotAlert(`OTP sent! (Demo: your code is ${otpCode})`, 'success');
   setTimeout(()=>{
     document.getElementById('forgotStep1').style.display='none';
@@ -1249,9 +1434,12 @@ function showChangePwAlert(msg,type='error'){
 
 // ── LOGOUT ────────────────────────────────────────────────
 window.logout=function(){
+  currentUser=null;
   document.getElementById('authButtons').style.display='flex';
   document.getElementById('profileAvatar').style.display='none';
   document.getElementById('profileMenu').style.display='none';
+  // Clear chat on logout
+  clearChatForLogin();
   toast('Signed out successfully.');
 };
 
@@ -1268,16 +1456,18 @@ window.openHelp=function(){
   document.getElementById('profileMenu').style.display='none';
   addMsg(
     '<strong>🌟 Lumina — Full Capabilities</strong><br><br>' +
-    '🏥 <strong>Medical:</strong> X-Ray, MRI, CT, Fundus, Skin Analysis, Wound, CLAHE, Denoise, Segmentation<br>' +
+    '🏥 <strong>Medical:</strong> X-Ray, MRI, CT, Fundus/Retina, ECG, Skin Analysis, Wound, CLAHE, Denoise, Segmentation<br>' +
     '🎨 <strong>Creative:</strong> Cartoon, Watercolor, Sketch, Oil Painting, Neon Glow, Glitch, Halftone, Pop Art, Stained Glass, Pointillism, ASCII Art, Thermal, Duotone, Mosaic, Lomo, Cross Process<br>' +
-    '🔍 <strong>Detection:</strong> Face Detect, Color Palette, Canny, Sobel, Edges, Quality Check, Color Analysis<br>' +
-    '✨ <strong>Restore:</strong> Super Resolution, Deblur, Colorize B&W, Restore Old Photo<br>' +
+    '🔍 <strong>Detection:</strong> Face Detect, Color Palette, Canny, Sobel, Quality Check, Color Analysis<br>' +
+    '✨ <strong>Restore:</strong> Super Resolution (2x), Deblur, Colorize B&W, Restore Old Photo<br>' +
     '🎭 <strong>Effects:</strong> Tilt-Shift, Bokeh, Fisheye, Double Exposure, HDR, Vignette, Film Grain<br>' +
-    '🎛️ <strong>Color:</strong> Contrast, Brightness, Saturation, Hue, White Balance, Shadows/Highlights<br>' +
+    '🎛️ <strong>Color:</strong> Contrast, Brightness, Saturation, Hue, White Balance (Warm/Cool), Shadows/Highlights<br>' +
     '⚙️ <strong>Basic:</strong> Rotate, Flip, Resize, Crop, Grayscale, Sepia, Invert, Blur, Sharpen<br>' +
-    '🤖 <strong>Generate:</strong> Create images from text prompts<br>' +
-    '💬 <strong>Chat:</strong> Describe images, ask questions, get medical analysis<br><br>' +
-    'Click <strong>⚡ Operations</strong> button for quick access!',
+    '🤖 <strong>Generate:</strong> Create images from text prompts using Gemini AI<br>' +
+    '💬 <strong>Chat:</strong> Describe images, ask questions, get medical analysis<br>' +
+    '🔗 <strong>Share:</strong> Share chats with links, download/copy output images<br><br>' +
+    '💡 <strong>Tip:</strong> Uploaded images are remembered throughout the conversation — no need to re-upload!<br>' +
+    'Click <strong>⚡ Operations</strong> for quick access to all filters.',
     'bot', true
   );
   if (!chatStarted) startChatMode();
@@ -1288,10 +1478,27 @@ function truncate(s,n){ return s.length>n?s.slice(0,n)+'…':s; }
 function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ── INIT ─────────────────────────────────────────────────
-// Auto-login if session still valid
+// Auto-login if session still valid — but do NOT restore a pre-login chat
 (function checkExistingSession(){
   const stored=JSON.parse(localStorage.getItem(LS_USER)||'null');
   if (stored&&stored.hash){ loginUser(stored); }
+  // Check for shared chat in URL
+  if (window.location.pathname.startsWith('/share/')) {
+    const shareId = window.location.pathname.split('/share/')[1];
+    const shareData = localStorage.getItem('lumina_share_' + shareId);
+    if (shareData) {
+      try {
+        const data = JSON.parse(shareData);
+        setTimeout(()=>{
+          document.getElementById('chatArea').innerHTML = data.html||'';
+          currentChatTitle = data.title;
+          currentChatKey = null;
+          startChatMode();
+          toast('📤 Viewing shared chat: ' + data.title);
+        }, 300);
+      } catch(e) {}
+    }
+  }
 })();
 
 })();
