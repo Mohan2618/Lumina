@@ -19,6 +19,7 @@ body {
   font-family: 'Segoe UI', Arial, sans-serif;
   overflow: hidden; position: relative;
 }
+/* ── TOPBAR ── */
 .topbar {
   position: fixed; top: 0; left: 0; right: 0; height: 62px;
   display: flex; align-items: center; justify-content: space-between;
@@ -37,7 +38,10 @@ body {
   background: radial-gradient(circle, #ffffff 60%, #cfd8dc);
   display: flex; justify-content: center; align-items: center;
 }
-.eye { width: 44%; height: 44%; border-radius: 50%; background: #020a2a; position: relative; }
+.eye {
+  width: 44%; height: 44%; border-radius: 50%;
+  background: #020a2a; position: relative;
+}
 .eye::after {
   content: ""; position: absolute; top: 18%; left: 18%;
   width: 22%; height: 22%; border-radius: 50%;
@@ -70,6 +74,7 @@ body {
   font-weight: 700; font-size: 15px; display: none; align-items: center;
   justify-content: center; cursor: pointer; border: 2px solid rgba(255,255,255,0.5);
 }
+/* ── HOME ── */
 .watermark {
   position: absolute; top: 42%; left: 50%; transform: translate(-50%,-50%);
   font-size: clamp(60px,12vw,110px); font-weight: 800; letter-spacing: 6px;
@@ -80,6 +85,7 @@ body {
   color: rgba(255,255,255,0.5); font-size: 15px; text-align: center;
   pointer-events: none; white-space: nowrap;
 }
+/* ── CHAT ── */
 #chatWrapper {
   position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
   width: min(94%, 760px); bottom: 110px; display: none;
@@ -98,7 +104,11 @@ body {
 .bot-msg code { background: rgba(255,255,255,0.15); padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; }
 .bot-msg strong { color: #41e1ae; }
 .chat-image-large { max-width: 100%; max-height: 380px; border-radius: 14px; margin-top: 8px; display: block; cursor: zoom-in; object-fit: contain; }
-.img-actions { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+
+/* Image action buttons */
+.img-actions {
+  display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;
+}
 .img-action-btn {
   display: flex; align-items: center; gap: 4px;
   padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.25);
@@ -107,6 +117,15 @@ body {
 }
 .img-action-btn:hover { background: rgba(255,255,255,0.2); }
 .img-action-btn .material-icons { font-size: 14px; }
+
+/* Medical badge */
+.medical-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(255,107,107,0.2); border: 1px solid rgba(255,107,107,0.5);
+  color: #ff9999; padding: 3px 10px; border-radius: 20px; font-size: 12px;
+  margin-bottom: 6px;
+}
+/* ── PROMPT ── */
 .prompt-wrap {
   position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
   width: min(94%, 760px); z-index: 700;
@@ -143,6 +162,7 @@ body {
 }
 .send-btn:hover { transform: scale(1.08); }
 .send-btn .material-icons { color: #6a7bd1; font-size: 22px; }
+/* ── BOTTOM TOOLS ── */
 .bottom-tools {
   position: fixed; bottom: 22px; right: 22px; display: flex; gap: 12px;
   padding: 10px 16px; background: var(--glass); backdrop-filter: blur(14px);
@@ -155,11 +175,13 @@ body {
 }
 .bottom-tools button:hover { background: rgba(255,255,255,0.15); }
 .bottom-tools .material-icons { font-size: 22px; }
+/* ── TYPING ── */
 .typing { display: flex; gap: 5px; align-items: center; padding: 4px 0; }
 .typing span { width: 8px; height: 8px; background: rgba(255,255,255,0.7); border-radius: 50%; animation: bounce 1.3s infinite ease-in-out; }
 .typing span:nth-child(2) { animation-delay: 0.2s; }
 .typing span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes bounce { 0%,80%,100%{transform:scale(0.5);opacity:0.5} 40%{transform:scale(1);opacity:1} }
+/* ── HISTORY PANEL ── */
 .history-panel {
   display: none; position: fixed; right: 0; top: 0; width: 300px; height: 100%;
   background: rgba(10,10,30,0.82); backdrop-filter: blur(16px);
@@ -182,6 +204,7 @@ body {
   margin-bottom: 12px;
 }
 .history-search::placeholder { color: rgba(255,255,255,0.4); }
+/* ── PROFILE MENU ── */
 .profile-menu {
   display: none; position: fixed; top: 68px; right: 18px; width: 240px;
   background: rgba(10,10,30,0.82); backdrop-filter: blur(20px); border-radius: 14px;
@@ -194,6 +217,7 @@ body {
 }
 .profile-menu .menu-item:hover { background: rgba(255,255,255,0.1); }
 .profile-menu .menu-item .material-icons { font-size: 20px; opacity: 0.8; }
+/* ── AUTH MODAL ── */
 .modal-overlay {
   display: none; position: fixed; inset: 0; backdrop-filter: blur(12px);
   background: rgba(0,0,0,0.3); justify-content: center; align-items: center; z-index: 2000;
@@ -255,6 +279,7 @@ body {
 .modal-alert.error { background: rgba(255,107,107,0.2); border: 1px solid rgba(255,107,107,0.5); color: #ffaaaa; }
 .modal-alert.success { background: rgba(107,203,119,0.2); border: 1px solid rgba(107,203,119,0.5); color: #aaffbb; }
 .rate-limit-timer { text-align: center; font-size: 12px; color: var(--warn); display: none; }
+/* ── MEDICAL PANEL ── */
 .medical-panel {
   display: none; position: fixed; left: 0; top: 0; width: 300px; height: 100%;
   background: rgba(10,10,30,0.88); backdrop-filter: blur(16px);
@@ -273,9 +298,11 @@ body {
 .op-chip.medical { border-color: rgba(255,107,107,0.4); color: #ffaaaa; }
 .op-chip.creative { border-color: rgba(65,225,174,0.4); color: #afffdc; }
 .op-chip.detection { border-color: rgba(106,123,209,0.6); color: #b3baff; }
+/* ── LIGHTBOX ── */
 .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); justify-content: center; align-items: center; z-index: 3000; cursor: zoom-out; }
 .lightbox img { max-width: 92%; max-height: 92%; border-radius: 12px; object-fit: contain; }
 body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
+/* ── TOAST ── */
 .toast {
   position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
   background: rgba(10,10,30,0.9); color: white; padding: 10px 20px;
@@ -284,6 +311,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15);
 }
 .toast.show { opacity: 1; }
+/* Share modal */
 .share-modal {
   display: none; position: fixed; inset: 0; backdrop-filter: blur(12px);
   background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 3000;
@@ -311,6 +339,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 </head>
 <body>
 
+<!-- ── TOPBAR ── -->
 <header class="topbar">
   <div class="logo-wrap">
     <div class="logo-container">
@@ -327,6 +356,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   <div class="profile-avatar" id="profileAvatar" onclick="toggleProfileMenu(event)">A</div>
 </header>
 
+<!-- ── PROFILE MENU ── -->
 <div class="profile-menu" id="profileMenu">
   <div class="menu-header"><strong id="profileName">User</strong><br><span style="font-size:12px;opacity:0.6;" id="planLabel">Free Plan</span></div>
   <div class="menu-item" onclick="openHelp()"><span class="material-icons">help_outline</span> Help</div>
@@ -337,11 +367,14 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   <div class="menu-item" onclick="logout()"><span class="material-icons">logout</span> Log Out</div>
 </div>
 
+<!-- ── HOME ── -->
 <div class="watermark" id="watermark">Lumina</div>
 <div class="home-subtitle" id="homeSubtitle">Upload an image and ask me anything ✨</div>
 
+<!-- ── CHAT ── -->
 <div id="chatWrapper"><div id="chatArea"></div></div>
 
+<!-- ── PROMPT ── -->
 <div class="prompt-wrap">
   <div class="prompt-container" id="promptContainer">
     <div id="attachmentPreview"></div>
@@ -358,6 +391,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   </div>
 </div>
 
+<!-- ── BOTTOM TOOLS ── -->
 <div class="bottom-tools">
   <button onclick="newChat()" title="New Chat"><span class="material-icons">edit_note</span></button>
   <button onclick="openHistory()" title="Chat History"><span class="material-icons">history</span></button>
@@ -365,7 +399,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   <button onclick="openOpsPanel()" title="Operations"><span class="material-icons">auto_awesome</span></button>
 </div>
 
-<!-- HISTORY PANEL -->
+<!-- ── HISTORY PANEL ── -->
 <div class="history-panel" id="historyPanel">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
     <h3 style="font-size:17px;">Chat History</h3>
@@ -375,12 +409,13 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   <div id="historyList"></div>
 </div>
 
-<!-- OPS PANEL -->
+<!-- ── OPS PANEL ── -->
 <div class="medical-panel" id="opsPanel">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
     <h3><span class="material-icons" style="color:#41e1ae;font-size:18px;">auto_awesome</span> Quick Operations</h3>
     <span class="material-icons" style="cursor:pointer;" onclick="closeOpsPanel()">close</span>
   </div>
+
   <div class="op-category">
     <div class="op-category-title">🏥 Medical</div>
     <span class="op-chip medical" onclick="quickOp('enhance this xray')">X-Ray Enhance</span>
@@ -394,6 +429,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     <span class="op-chip medical" onclick="quickOp('denoise image')">Denoise</span>
     <span class="op-chip medical" onclick="quickOp('segment image')">Segmentation</span>
   </div>
+
   <div class="op-category">
     <div class="op-category-title">🎨 Creative Filters</div>
     <span class="op-chip creative" onclick="quickOp('apply cartoon effect')">Cartoon</span>
@@ -418,6 +454,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     <span class="op-chip creative" onclick="quickOp('apply mosaic effect')">Mosaic</span>
     <span class="op-chip creative" onclick="quickOp('cross process effect')">Cross Process</span>
   </div>
+
   <div class="op-category">
     <div class="op-category-title">🔬 Detection & Analysis</div>
     <span class="op-chip detection" onclick="quickOp('detect faces')">Face Detect</span>
@@ -428,6 +465,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     <span class="op-chip detection" onclick="quickOp('analyze colors')">Color Analysis</span>
     <span class="op-chip detection" onclick="quickOp('histogram equalization')">Histogram Eq</span>
   </div>
+
   <div class="op-category">
     <div class="op-category-title">✨ Restoration</div>
     <span class="op-chip" onclick="quickOp('super resolution upscale')">Super Resolution</span>
@@ -435,6 +473,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     <span class="op-chip" onclick="quickOp('colorize black and white')">Colorize B&W</span>
     <span class="op-chip" onclick="quickOp('restore old photo')">Restore Old Photo</span>
   </div>
+
   <div class="op-category">
     <div class="op-category-title">⚙️ Basic</div>
     <span class="op-chip" onclick="quickOp('rotate 90 degrees')">Rotate 90°</span>
@@ -453,20 +492,23 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     <span class="op-chip" onclick="quickOp('add film grain')">Film Grain</span>
     <span class="op-chip" onclick="quickOp('warm white balance')">Warm Tone</span>
     <span class="op-chip" onclick="quickOp('cool white balance')">Cool Tone</span>
+    <span class="op-chip" onclick="quickOp('apply HDR effect')">HDR</span>
     <span class="op-chip" onclick="quickOp('image info')">Image Info</span>
   </div>
+
   <div class="op-category">
     <div class="op-category-title">🤖 Generate</div>
     <span class="op-chip creative" onclick="promptGenerate()">Generate from Text</span>
   </div>
 </div>
 
-<!-- AUTH MODAL -->
+<!-- ── AUTH MODAL ── -->
 <div class="modal-overlay" id="authModal">
   <div class="modal-box" id="authBox">
     <h3 id="authTitle">Sign In</h3>
     <div class="modal-alert" id="authAlert"></div>
     <div class="rate-limit-timer" id="rateLimitMsg">⏳ Too many attempts. Please wait <span id="rateLimitCountdown">30</span>s</div>
+
     <div id="signupSection" style="display:none;flex-direction:column;gap:10px;">
       <div style="display:flex;gap:10px;">
         <div class="input-field-wrap" style="flex:1">
@@ -493,10 +535,12 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
         <span class="field-error" id="dobErr">Must be 13+</span>
       </div>
     </div>
+
     <div class="input-field-wrap" id="loginIdentifierWrap">
       <input class="modal-input" id="loginIdentifier" placeholder="Email or Username">
       <span class="field-error" id="identifierErr">Required</span>
     </div>
+
     <div class="input-field-wrap">
       <div class="pw-wrap">
         <input class="modal-input" id="password" type="password" placeholder="Password" oninput="onPasswordInput()">
@@ -518,6 +562,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
       </div>
       <span class="field-error" id="passwordErr">Required</span>
     </div>
+
     <div class="input-field-wrap" id="confirmPwWrap" style="display:none;">
       <div class="pw-wrap">
         <input class="modal-input" id="confirmPassword" type="password" placeholder="Confirm Password" oninput="validateConfirmPw()">
@@ -525,12 +570,14 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
       </div>
       <span class="field-error" id="confirmPwErr">Passwords don't match</span>
     </div>
+
     <div id="termsWrap" style="display:none;">
       <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
         <input type="checkbox" id="agreeTerms" style="margin-top:2px;flex-shrink:0;">
         <span class="modal-terms">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>. I am 13 years of age or older.</span>
       </label>
     </div>
+
     <button class="modal-btn-primary" id="authSubmitBtn" onclick="submitAuth()">Submit</button>
     <button class="modal-btn-text" id="forgotBtn" onclick="showForgotPassword()">Forgot Password?</button>
     <div class="modal-divider" id="switchDivider">or</div>
@@ -539,20 +586,22 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   </div>
 </div>
 
-<!-- FORGOT PASSWORD MODAL -->
+<!-- ── FORGOT PASSWORD MODAL ── -->
 <div class="modal-overlay" id="forgotModal">
   <div class="modal-box" style="max-width:380px;">
     <h3>Reset Password</h3>
     <div class="modal-alert" id="forgotAlert"></div>
     <div id="forgotStep1">
       <div style="display:flex;flex-direction:column;gap:12px;">
-        <input class="modal-input" id="forgotEmail" placeholder="Enter your email or username">
+        <div class="input-field-wrap">
+          <input class="modal-input" id="forgotEmail" placeholder="Enter your email or username">
+        </div>
         <button class="modal-btn-primary" onclick="sendOTP()">Send OTP</button>
       </div>
     </div>
     <div id="forgotStep2" style="display:none;flex-direction:column;gap:12px;">
       <p style="color:rgba(255,255,255,0.7);font-size:13px;text-align:center;">Enter the 6-digit code sent to your email</p>
-      <div class="otp-grid">
+      <div class="otp-grid" id="otpGrid">
         <input class="otp-digit" maxlength="1" oninput="otpInput(this,0)" onkeydown="otpBack(this,event,0)">
         <input class="otp-digit" maxlength="1" oninput="otpInput(this,1)" onkeydown="otpBack(this,event,1)">
         <input class="otp-digit" maxlength="1" oninput="otpInput(this,2)" onkeydown="otpBack(this,event,2)">
@@ -564,20 +613,24 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
       <button class="modal-btn-primary" onclick="verifyOTP()">Verify OTP</button>
     </div>
     <div id="forgotStep3" style="display:none;flex-direction:column;gap:12px;">
-      <div class="pw-wrap">
-        <input class="modal-input" id="newPassword" type="password" placeholder="New Password" oninput="onNewPasswordInput()">
-        <span class="pw-eye material-icons" onclick="togglePwEye('newPassword','eyeIcon3')" id="eyeIcon3">visibility</span>
-      </div>
-      <div class="pw-strength-wrap">
-        <div class="pw-bars">
-          <div class="pw-bar" id="nbar1"></div><div class="pw-bar" id="nbar2"></div>
-          <div class="pw-bar" id="nbar3"></div><div class="pw-bar" id="nbar4"></div><div class="pw-bar" id="nbar5"></div>
+      <div class="input-field-wrap">
+        <div class="pw-wrap">
+          <input class="modal-input" id="newPassword" type="password" placeholder="New Password" oninput="onNewPasswordInput()">
+          <span class="pw-eye material-icons" onclick="togglePwEye('newPassword','eyeIcon3')" id="eyeIcon3">visibility</span>
         </div>
-        <div class="pw-label" id="newPwLabel"></div>
+        <div class="pw-strength-wrap" id="newPwStrengthWrap">
+          <div class="pw-bars">
+            <div class="pw-bar" id="nbar1"></div><div class="pw-bar" id="nbar2"></div>
+            <div class="pw-bar" id="nbar3"></div><div class="pw-bar" id="nbar4"></div><div class="pw-bar" id="nbar5"></div>
+          </div>
+          <div class="pw-label" id="newPwLabel"></div>
+        </div>
       </div>
-      <div class="pw-wrap">
-        <input class="modal-input" id="confirmNewPassword" type="password" placeholder="Confirm New Password">
-        <span class="pw-eye material-icons" onclick="togglePwEye('confirmNewPassword','eyeIcon4')" id="eyeIcon4">visibility</span>
+      <div class="input-field-wrap">
+        <div class="pw-wrap">
+          <input class="modal-input" id="confirmNewPassword" type="password" placeholder="Confirm New Password">
+          <span class="pw-eye material-icons" onclick="togglePwEye('confirmNewPassword','eyeIcon4')" id="eyeIcon4">visibility</span>
+        </div>
       </div>
       <button class="modal-btn-primary" onclick="resetPassword()">Reset Password</button>
     </div>
@@ -585,36 +638,42 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   </div>
 </div>
 
-<!-- CHANGE PASSWORD MODAL -->
+<!-- ── CHANGE PASSWORD MODAL ── -->
 <div class="modal-overlay" id="changePwModal">
   <div class="modal-box" style="max-width:380px;">
     <h3>Change Password</h3>
     <div class="modal-alert" id="changePwAlert"></div>
-    <div class="pw-wrap">
-      <input class="modal-input" id="currentPassword" type="password" placeholder="Current Password">
-      <span class="pw-eye material-icons" onclick="togglePwEye('currentPassword','eyeIcon5')" id="eyeIcon5">visibility</span>
-    </div>
-    <div class="pw-wrap">
-      <input class="modal-input" id="newPwChange" type="password" placeholder="New Password" oninput="onChangePwInput()">
-      <span class="pw-eye material-icons" onclick="togglePwEye('newPwChange','eyeIcon6')" id="eyeIcon6">visibility</span>
-    </div>
-    <div class="pw-strength-wrap" id="changePwStrength">
-      <div class="pw-bars">
-        <div class="pw-bar" id="cbar1"></div><div class="pw-bar" id="cbar2"></div>
-        <div class="pw-bar" id="cbar3"></div><div class="pw-bar" id="cbar4"></div><div class="pw-bar" id="cbar5"></div>
+    <div class="input-field-wrap">
+      <div class="pw-wrap">
+        <input class="modal-input" id="currentPassword" type="password" placeholder="Current Password">
+        <span class="pw-eye material-icons" onclick="togglePwEye('currentPassword','eyeIcon5')" id="eyeIcon5">visibility</span>
       </div>
-      <div class="pw-label" id="changePwLabel"></div>
     </div>
-    <div class="pw-wrap">
-      <input class="modal-input" id="confirmNewPwChange" type="password" placeholder="Confirm New Password">
-      <span class="pw-eye material-icons" onclick="togglePwEye('confirmNewPwChange','eyeIcon7')" id="eyeIcon7">visibility</span>
+    <div class="input-field-wrap">
+      <div class="pw-wrap">
+        <input class="modal-input" id="newPwChange" type="password" placeholder="New Password" oninput="onChangePwInput()">
+        <span class="pw-eye material-icons" onclick="togglePwEye('newPwChange','eyeIcon6')" id="eyeIcon6">visibility</span>
+      </div>
+      <div class="pw-strength-wrap" id="changePwStrength">
+        <div class="pw-bars">
+          <div class="pw-bar" id="cbar1"></div><div class="pw-bar" id="cbar2"></div>
+          <div class="pw-bar" id="cbar3"></div><div class="pw-bar" id="cbar4"></div><div class="pw-bar" id="cbar5"></div>
+        </div>
+        <div class="pw-label" id="changePwLabel"></div>
+      </div>
+    </div>
+    <div class="input-field-wrap">
+      <div class="pw-wrap">
+        <input class="modal-input" id="confirmNewPwChange" type="password" placeholder="Confirm New Password">
+        <span class="pw-eye material-icons" onclick="togglePwEye('confirmNewPwChange','eyeIcon7')" id="eyeIcon7">visibility</span>
+      </div>
     </div>
     <button class="modal-btn-primary" onclick="submitChangePassword()">Update Password</button>
     <button class="modal-btn-text" onclick="document.getElementById('changePwModal').style.display='none'">Cancel</button>
   </div>
 </div>
 
-<!-- SHARE MODAL -->
+<!-- ── SHARE MODAL ── -->
 <div class="share-modal" id="shareModal" onclick="if(event.target===this)this.style.display='none'">
   <div class="share-box">
     <h3>🔗 Share Chat</h3>
@@ -628,9 +687,12 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   </div>
 </div>
 
+<!-- ── LIGHTBOX ── -->
 <div class="lightbox" id="lightbox" onclick="this.style.display='none'">
   <img id="lightboxImg" alt="Preview">
 </div>
+
+<!-- ── TOAST ── -->
 <div class="toast" id="toast"></div>
 
 <input type="file" id="fileInput" accept="image/*" multiple style="display:none"
@@ -640,804 +702,758 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 (function () {
 'use strict';
 
-// ── STATE ─────────────────────────────────────────────────
-let chatStarted = false, generating = false;
-let attachedFiles = [], conversationHistory = [];
-let currentChatTitle = null, currentChatKey = null;
-let authMode = 'signin';
-let loginAttempts = 0, lockUntil = 0;
-let otpCode = '', otpExpiry = 0, otpTimerInt = null;
-let currentUser = null;
+// ── STORAGE PURGE ──────────────────────────────────────────
+(function purgeOldImageChats() {
+  try {
+    Object.keys(localStorage).forEach(key => {
+      if (key === 'berryChats') localStorage.removeItem(key);
+    });
+  } catch(e) {}
+})();
 
-const MAX_SIZE   = 10 * 1024 * 1024;
-const ALLOWED    = ['image/jpeg','image/png','image/webp','image/gif','image/bmp'];
-const LS_PREFIX  = 'lumina_chat_v3_';
-const LS_USER    = 'luminaUser_v3';
-const MAX_LOGIN_ATTEMPTS = 5, LOCK_DURATION = 30;
+// ── STATE ─────────────────────────────────────────────────
+let chatStarted=false, generating=false;
+let attachedFiles=[], conversationHistory=[];
+let currentChatTitle=null, currentChatKey=null;
+let authMode='signin';
+let loginAttempts=0, lockUntil=0;
+let otpCode='', otpExpiry=0, otpTimerInt=null;
+let currentUser=null; // track logged-in user
+const MAX_SIZE=10*1024*1024;
+const ALLOWED=['image/jpeg','image/png','image/webp','image/gif','image/bmp'];
+const LS_INDEX='lumina_index_v2', LS_PREFIX='lumina_chat_v2_', LS_USER='luminaUser_v2';
+const MAX_LOGIN_ATTEMPTS=5, LOCK_DURATION=30;
 
 // ── TOAST ─────────────────────────────────────────────────
-function toast(msg, dur = 2500) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), dur);
-}
-
-// ── INDEX KEY (user-specific) ─────────────────────────────
-function getIndexKey() {
-  return currentUser ? `lumina_index_${currentUser.username}` : 'lumina_index_guest';
-}
-function getChatKeyPrefix() {
-  return currentUser ? `lumina_chat_${currentUser.username}_` : LS_PREFIX;
+function toast(msg, dur=2500) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), dur);
 }
 
 // ── CHAT HELPERS ──────────────────────────────────────────
 function startChatMode() {
-  if (chatStarted) return;
-  chatStarted = true;
-  document.getElementById('watermark').style.display = 'none';
-  document.getElementById('homeSubtitle').style.display = 'none';
-  document.getElementById('chatWrapper').style.display = 'block';
+  if (chatStarted) return; chatStarted=true;
+  document.getElementById('watermark').style.display='none';
+  document.getElementById('homeSubtitle').style.display='none';
+  document.getElementById('chatWrapper').style.display='block';
 }
 
-function addMsg(content, role, isHTML = false) {
-  const div = document.createElement('div');
-  div.classList.add('chat-msg', role === 'user' ? 'user-msg' : 'bot-msg');
-  if (isHTML) div.innerHTML = content; else div.innerText = content;
+function addMsg(content, role, isHTML=false) {
+  const div=document.createElement('div');
+  div.classList.add('chat-msg', role==='user'?'user-msg':'bot-msg');
+  if (isHTML) div.innerHTML=content; else div.innerText=content;
   document.getElementById('chatArea').appendChild(div);
-  scrollChat();
-  return div;
+  scrollChat(); return div;
 }
 
 function addImageMsg(src, role) {
-  const div = document.createElement('div');
-  div.classList.add('chat-msg', role === 'user' ? 'user-msg' : 'bot-msg');
-  const img = document.createElement('img');
-  img.src = src;
-  img.className = 'chat-image-large';
-  img.onclick = () => openLightbox(src);
+  const div=document.createElement('div');
+  div.classList.add('chat-msg', role==='user'?'user-msg':'bot-msg');
+  const img=document.createElement('img'); img.src=src; img.className='chat-image-large';
+  img.onclick=()=>openLightbox(src);
   div.appendChild(img);
+  // Add action buttons for bot images
   if (role === 'bot') {
-    const actions = document.createElement('div');
-    actions.className = 'img-actions';
-    // Store src in dataset to avoid closure issues
-    const dlBtn  = document.createElement('button');
-    dlBtn.className = 'img-action-btn';
-    dlBtn.innerHTML = '<span class="material-icons">download</span> Download';
-    dlBtn.onclick = () => downloadImage(src);
-
-    const fvBtn  = document.createElement('button');
-    fvBtn.className = 'img-action-btn';
-    fvBtn.innerHTML = '<span class="material-icons">zoom_in</span> Full View';
-    fvBtn.onclick = () => openLightbox(src);
-
-    const cpBtn  = document.createElement('button');
-    cpBtn.className = 'img-action-btn';
-    cpBtn.innerHTML = '<span class="material-icons">content_copy</span> Copy';
-    cpBtn.onclick = () => copyImageToClipboard(src);
-
-    actions.appendChild(dlBtn);
-    actions.appendChild(fvBtn);
-    actions.appendChild(cpBtn);
+    const actions=document.createElement('div');
+    actions.className='img-actions';
+    actions.innerHTML=`
+      <button class="img-action-btn" onclick="downloadImage('${src}')">
+        <span class="material-icons">download</span> Download
+      </button>
+      <button class="img-action-btn" onclick="openLightbox('${src}')">
+        <span class="material-icons">zoom_in</span> Full View
+      </button>
+      <button class="img-action-btn" onclick="copyImageToClipboard('${src}')">
+        <span class="material-icons">content_copy</span> Copy
+      </button>`;
     div.appendChild(actions);
   }
-  document.getElementById('chatArea').appendChild(div);
-  scrollChat();
+  document.getElementById('chatArea').appendChild(div); scrollChat();
 }
 
-function downloadImage(src) {
-  const a = document.createElement('a');
-  a.href = src;
-  a.download = 'lumina_' + Date.now() + '.png';
+// ── IMAGE DOWNLOAD ─────────────────────────────────────────
+window.downloadImage = function(src) {
+  const a=document.createElement('a');
+  a.href=src;
+  a.download='lumina_' + Date.now() + '.png';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   toast('Image downloaded! 📥');
-}
+};
 
-async function copyImageToClipboard(src) {
+window.copyImageToClipboard = async function(src) {
   try {
-    const res  = await fetch(src);
-    const blob = await res.blob();
-    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    const res=await fetch(src);
+    const blob=await res.blob();
+    await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
     toast('Image copied to clipboard! 📋');
-  } catch (e) {
+  } catch(e) {
+    // Fallback: open in new tab
     window.open(src, '_blank');
     toast('Opened in new tab — right-click to copy!');
   }
-}
+};
 
 function scrollChat() {
-  const w = document.getElementById('chatWrapper');
-  setTimeout(() => { w.scrollTop = w.scrollHeight; }, 60);
+  const w=document.getElementById('chatWrapper');
+  setTimeout(()=>{w.scrollTop=w.scrollHeight;}, 60);
 }
-
 function showTyping() {
-  const div = document.createElement('div');
-  div.classList.add('chat-msg', 'bot-msg');
-  div.id = 'typing';
-  div.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
-  document.getElementById('chatArea').appendChild(div);
-  scrollChat();
+  const div=document.createElement('div');
+  div.classList.add('chat-msg','bot-msg'); div.id='typing';
+  div.innerHTML='<div class="typing"><span></span><span></span><span></span></div>';
+  document.getElementById('chatArea').appendChild(div); scrollChat();
 }
-function removeTyping() { const t = document.getElementById('typing'); if (t) t.remove(); }
-
+function removeTyping() { const t=document.getElementById('typing'); if(t) t.remove(); }
 function formatReply(text) {
-  if (!text) return '';
   return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\n/g, '<br>');
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g,'<em>$1</em>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\n/g,'<br>');
 }
 
 // ── SEND MESSAGE ──────────────────────────────────────────
-window.sendMessage = async function () {
+window.sendMessage = async function() {
   if (generating) return;
-  const input    = document.getElementById('promptInput');
-  const text     = input.value.trim();
-  const hasFiles = attachedFiles.length > 0;
+  const input=document.getElementById('promptInput');
+  const text=input.value.trim();
+  const hasFiles=attachedFiles.length>0;
   if (!text && !hasFiles) return;
-
-  generating = true;
-  document.getElementById('actionIcon').textContent = 'stop';
+  generating=true;
+  document.getElementById('actionIcon').textContent='stop';
   startChatMode();
-
   if (!currentChatTitle) {
-    currentChatTitle = text || 'Image uploaded';
-    currentChatKey   = getChatKeyPrefix() + Date.now();
+    currentChatTitle=text||'Image uploaded';
+    currentChatKey=LS_PREFIX+Date.now();
   }
-
-  if (text) addMsg(text, 'user');
-  if (hasFiles) attachedFiles.forEach(f => addImageMsg(f, 'user'));
-
-  const promptText = text;
-  const fileToSend = attachedFiles[0] || null;
-  input.value = '';
-  attachedFiles = [];
-  renderPreviews();
+  if (text) addMsg(text,'user');
+  if (hasFiles) attachedFiles.forEach(f=>addImageMsg(f,'user'));
+  const promptText=text;
+  const fileToSend=attachedFiles[0]||null;
+  input.value=''; attachedFiles=[]; renderPreviews();
   showTyping();
-
   try {
-    const fd = new FormData();
-    fd.append('prompt', promptText);
-    fd.append('history', JSON.stringify(conversationHistory));
+    const fd=new FormData();
+    fd.append('prompt',promptText);
+    fd.append('history',JSON.stringify(conversationHistory));
     if (fileToSend) {
-      const blob = await (await fetch(fileToSend)).blob();
-      fd.append('image', blob, 'upload.jpg');
+      const blob=await (await fetch(fileToSend)).blob();
+      fd.append('image',blob,'upload.jpg');
     }
-
-    const res = await fetch('/process', { method: 'POST', body: fd });
+    const res=await fetch('/process',{method:'POST',body:fd});
     removeTyping();
-
-    // Always try to parse JSON regardless of status
-    let data;
-    try {
-      data = await res.json();
-    } catch (e) {
-      const rawText = await res.text().catch(() => 'Unknown server error');
-      addMsg('⚠️ Server returned invalid response. Check server logs.', 'bot');
-      return;
-    }
-
-    if (data.history) conversationHistory = data.history;
-    if (data.message) addMsg(formatReply(data.message), 'bot', true);
-    if (data.image)   addImageMsg(data.image, 'bot');
+    if (!res.ok) { addMsg('⚠️ Server error: '+await res.text(),'bot'); return; }
+    const data=await res.json();
+    if (data.history) conversationHistory=data.history;
+    if (data.message) addMsg(formatReply(data.message),'bot',true);
+    if (data.image) addImageMsg(data.image,'bot');
     saveChatHistory();
-
-  } catch (err) {
-    removeTyping();
-    addMsg('⚠️ Connection error: ' + err.message, 'bot');
+  } catch(err) {
+    removeTyping(); addMsg('⚠️ Connection error: '+err.message,'bot');
   } finally {
-    generating = false;
-    document.getElementById('actionIcon').textContent = 'arrow_upward';
+    generating=false;
+    document.getElementById('actionIcon').textContent='arrow_upward';
   }
 };
 
 // ── QUICK OP ─────────────────────────────────────────────
-window.quickOp = function (cmd) {
-  document.getElementById('promptInput').value = cmd;
+window.quickOp = function(cmd) {
+  document.getElementById('promptInput').value=cmd;
   closeOpsPanel();
   sendMessage();
 };
-window.promptGenerate = function () {
+window.promptGenerate = function() {
   closeOpsPanel();
-  const p = prompt('Enter a text prompt to generate an image:');
+  const p=prompt('Enter a text prompt to generate an image:');
   if (p && p.trim()) {
-    document.getElementById('promptInput').value = 'generate ' + p.trim();
+    document.getElementById('promptInput').value='generate ' + p.trim();
     sendMessage();
   }
 };
 
 // ── NEW CHAT ─────────────────────────────────────────────
-window.newChat = function () {
-  document.getElementById('chatArea').innerHTML = '';
-  document.getElementById('chatWrapper').style.display = 'none';
-  document.getElementById('watermark').style.display = 'block';
-  document.getElementById('homeSubtitle').style.display = 'block';
-  chatStarted = false;
-  attachedFiles = [];
-  conversationHistory = [];
-  currentChatTitle = null;
-  currentChatKey   = null;
+window.newChat = function() {
+  document.getElementById('chatArea').innerHTML='';
+  document.getElementById('chatWrapper').style.display='none';
+  document.getElementById('watermark').style.display='block';
+  document.getElementById('homeSubtitle').style.display='block';
+  chatStarted=false; attachedFiles=[]; conversationHistory=[];
+  currentChatTitle=null; currentChatKey=null;
   renderPreviews();
-  document.getElementById('profileMenu').style.display = 'none';
+  document.getElementById('profileMenu').style.display='none';
 };
 
 // ── HISTORY ───────────────────────────────────────────────
-function getChatIndex() {
-  try { return JSON.parse(localStorage.getItem(getIndexKey()) || '[]'); } catch { return []; }
+function getChatKey() {
+  // Use user-specific keys when logged in
+  const prefix = currentUser ? `lumina_chat_${currentUser.username}_` : LS_PREFIX;
+  return prefix;
 }
-function updateChatIndex(a) {
-  try { localStorage.setItem(getIndexKey(), JSON.stringify(a)); } catch (e) {}
+function getIndexKey() {
+  return currentUser ? `lumina_index_${currentUser.username}` : LS_INDEX;
 }
 
 function saveChatHistory() {
   if (!currentChatKey || !currentChatTitle) return;
-  const rawHTML  = document.getElementById('chatArea').innerHTML;
-  // Strip base64 src to save space — keep everything else
-  const cleanHTML = rawHTML.replace(/src="data:image[^"]{0,500000}"/gi, 'src="[img]"');
-
-  // Lean history — strip image bytes from parts (keep text context)
-  const leanHistory = (conversationHistory || []).map(turn => ({
+  const rawHTML=document.getElementById('chatArea').innerHTML;
+  // Strip base64 images from stored HTML to save space
+  const cleanHTML=rawHTML.replace(/src="data:image[^"]+"/gi, 'src=""').replace(/<img[^>]*src=""[^>]*>/gi, '<span style="color:rgba(255,255,255,0.45);font-size:12px;">[image]</span>');
+  const chatData={title:currentChatTitle,html:cleanHTML,history:conversationHistory,ts:Date.now()};
+  
+  // Limit history size — strip image data from history parts
+  const leanHistory = (chatData.history||[]).map(turn => ({
     ...turn,
-    parts: (turn.parts || []).map(p => {
-      if (typeof p === 'object' && p.mime_type) return { mime_type: p.mime_type, data: '[stripped]' };
+    parts: (turn.parts||[]).map(p => {
+      if (typeof p === 'object' && p.mime_type) return {mime_type:p.mime_type, data:'[stripped]'};
       return p;
     })
   }));
-
-  const chatData = {
-    title:   currentChatTitle,
-    html:    cleanHTML,
-    history: leanHistory,
-    ts:      Date.now()
-  };
-
-  const serialized = JSON.stringify(chatData);
-  try {
-    if (serialized.length < 400000) {
+  chatData.history = leanHistory;
+  
+  const serialized=JSON.stringify(chatData);
+  if (serialized.length > 300000) {
+    // Too large — save without history
+    chatData.history = [];
+    const small = JSON.stringify(chatData);
+    try { localStorage.setItem(currentChatKey, small); } catch(e) {}
+  } else {
+    try {
       localStorage.setItem(currentChatKey, serialized);
-    } else {
-      // Too large — save without history
-      chatData.history = [];
-      localStorage.setItem(currentChatKey, JSON.stringify(chatData));
-    }
-  } catch (e) {
-    // Quota — prune oldest
-    const idx = getChatIndex();
-    if (idx.length > 0) {
-      localStorage.removeItem(idx[0].key);
-      updateChatIndex(idx.slice(1));
-      try { localStorage.setItem(currentChatKey, JSON.stringify({ ...chatData, history: [] })); } catch (e2) {}
+    } catch(e) {
+      // Quota exceeded — prune oldest chats
+      const idx = getChatIndex();
+      if (idx.length > 0) {
+        const oldest = idx[0];
+        localStorage.removeItem(oldest.key);
+        updateChatIndex(idx.slice(1));
+        try { localStorage.setItem(currentChatKey, serialized); } catch(e2) {}
+      }
     }
   }
-
-  const idx = getChatIndex().filter(c => c.key !== currentChatKey).slice(-49);
-  idx.push({ key: currentChatKey, title: currentChatTitle, ts: Date.now() });
+  const idx=getChatIndex().filter(c=>c.key!==currentChatKey).slice(-49);
+  idx.push({key:currentChatKey,title:currentChatTitle,ts:Date.now()});
   updateChatIndex(idx);
 }
 
-window.openHistory = function () {
-  document.getElementById('historyPanel').style.display = 'block';
-  document.getElementById('historySearch').value = '';
+function getChatIndex() {
+  try { return JSON.parse(localStorage.getItem(getIndexKey())||'[]'); } catch { return []; }
+}
+function updateChatIndex(a) {
+  localStorage.setItem(getIndexKey(), JSON.stringify(a));
+}
+
+window.openHistory=function(){
+  document.getElementById('historyPanel').style.display='block';
+  document.getElementById('historySearch').value='';
   renderHistoryList('');
 };
-window.closeHistory = function () { document.getElementById('historyPanel').style.display = 'none'; };
+window.closeHistory=function(){ document.getElementById('historyPanel').style.display='none'; };
 
-window.renderHistoryList = function (query = '') {
-  const list = document.getElementById('historyList');
-  list.innerHTML = '';
-  let idx = getChatIndex().slice().sort((a, b) => b.ts - a.ts);
+function renderHistoryList(query='') {
+  const list=document.getElementById('historyList'); list.innerHTML='';
+  let idx=getChatIndex().slice().sort((a,b)=>b.ts-a.ts);
   if (query) {
-    const q = query.toLowerCase();
-    idx = idx.filter(e => e.title.toLowerCase().includes(q));
+    const q=query.toLowerCase();
+    idx=idx.filter(e=>e.title.toLowerCase().includes(q));
   }
   if (!idx.length) {
-    list.innerHTML = `<p style="opacity:.55;font-size:13px;">${query ? 'No matching chats.' : 'No saved chats yet.'}</p>`;
+    list.innerHTML=`<p style="opacity:.55;font-size:13px;">${query?'No matching chats.':'No saved chats yet.'}</p>`;
     return;
   }
-  idx.forEach(entry => {
-    const item = document.createElement('div');
-    item.className = 'history-item';
-    const date = new Date(entry.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    item.innerHTML = `
+  idx.forEach(entry=>{
+    const item=document.createElement('div'); item.className='history-item';
+    const date=new Date(entry.ts).toLocaleDateString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    item.innerHTML=`
       <div style="flex:1;min-width:0;">
-        <div class="title">${escHtml(trunc(entry.title, 42))}</div>
+        <div class="title">${escapeHtml(truncate(entry.title,42))}</div>
         <div class="date">${date}</div>
       </div>
       <button class="del-btn" title="Delete">×</button>`;
-    item.querySelector('.del-btn').onclick = (e) => { e.stopPropagation(); deleteChat(entry.key); };
-    item.addEventListener('click', () => loadChat(entry.key));
+    item.querySelector('.del-btn').onclick=(e)=>{ e.stopPropagation(); deleteChat(entry.key); };
+    item.addEventListener('click',()=>loadChat(entry.key));
     list.appendChild(item);
   });
-};
+}
 
 function deleteChat(key) {
   localStorage.removeItem(key);
-  updateChatIndex(getChatIndex().filter(c => c.key !== key));
-  window.renderHistoryList(document.getElementById('historySearch').value);
+  updateChatIndex(getChatIndex().filter(c=>c.key!==key));
+  renderHistoryList(document.getElementById('historySearch').value);
   toast('Chat deleted.');
 }
 
 function loadChat(key) {
-  const raw = localStorage.getItem(key);
-  if (!raw) return;
+  const raw=localStorage.getItem(key); if (!raw) return;
   try {
-    const data = JSON.parse(raw);
-    document.getElementById('chatArea').innerHTML = data.html || '';
-    conversationHistory = data.history || [];
-    currentChatTitle    = data.title || null;
-    currentChatKey      = key;
-    document.querySelectorAll('.chat-image-large').forEach(img => {
-      if (img.src && !img.src.includes('[img]')) img.onclick = () => openLightbox(img.src);
-    });
-    startChatMode();
-    closeHistory();
-    scrollChat();
-  } catch (e) { console.error(e); }
+    const data=JSON.parse(raw);
+    document.getElementById('chatArea').innerHTML=data.html||'';
+    conversationHistory=data.history||[];
+    currentChatTitle=data.title||null;
+    currentChatKey=key;
+    document.querySelectorAll('.chat-image-large').forEach(img=>{img.onclick=()=>openLightbox(img.src);});
+    startChatMode(); closeHistory(); scrollChat();
+  } catch(e) { console.error(e); }
 }
 
 // ── SHARE CHAT ─────────────────────────────────────────────
-window.shareCurrentChat = function () {
-  document.getElementById('profileMenu').style.display = 'none';
+window.shareCurrentChat = function() {
+  document.getElementById('profileMenu').style.display='none';
   if (!chatStarted) { toast('Start a chat first to share!'); return; }
+  // Encode chat as base64 in URL
   const shareData = {
     title: currentChatTitle || 'Lumina Chat',
-    html:  document.getElementById('chatArea').innerHTML.replace(/src="data:image[^"]{0,500000}"/gi, 'src=""'),
-    ts:    Date.now()
+    html: document.getElementById('chatArea').innerHTML
+      .replace(/src="data:image[^"]+"/gi, 'src=""'),
+    ts: Date.now()
   };
   try {
-    const shareId = 'share_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    const encoded = btoa(encodeURIComponent(JSON.stringify({title: shareData.title, ts: shareData.ts})));
+    const shareId = encoded.slice(0, 20) + '_' + Date.now();
+    // Store in localStorage for local sharing
     localStorage.setItem('lumina_share_' + shareId, JSON.stringify(shareData));
-    const shareUrl = window.location.origin + '/share/' + shareId;
+    const shareUrl = window.location.origin + '/share/' + shareId + '#' + btoa(JSON.stringify(shareData)).slice(0, 200);
     document.getElementById('shareLinkInput').value = shareUrl;
-    document.getElementById('shareModal').style.display = 'flex';
-  } catch (e) { toast('Could not generate share link.'); }
+    document.getElementById('shareModal').style.display='flex';
+  } catch(e) {
+    toast('Could not generate share link.');
+  }
 };
 
-window.copyShareLink = function () {
+window.copyShareLink = function() {
   const input = document.getElementById('shareLinkInput');
   input.select();
-  navigator.clipboard.writeText(input.value)
-    .then(() => toast('Share link copied! 🔗'))
-    .catch(() => { document.execCommand('copy'); toast('Share link copied! 🔗'); });
+  navigator.clipboard.writeText(input.value).then(()=>toast('Share link copied! 🔗')).catch(()=>{
+    document.execCommand('copy');
+    toast('Share link copied! 🔗');
+  });
 };
 
-window.copyShareText = function () {
+window.copyShareText = function() {
   const messages = [];
   document.querySelectorAll('.chat-msg').forEach(msg => {
     const role = msg.classList.contains('user-msg') ? 'You' : 'Lumina';
-    const text = (msg.innerText || msg.textContent || '').trim();
-    if (text) messages.push(role + ': ' + text);
+    const text = msg.innerText || msg.textContent;
+    if (text.trim()) messages.push(role + ': ' + text.trim());
   });
-  const text = `--- Lumina Chat ---\n${currentChatTitle || 'Chat'}\n\n` + messages.join('\n\n');
-  navigator.clipboard.writeText(text)
-    .then(() => toast('Chat text copied! 📋'))
-    .catch(() => toast('Could not copy.'));
+  const text = `--- Lumina Chat ---\n${currentChatTitle||'Chat'}\n\n` + messages.join('\n\n');
+  navigator.clipboard.writeText(text).then(()=>toast('Chat text copied! 📋')).catch(()=>toast('Could not copy.'));
 };
 
 // ── FILE UPLOAD ───────────────────────────────────────────
-window.triggerUpload = function () { document.getElementById('fileInput').click(); };
-window.handleFileInputChange = function (e) { handleFiles(Array.from(e.target.files)); e.target.value = ''; };
-
+window.triggerUpload=function(){ document.getElementById('fileInput').click(); };
+window.handleFileInputChange=function(e){ handleFiles(Array.from(e.target.files)); e.target.value=''; };
 function handleFiles(files) {
-  files.forEach(file => {
+  files.forEach(file=>{
     if (!ALLOWED.includes(file.type)) { toast('Only images allowed (JPG, PNG, WEBP, GIF, BMP).'); return; }
-    if (file.size > MAX_SIZE) { toast('File exceeds 10MB limit.'); return; }
-    const reader = new FileReader();
-    reader.onload = ev => { attachedFiles.push(ev.target.result); renderPreviews(); };
+    if (file.size>MAX_SIZE) { toast('File exceeds 10MB limit.'); return; }
+    const reader=new FileReader();
+    reader.onload=ev=>{ attachedFiles.push(ev.target.result); renderPreviews(); };
     reader.readAsDataURL(file);
   });
 }
-
 function renderPreviews() {
-  const box = document.getElementById('attachmentPreview');
-  box.innerHTML = '';
-  attachedFiles.forEach((src, i) => {
-    const wrap = document.createElement('div'); wrap.className = 'attach-thumb';
-    const img  = document.createElement('img'); img.src = src; img.onclick = () => openLightbox(src);
-    const rm   = document.createElement('div'); rm.className = 'attach-remove'; rm.innerHTML = '×';
-    rm.onclick = () => { attachedFiles.splice(i, 1); renderPreviews(); };
+  const box=document.getElementById('attachmentPreview'); box.innerHTML='';
+  attachedFiles.forEach((src,i)=>{
+    const wrap=document.createElement('div'); wrap.className='attach-thumb';
+    const img=document.createElement('img'); img.src=src; img.onclick=()=>openLightbox(src);
+    const rm=document.createElement('div'); rm.className='attach-remove'; rm.innerHTML='×';
+    rm.onclick=()=>{ attachedFiles.splice(i,1); renderPreviews(); };
     wrap.appendChild(img); wrap.appendChild(rm); box.appendChild(wrap);
   });
 }
-
-document.addEventListener('dragover',  e => { e.preventDefault(); document.body.classList.add('dragging-over'); });
-document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('dragging-over'); });
-document.addEventListener('drop', e => { e.preventDefault(); document.body.classList.remove('dragging-over'); handleFiles(Array.from(e.dataTransfer.files)); });
+document.addEventListener('dragover',e=>{ e.preventDefault(); document.body.classList.add('dragging-over'); });
+document.addEventListener('dragleave',e=>{ if (!e.relatedTarget) document.body.classList.remove('dragging-over'); });
+document.addEventListener('drop',e=>{ e.preventDefault(); document.body.classList.remove('dragging-over'); handleFiles(Array.from(e.dataTransfer.files)); });
 
 // ── VOICE ─────────────────────────────────────────────────
-window.micAction = function () {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+window.micAction=function(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if (!SR) { toast('Voice input requires Chrome or Edge.'); return; }
-  const rec = new SR(); rec.lang = 'en-US';
-  rec.onresult = e => { document.getElementById('promptInput').value = e.results[0][0].transcript; };
+  const rec=new SR(); rec.lang='en-US';
+  rec.onresult=e=>{ document.getElementById('promptInput').value=e.results[0][0].transcript; };
   rec.start(); toast('Listening…');
 };
 
 // ── LIGHTBOX ─────────────────────────────────────────────
-function openLightbox(src) {
-  document.getElementById('lightboxImg').src = src;
-  document.getElementById('lightbox').style.display = 'flex';
-}
+function openLightbox(src){ document.getElementById('lightboxImg').src=src; document.getElementById('lightbox').style.display='flex'; }
 
 // ── OPS PANEL ─────────────────────────────────────────────
-window.openOpsPanel  = function () { document.getElementById('opsPanel').style.display = 'block'; document.getElementById('profileMenu').style.display = 'none'; };
-window.closeOpsPanel = function () { document.getElementById('opsPanel').style.display = 'none'; };
+window.openOpsPanel=function(){
+  document.getElementById('opsPanel').style.display='block';
+  document.getElementById('profileMenu').style.display='none';
+};
+window.closeOpsPanel=function(){ document.getElementById('opsPanel').style.display='none'; };
 
 // ── PASSWORD STRENGTH ─────────────────────────────────────
 function checkPasswordStrength(pw) {
-  const checks = {
-    len:     pw.length >= 8,
-    upper:   /[A-Z]/.test(pw),
-    lower:   /[a-z]/.test(pw),
-    num:     /\d/.test(pw),
+  const checks={
+    len: pw.length>=8,
+    upper: /[A-Z]/.test(pw),
+    lower: /[a-z]/.test(pw),
+    num: /\d/.test(pw),
     special: /[!@#$%^&*(),.?":{}|<>]/.test(pw)
   };
-  const score = Object.values(checks).filter(Boolean).length;
-  return { checks, score };
+  const score=Object.values(checks).filter(Boolean).length;
+  return {checks, score};
 }
-
 function renderStrength(pw, barPrefix, labelId) {
-  const { checks, score } = checkPasswordStrength(pw);
-  const colors = ['#ff4444','#ff8844','#ffcc44','#88cc44','#44cc77'];
-  const labels = ['Very Weak','Weak','Fair','Strong','Very Strong'];
-  for (let i = 1; i <= 5; i++) {
-    const bar = document.getElementById(barPrefix + i);
+  const {checks,score}=checkPasswordStrength(pw);
+  const colors=['#ff4444','#ff8844','#ffcc44','#88cc44','#44cc77'];
+  const labels=['Very Weak','Weak','Fair','Strong','Very Strong'];
+  for (let i=1;i<=5;i++){
+    const bar=document.getElementById(barPrefix+i);
     if (!bar) continue;
-    bar.style.background = i <= score ? colors[score - 1] : 'rgba(255,255,255,0.2)';
+    bar.style.background=i<=score?colors[score-1]:'rgba(255,255,255,0.2)';
   }
-  const lbl = document.getElementById(labelId);
-  if (lbl) lbl.textContent = pw ? (labels[score - 1] || 'Very Weak') : '';
+  const lbl=document.getElementById(labelId);
+  if (lbl) lbl.textContent=pw?labels[score-1]||'Very Weak':'';
   return checks;
 }
-
 function updateReqs(checks) {
-  const map = { len:'req-len', upper:'req-upper', lower:'req-lower', num:'req-num', special:'req-special' };
-  Object.entries(map).forEach(([k, id]) => {
-    const el = document.getElementById(id); if (!el) return;
-    el.className = 'pw-req ' + (checks[k] ? 'met' : 'unmet');
-    el.textContent = (checks[k] ? '✓' : '✗') + el.textContent.slice(1);
+  const map={len:'req-len',upper:'req-upper',lower:'req-lower',num:'req-num',special:'req-special'};
+  Object.entries(map).forEach(([k,id])=>{
+    const el=document.getElementById(id); if (!el) return;
+    el.className='pw-req '+(checks[k]?'met':'unmet');
+    el.textContent=(checks[k]?'✓':'✗')+el.textContent.slice(1);
   });
 }
-
-window.onPasswordInput = function () {
-  const pw = document.getElementById('password').value;
-  if (authMode === 'signup') { const checks = renderStrength(pw, 'bar', 'pwLabel'); updateReqs(checks); }
+window.onPasswordInput=function(){
+  const pw=document.getElementById('password').value;
+  if (authMode==='signup') {
+    const checks=renderStrength(pw,'bar','pwLabel');
+    updateReqs(checks);
+  }
 };
-window.onNewPasswordInput  = function () { renderStrength(document.getElementById('newPassword').value, 'nbar', 'newPwLabel'); };
-window.onChangePwInput     = function () { renderStrength(document.getElementById('newPwChange').value, 'cbar', 'changePwLabel'); };
-
-window.togglePwEye = function (inputId, iconId) {
-  const inp = document.getElementById(inputId);
-  const ico = document.getElementById(iconId);
-  if (!inp || !ico) return;
-  if (inp.type === 'password') { inp.type = 'text'; ico.textContent = 'visibility_off'; }
-  else { inp.type = 'password'; ico.textContent = 'visibility'; }
+window.onNewPasswordInput=function(){
+  const pw=document.getElementById('newPassword').value;
+  renderStrength(pw,'nbar','newPwLabel');
+};
+window.onChangePwInput=function(){
+  const pw=document.getElementById('newPwChange').value;
+  renderStrength(pw,'cbar','changePwLabel');
+};
+window.togglePwEye=function(inputId, iconId){
+  const inp=document.getElementById(inputId);
+  const ico=document.getElementById(iconId);
+  if (!inp||!ico) return;
+  if (inp.type==='password'){ inp.type='text'; ico.textContent='visibility_off'; }
+  else { inp.type='password'; ico.textContent='visibility'; }
 };
 
 // ── AUTH MODE ─────────────────────────────────────────────
-window.showSignIn = function () {
-  authMode = 'signin'; resetAuthModal();
-  document.getElementById('authTitle').innerText = 'Sign In';
-  document.getElementById('signupSection').style.display = 'none';
-  document.getElementById('loginIdentifierWrap').style.display = 'flex';
-  document.getElementById('confirmPwWrap').style.display = 'none';
-  document.getElementById('termsWrap').style.display = 'none';
-  document.getElementById('pwStrengthWrap').style.display = 'none';
-  document.getElementById('forgotBtn').style.display = 'block';
-  document.getElementById('switchBtn').textContent = "Don't have an account? Sign Up";
-  document.getElementById('authSubmitBtn').textContent = 'Sign In';
-  document.getElementById('authModal').style.display = 'flex';
+window.showSignIn=function(){
+  authMode='signin'; resetAuthModal();
+  document.getElementById('authTitle').innerText='Sign In';
+  document.getElementById('signupSection').style.display='none';
+  document.getElementById('loginIdentifierWrap').style.display='flex';
+  document.getElementById('confirmPwWrap').style.display='none';
+  document.getElementById('termsWrap').style.display='none';
+  document.getElementById('pwStrengthWrap').style.display='none';
+  document.getElementById('forgotBtn').style.display='block';
+  document.getElementById('switchBtn').textContent="Don't have an account? Sign Up";
+  document.getElementById('authSubmitBtn').textContent='Sign In';
+  document.getElementById('authModal').style.display='flex';
 };
-
-window.showSignUp = function () {
-  authMode = 'signup'; resetAuthModal();
-  document.getElementById('authTitle').innerText = 'Create Account';
-  document.getElementById('signupSection').style.display = 'flex';
-  document.getElementById('loginIdentifierWrap').style.display = 'none';
-  document.getElementById('confirmPwWrap').style.display = 'flex';
-  document.getElementById('termsWrap').style.display = 'flex';
-  document.getElementById('pwStrengthWrap').style.display = 'block';
-  document.getElementById('forgotBtn').style.display = 'none';
-  document.getElementById('switchBtn').textContent = 'Already have an account? Sign In';
-  document.getElementById('authSubmitBtn').textContent = 'Create Account';
-  document.getElementById('authModal').style.display = 'flex';
+window.showSignUp=function(){
+  authMode='signup'; resetAuthModal();
+  document.getElementById('authTitle').innerText='Create Account';
+  document.getElementById('signupSection').style.display='flex';
+  document.getElementById('loginIdentifierWrap').style.display='none';
+  document.getElementById('confirmPwWrap').style.display='flex';
+  document.getElementById('termsWrap').style.display='flex';
+  document.getElementById('pwStrengthWrap').style.display='block';
+  document.getElementById('forgotBtn').style.display='none';
+  document.getElementById('switchBtn').textContent='Already have an account? Sign In';
+  document.getElementById('authSubmitBtn').textContent='Create Account';
+  document.getElementById('authModal').style.display='flex';
 };
-
-window.switchAuthMode = function () { authMode === 'signin' ? showSignUp() : showSignIn(); };
-window.closeAuth      = function () { document.getElementById('authModal').style.display = 'none'; };
-
+window.switchAuthMode=function(){ authMode==='signin'?showSignUp():showSignIn(); };
+window.closeAuth=function(){ document.getElementById('authModal').style.display='none'; };
 function resetAuthModal() {
-  document.getElementById('authAlert').style.display = 'none';
-  document.getElementById('authAlert').className = 'modal-alert';
-  document.querySelectorAll('#authModal .field-error').forEach(e => e.style.display = 'none');
-  document.querySelectorAll('#authModal .modal-input').forEach(e => e.classList.remove('input-error', 'input-ok'));
+  document.getElementById('authAlert').style.display='none';
+  document.getElementById('authAlert').className='modal-alert';
+  document.querySelectorAll('#authModal .field-error').forEach(e=>e.style.display='none');
+  document.querySelectorAll('#authModal .modal-input').forEach(e=>{ e.classList.remove('input-error','input-ok'); });
 }
-
-function showAuthAlert(msg, type = 'error') {
-  const el = document.getElementById('authAlert');
-  el.textContent = msg; el.className = 'modal-alert ' + type; el.style.display = 'flex';
+function showAuthAlert(msg, type='error') {
+  const el=document.getElementById('authAlert');
+  el.textContent=msg; el.className='modal-alert '+type;
+  el.style.display='flex';
 }
-
-window.clearFieldError    = function (input) { input.classList.remove('input-error'); };
-window.validateEmailField = function () {
-  const val = document.getElementById('email').value;
-  const ok  = /^[^@]+@[^@]+\.[a-z]{2,}$/i.test(val);
-  document.getElementById('email').classList.toggle('input-error', val.length > 3 && !ok);
-  document.getElementById('email').classList.toggle('input-ok', ok);
+function showFieldError(errId, show=true) {
+  const el=document.getElementById(errId);
+  if (el) el.style.display=show?'block':'none';
+}
+window.clearFieldError=function(input){ input.classList.remove('input-error'); };
+window.validateEmailField=function(){
+  const val=document.getElementById('email').value;
+  const ok=/^[^@]+@[^@]+\.[a-z]{2,}$/i.test(val);
+  document.getElementById('email').classList.toggle('input-error',val.length>3&&!ok);
+  document.getElementById('email').classList.toggle('input-ok',ok);
   return ok;
 };
-window.validateUsernameField = function () {
-  const val = document.getElementById('username').value;
-  const ok  = /^[a-zA-Z0-9_]{3,20}$/.test(val);
-  document.getElementById('username').classList.toggle('input-error', val.length > 2 && !ok);
-  document.getElementById('username').classList.toggle('input-ok', ok);
+window.validateUsernameField=function(){
+  const val=document.getElementById('username').value;
+  const ok=/^[a-zA-Z0-9_]{3,20}$/.test(val);
+  document.getElementById('username').classList.toggle('input-error',val.length>2&&!ok);
+  document.getElementById('username').classList.toggle('input-ok',ok);
   return ok;
 };
-window.validateConfirmPw = function () {
-  const p1 = document.getElementById('password').value;
-  const p2 = document.getElementById('confirmPassword').value;
-  const ok = p1 === p2 && p2.length > 0;
-  document.getElementById('confirmPassword').classList.toggle('input-error', p2.length > 0 && !ok);
-  document.getElementById('confirmPassword').classList.toggle('input-ok', ok);
+window.validateConfirmPw=function(){
+  const p1=document.getElementById('password').value;
+  const p2=document.getElementById('confirmPassword').value;
+  const ok=p1===p2&&p2.length>0;
+  document.getElementById('confirmPassword').classList.toggle('input-error',p2.length>0&&!ok);
+  document.getElementById('confirmPassword').classList.toggle('input-ok',ok);
   return ok;
 };
 
 // ── RATE LIMITING ─────────────────────────────────────────
 function isRateLimited() {
-  if (lockUntil && Date.now() < lockUntil) {
-    const remaining = Math.ceil((lockUntil - Date.now()) / 1000);
-    document.getElementById('rateLimitCountdown').textContent = remaining;
-    document.getElementById('rateLimitMsg').style.display = 'block';
-    document.getElementById('authSubmitBtn').disabled = true;
+  if (lockUntil && Date.now()<lockUntil) {
+    const remaining=Math.ceil((lockUntil-Date.now())/1000);
+    const rlEl=document.getElementById('rateLimitMsg');
+    document.getElementById('rateLimitCountdown').textContent=remaining;
+    rlEl.style.display='block';
+    document.getElementById('authSubmitBtn').disabled=true;
     return true;
   }
-  document.getElementById('rateLimitMsg').style.display = 'none';
-  document.getElementById('authSubmitBtn').disabled = false;
+  document.getElementById('rateLimitMsg').style.display='none';
+  document.getElementById('authSubmitBtn').disabled=false;
   return false;
 }
 function recordFailedAttempt() {
   loginAttempts++;
-  if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
-    lockUntil = Date.now() + LOCK_DURATION * 1000; loginAttempts = 0;
-    const countdown = setInterval(() => { if (!isRateLimited()) clearInterval(countdown); }, 1000);
+  if (loginAttempts>=MAX_LOGIN_ATTEMPTS) {
+    lockUntil=Date.now()+LOCK_DURATION*1000; loginAttempts=0;
+    const countdown=setInterval(()=>{ if (!isRateLimited()) clearInterval(countdown); },1000);
   }
 }
 
 // ── SUBMIT AUTH ───────────────────────────────────────────
-window.submitAuth = async function () {
+window.submitAuth = async function() {
   if (isRateLimited()) return;
-  const pw = document.getElementById('password').value;
-
-  if (authMode === 'signup') {
-    const fn    = document.getElementById('firstName').value.trim();
-    const ln    = document.getElementById('lastName').value.trim();
-    const em    = document.getElementById('email').value.trim();
-    const un    = document.getElementById('username').value.trim();
-    const dob   = document.getElementById('dob').value;
-    const agree = document.getElementById('agreeTerms').checked;
-    let ok = true;
-    if (!fn)  { document.getElementById('firstName').classList.add('input-error'); document.getElementById('firstNameErr').style.display='block'; ok=false; }
-    if (!ln)  { document.getElementById('lastName').classList.add('input-error');  document.getElementById('lastNameErr').style.display='block';  ok=false; }
-    if (!/^[^@]+@[^@]+\.[a-z]{2,}$/i.test(em)) { document.getElementById('email').classList.add('input-error'); document.getElementById('emailErr').style.display='block'; ok=false; }
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(un)) { document.getElementById('username').classList.add('input-error'); document.getElementById('usernameErr').style.display='block'; ok=false; }
-    if (!dob) { document.getElementById('dob').classList.add('input-error'); document.getElementById('dobErr').style.display='block'; ok=false; }
+  const pw=document.getElementById('password').value;
+  if (authMode==='signup') {
+    const fn=document.getElementById('firstName').value.trim();
+    const ln=document.getElementById('lastName').value.trim();
+    const em=document.getElementById('email').value.trim();
+    const un=document.getElementById('username').value.trim();
+    const dob=document.getElementById('dob').value;
+    const agree=document.getElementById('agreeTerms').checked;
+    let ok=true;
+    if (!fn){ document.getElementById('firstName').classList.add('input-error'); showFieldError('firstNameErr'); ok=false; }
+    if (!ln){ document.getElementById('lastName').classList.add('input-error'); showFieldError('lastNameErr'); ok=false; }
+    if (!/^[^@]+@[^@]+\.[a-z]{2,}$/i.test(em)){ document.getElementById('email').classList.add('input-error'); showFieldError('emailErr'); ok=false; }
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(un)){ document.getElementById('username').classList.add('input-error'); showFieldError('usernameErr'); ok=false; }
+    if (!dob){ document.getElementById('dob').classList.add('input-error'); showFieldError('dobErr'); ok=false; }
     else {
-      const age = (Date.now() - new Date(dob).getTime()) / (365.25 * 24 * 3600 * 1000);
-      if (age < 13) { document.getElementById('dob').classList.add('input-error'); document.getElementById('dobErr').style.display='block'; ok=false; }
+      const age=(Date.now()-new Date(dob).getTime())/(365.25*24*3600*1000);
+      if (age<13){ document.getElementById('dob').classList.add('input-error'); showFieldError('dobErr'); ok=false; }
     }
-    if (!agree) { showAuthAlert('You must agree to the Terms of Service.'); ok=false; }
+    if (!agree){ showAuthAlert('You must agree to the Terms of Service.'); ok=false; }
     if (!ok) return;
-    const { score } = checkPasswordStrength(pw);
-    if (score < 3) { showAuthAlert('Password is too weak. Please meet all requirements.'); return; }
-    if (pw !== document.getElementById('confirmPassword').value) { showAuthAlert('Passwords do not match.'); return; }
+    const {score}=checkPasswordStrength(pw);
+    if (score<3){ showAuthAlert('Password is too weak. Please meet all requirements.'); return; }
+    if (pw!==document.getElementById('confirmPassword').value){ showAuthAlert('Passwords do not match.'); return; }
     try {
-      const r = await fetch('/api/auth/hash-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
-      const d = await r.json();
-      if (!r.ok) { showAuthAlert(d.error + (d.details ? '\n' + d.details.join(', ') : '')); return; }
-      // Check if username/email exists
-      const existing = JSON.parse(localStorage.getItem(LS_USER) || 'null');
-      if (existing && (existing.email === em || existing.username === un)) {
+      const r=await fetch('/api/auth/hash-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+      const d=await r.json();
+      if (!r.ok){ showAuthAlert(d.error+(d.details?'\n'+d.details.join(', '):''),'error'); return; }
+      const existing=JSON.parse(localStorage.getItem(LS_USER)||'null');
+      if (existing && (existing.email===em||existing.username===un)){
         showAuthAlert('An account with this email or username already exists.'); return;
       }
-      const userData = { firstName:fn, lastName:ln, email:em, username:un, salt:d.salt, hash:d.hash, createdAt:Date.now(), plan:'Free' };
-      localStorage.setItem(LS_USER, JSON.stringify(userData));
-      showAuthAlert('Account created! Signing you in…', 'success');
-      setTimeout(() => { closeAuth(); clearChatState(); loginUser(userData); }, 1000);
-    } catch (e) { showAuthAlert('Server error. Please try again.'); }
+      const userData={firstName:fn,lastName:ln,email:em,username:un,
+        salt:d.salt,hash:d.hash,createdAt:Date.now(),plan:'Free'};
+      localStorage.setItem(LS_USER,JSON.stringify(userData));
+      showAuthAlert('Account created! Signing you in…','success');
+      setTimeout(()=>{ closeAuth(); loginUser(userData); },1000);
+    } catch(e){ showAuthAlert('Server error. Please try again.'); }
     return;
   }
-
-  // SIGN IN
-  const id = document.getElementById('loginIdentifier').value.trim();
-  if (!id || !pw) { showAuthAlert('Please fill in all fields.'); return; }
-  const stored = JSON.parse(localStorage.getItem(LS_USER) || 'null');
-  if (!stored) { showAuthAlert('No account found. Please sign up first.'); return; }
+  // SIGNIN
+  const id=document.getElementById('loginIdentifier').value.trim();
+  if (!id||!pw){ showAuthAlert('Please fill in all fields.'); return; }
+  const stored=JSON.parse(localStorage.getItem(LS_USER)||'null');
+  if (!stored){ showAuthAlert('No account found. Please sign up first.'); return; }
   try {
-    const r = await fetch('/api/auth/verify-password', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pw, salt: stored.salt, hash: stored.hash })
-    });
-    const d = await r.json();
-    if (d.valid && (stored.email === id || stored.username === id)) {
-      loginAttempts = 0; lockUntil = 0;
+    const r=await fetch('/api/auth/verify-password',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({password:pw,salt:stored.salt,hash:stored.hash})});
+    const d=await r.json();
+    if (d.valid && (stored.email===id||stored.username===id)){
+      loginAttempts=0; lockUntil=0;
       closeAuth();
-      clearChatState(); // ← KEY FIX: clear chat BEFORE logging in
+      // ── KEY FIX: Clear pre-login chat, start fresh session ──
+      clearChatForLogin();
       loginUser(stored);
     } else {
       recordFailedAttempt();
-      const remaining = MAX_LOGIN_ATTEMPTS - loginAttempts;
-      showAuthAlert(`Invalid credentials. ${remaining > 0 ? remaining + ' attempts remaining.' : 'Account locked for ' + LOCK_DURATION + 's.'}`);
+      const remaining=MAX_LOGIN_ATTEMPTS-loginAttempts;
+      showAuthAlert(`Invalid credentials. ${remaining>0?remaining+' attempts remaining.':'Account locked for '+LOCK_DURATION+'s.'}`);
     }
-  } catch (e) { showAuthAlert('Server error. Please try again.'); }
+  } catch(e){ showAuthAlert('Server error. Please try again.'); }
 };
 
-// ── CLEAR CHAT STATE ──────────────────────────────────────
-function clearChatState() {
-  document.getElementById('chatArea').innerHTML = '';
-  document.getElementById('chatWrapper').style.display = 'none';
-  document.getElementById('watermark').style.display = 'block';
-  document.getElementById('homeSubtitle').style.display = 'block';
-  chatStarted = false;
-  attachedFiles = [];
-  conversationHistory = [];
-  currentChatTitle = null;
-  currentChatKey   = null;
+// ── CLEAR CHAT ON LOGIN/LOGOUT ─────────────────────────────
+function clearChatForLogin() {
+  // Reset chat state completely when user logs in
+  document.getElementById('chatArea').innerHTML='';
+  document.getElementById('chatWrapper').style.display='none';
+  document.getElementById('watermark').style.display='block';
+  document.getElementById('homeSubtitle').style.display='block';
+  chatStarted=false;
+  attachedFiles=[];
+  conversationHistory=[];
+  currentChatTitle=null;
+  currentChatKey=null;
   renderPreviews();
 }
 
 function loginUser(user) {
   currentUser = user;
-  document.getElementById('authButtons').style.display = 'none';
-  const av = document.getElementById('profileAvatar');
-  av.style.display = 'flex';
-  av.innerText = user.firstName.charAt(0).toUpperCase();
-  document.getElementById('profileName').innerText = user.firstName + ' ' + user.lastName;
-  document.getElementById('planLabel').innerText = (user.plan || 'Free') + ' Plan';
-  toast('Welcome back, ' + user.firstName + '! 👋');
+  document.getElementById('authButtons').style.display='none';
+  const av=document.getElementById('profileAvatar');
+  av.style.display='flex'; av.innerText=user.firstName.charAt(0).toUpperCase();
+  document.getElementById('profileName').innerText=user.firstName+' '+user.lastName;
+  document.getElementById('planLabel').innerText=(user.plan||'Free')+' Plan';
+  toast('Welcome back, '+user.firstName+'! 👋');
 }
 
 // ── FORGOT PASSWORD ────────────────────────────────────────
-window.showForgotPassword = function () {
+window.showForgotPassword=function(){
   closeAuth();
-  document.getElementById('forgotStep1').style.display = 'block';
-  document.getElementById('forgotStep2').style.display = 'none';
-  document.getElementById('forgotStep3').style.display = 'none';
-  document.getElementById('forgotAlert').style.display = 'none';
-  document.getElementById('forgotModal').style.display = 'flex';
+  document.getElementById('forgotStep1').style.display='block';
+  document.getElementById('forgotStep2').style.display='none';
+  document.getElementById('forgotStep3').style.display='none';
+  document.getElementById('forgotAlert').style.display='none';
+  document.getElementById('forgotModal').style.display='flex';
 };
-window.closeForgot = function () { document.getElementById('forgotModal').style.display = 'none'; };
-
-window.sendOTP = function () {
-  const id = document.getElementById('forgotEmail').value.trim();
-  if (!id) { showForgotAlert('Please enter your email or username.'); return; }
-  const stored = JSON.parse(localStorage.getItem(LS_USER) || 'null');
-  if (!stored || (stored.email !== id && stored.username !== id)) {
+window.closeForgot=function(){ document.getElementById('forgotModal').style.display='none'; };
+window.sendOTP=function(){
+  const id=document.getElementById('forgotEmail').value.trim();
+  if (!id){ showForgotAlert('Please enter your email or username.'); return; }
+  const stored=JSON.parse(localStorage.getItem(LS_USER)||'null');
+  if (!stored||(stored.email!==id&&stored.username!==id)){
     showForgotAlert('No account found with that email or username.'); return;
   }
-  otpCode   = String(Math.floor(100000 + Math.random() * 900000));
-  otpExpiry = Date.now() + 5 * 60 * 1000;
+  otpCode=String(Math.floor(100000+Math.random()*900000));
+  otpExpiry=Date.now()+5*60*1000;
   showForgotAlert(`OTP sent! (Demo: your code is ${otpCode})`, 'success');
-  setTimeout(() => {
-    document.getElementById('forgotStep1').style.display = 'none';
-    document.getElementById('forgotStep2').style.display = 'flex';
-    document.getElementById('forgotAlert').style.display = 'none';
+  setTimeout(()=>{
+    document.getElementById('forgotStep1').style.display='none';
+    document.getElementById('forgotStep2').style.display='flex';
+    document.getElementById('forgotAlert').style.display='none';
     startOtpTimer();
-  }, 1500);
+  },1500);
 };
-
-function startOtpTimer() {
-  let secs = 60;
-  document.getElementById('otpCountdown').textContent = secs;
+function startOtpTimer(){
+  let secs=60;
+  document.getElementById('otpCountdown').textContent=secs;
   if (otpTimerInt) clearInterval(otpTimerInt);
-  otpTimerInt = setInterval(() => {
+  otpTimerInt=setInterval(()=>{
     secs--;
-    document.getElementById('otpCountdown').textContent = secs;
-    if (secs <= 0) { clearInterval(otpTimerInt); document.getElementById('otpTimer').textContent = 'OTP expired.'; }
-  }, 1000);
+    document.getElementById('otpCountdown').textContent=secs;
+    if (secs<=0){ clearInterval(otpTimerInt); document.getElementById('otpTimer').textContent='OTP expired. Please try again.'; }
+  },1000);
 }
-
-window.otpInput = function (el, idx) {
-  const digits = document.querySelectorAll('.otp-digit');
-  if (el.value && idx < 5) digits[idx + 1].focus();
+window.otpInput=function(el,idx){
+  const digits=document.querySelectorAll('.otp-digit');
+  if (el.value&&idx<5) digits[idx+1].focus();
 };
-window.otpBack = function (el, e, idx) {
-  if (e.key === 'Backspace' && !el.value && idx > 0) document.querySelectorAll('.otp-digit')[idx - 1].focus();
+window.otpBack=function(el,e,idx){
+  const digits=document.querySelectorAll('.otp-digit');
+  if (e.key==='Backspace'&&!el.value&&idx>0) digits[idx-1].focus();
 };
-
-window.verifyOTP = function () {
-  const digits = Array.from(document.querySelectorAll('.otp-digit')).map(d => d.value).join('');
-  if (digits.length < 6) { showForgotAlert('Please enter all 6 digits.'); return; }
-  if (Date.now() > otpExpiry) { showForgotAlert('OTP has expired. Please start over.'); return; }
-  if (digits !== otpCode) { showForgotAlert('Incorrect OTP. Please try again.'); return; }
-  document.getElementById('forgotStep2').style.display = 'none';
-  document.getElementById('forgotStep3').style.display = 'flex';
-  document.getElementById('forgotAlert').style.display = 'none';
+window.verifyOTP=function(){
+  const digits=Array.from(document.querySelectorAll('.otp-digit')).map(d=>d.value).join('');
+  if (digits.length<6){ showForgotAlert('Please enter all 6 digits.'); return; }
+  if (Date.now()>otpExpiry){ showForgotAlert('OTP has expired. Please start over.'); return; }
+  if (digits!==otpCode){ showForgotAlert('Incorrect OTP. Please try again.'); return; }
+  document.getElementById('forgotStep2').style.display='none';
+  document.getElementById('forgotStep3').style.display='flex';
+  document.getElementById('forgotAlert').style.display='none';
 };
-
-window.resetPassword = async function () {
-  const newPw    = document.getElementById('newPassword').value;
-  const confirmPw = document.getElementById('confirmNewPassword').value;
-  if (!newPw || !confirmPw) { showForgotAlert('Please fill in both fields.'); return; }
-  if (newPw !== confirmPw)  { showForgotAlert('Passwords do not match.'); return; }
-  const { score } = checkPasswordStrength(newPw);
-  if (score < 3) { showForgotAlert('Password is too weak.'); return; }
+window.resetPassword = async function(){
+  const newPw=document.getElementById('newPassword').value;
+  const confirmPw=document.getElementById('confirmNewPassword').value;
+  if (!newPw||!confirmPw){ showForgotAlert('Please fill in both fields.'); return; }
+  if (newPw!==confirmPw){ showForgotAlert('Passwords do not match.'); return; }
+  const {score}=checkPasswordStrength(newPw);
+  if (score<3){ showForgotAlert('Password is too weak.'); return; }
   try {
-    const r = await fetch('/api/auth/hash-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: newPw }) });
-    const d = await r.json();
-    if (!r.ok) { showForgotAlert(d.error); return; }
-    const stored = JSON.parse(localStorage.getItem(LS_USER) || 'null');
-    if (stored) { stored.salt = d.salt; stored.hash = d.hash; localStorage.setItem(LS_USER, JSON.stringify(stored)); }
-    showForgotAlert('Password reset successfully!', 'success');
-    setTimeout(() => { closeForgot(); showSignIn(); }, 1500);
-  } catch (e) { showForgotAlert('Server error.'); }
+    const r=await fetch('/api/auth/hash-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:newPw})});
+    const d=await r.json();
+    if (!r.ok){ showForgotAlert(d.error); return; }
+    const stored=JSON.parse(localStorage.getItem(LS_USER)||'null');
+    if (stored){ stored.salt=d.salt; stored.hash=d.hash; localStorage.setItem(LS_USER,JSON.stringify(stored)); }
+    showForgotAlert('Password reset successfully!','success');
+    setTimeout(()=>{ closeForgot(); showSignIn(); },1500);
+  } catch(e){ showForgotAlert('Server error.'); }
 };
-
-function showForgotAlert(msg, type = 'error') {
-  const el = document.getElementById('forgotAlert');
-  el.textContent = msg; el.className = 'modal-alert ' + type; el.style.display = 'flex';
+function showForgotAlert(msg,type='error'){
+  const el=document.getElementById('forgotAlert');
+  el.textContent=msg; el.className='modal-alert '+type; el.style.display='flex';
 }
 
 // ── CHANGE PASSWORD ────────────────────────────────────────
-window.showChangePassword = function () {
-  document.getElementById('profileMenu').style.display = 'none';
-  document.getElementById('changePwModal').style.display = 'flex';
-  document.getElementById('changePwAlert').style.display = 'none';
+window.showChangePassword=function(){
+  document.getElementById('profileMenu').style.display='none';
+  document.getElementById('changePwModal').style.display='flex';
+  document.getElementById('changePwAlert').style.display='none';
 };
-
-window.submitChangePassword = async function () {
-  const curPw  = document.getElementById('currentPassword').value;
-  const newPw  = document.getElementById('newPwChange').value;
-  const conPw  = document.getElementById('confirmNewPwChange').value;
-  if (!curPw || !newPw || !conPw) { showChangePwAlert('All fields required.'); return; }
-  if (newPw !== conPw) { showChangePwAlert('New passwords do not match.'); return; }
-  const { score } = checkPasswordStrength(newPw);
-  if (score < 3) { showChangePwAlert('New password is too weak.'); return; }
-  const stored = JSON.parse(localStorage.getItem(LS_USER) || 'null');
-  if (!stored) { showChangePwAlert('Not logged in.'); return; }
+window.submitChangePassword = async function(){
+  const curPw=document.getElementById('currentPassword').value;
+  const newPw=document.getElementById('newPwChange').value;
+  const conPw=document.getElementById('confirmNewPwChange').value;
+  if (!curPw||!newPw||!conPw){ showChangePwAlert('All fields required.'); return; }
+  if (newPw!==conPw){ showChangePwAlert('New passwords do not match.'); return; }
+  const {score}=checkPasswordStrength(newPw);
+  if (score<3){ showChangePwAlert('New password is too weak.'); return; }
+  const stored=JSON.parse(localStorage.getItem(LS_USER)||'null');
+  if (!stored){ showChangePwAlert('Not logged in.'); return; }
   try {
-    const r = await fetch('/api/auth/verify-password', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: curPw, salt: stored.salt, hash: stored.hash })
-    });
-    const d = await r.json();
-    if (!d.valid) { showChangePwAlert('Current password is incorrect.'); return; }
-    const r2 = await fetch('/api/auth/hash-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: newPw }) });
-    const d2 = await r2.json();
-    if (!r2.ok) { showChangePwAlert(d2.error); return; }
-    stored.salt = d2.salt; stored.hash = d2.hash;
-    localStorage.setItem(LS_USER, JSON.stringify(stored));
-    showChangePwAlert('Password changed successfully!', 'success');
-    setTimeout(() => { document.getElementById('changePwModal').style.display = 'none'; }, 1500);
-  } catch (e) { showChangePwAlert('Server error.'); }
+    const r=await fetch('/api/auth/verify-password',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({password:curPw,salt:stored.salt,hash:stored.hash})});
+    const d=await r.json();
+    if (!d.valid){ showChangePwAlert('Current password is incorrect.'); return; }
+    const r2=await fetch('/api/auth/hash-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:newPw})});
+    const d2=await r2.json();
+    if (!r2.ok){ showChangePwAlert(d2.error); return; }
+    stored.salt=d2.salt; stored.hash=d2.hash;
+    localStorage.setItem(LS_USER,JSON.stringify(stored));
+    showChangePwAlert('Password changed successfully!','success');
+    setTimeout(()=>{ document.getElementById('changePwModal').style.display='none'; },1500);
+  } catch(e){ showChangePwAlert('Server error.'); }
 };
-
-function showChangePwAlert(msg, type = 'error') {
-  const el = document.getElementById('changePwAlert');
-  el.textContent = msg; el.className = 'modal-alert ' + type; el.style.display = 'flex';
+function showChangePwAlert(msg,type='error'){
+  const el=document.getElementById('changePwAlert');
+  el.textContent=msg; el.className='modal-alert '+type; el.style.display='flex';
 }
 
 // ── LOGOUT ────────────────────────────────────────────────
-window.logout = function () {
-  currentUser = null;
-  document.getElementById('authButtons').style.display = 'flex';
-  document.getElementById('profileAvatar').style.display = 'none';
-  document.getElementById('profileMenu').style.display = 'none';
-  clearChatState();
+window.logout=function(){
+  currentUser=null;
+  document.getElementById('authButtons').style.display='flex';
+  document.getElementById('profileAvatar').style.display='none';
+  document.getElementById('profileMenu').style.display='none';
+  // Clear chat on logout
+  clearChatForLogin();
   toast('Signed out successfully.');
 };
 
 // ── PROFILE MENU ──────────────────────────────────────────
-window.toggleProfileMenu = function (e) {
+window.toggleProfileMenu=function(e){
   e.stopPropagation();
-  const m = document.getElementById('profileMenu');
-  m.style.display = m.style.display === 'block' ? 'none' : 'block';
+  const m=document.getElementById('profileMenu');
+  m.style.display=m.style.display==='block'?'none':'block';
 };
-document.addEventListener('click', () => { document.getElementById('profileMenu').style.display = 'none'; });
+document.addEventListener('click',()=>{ document.getElementById('profileMenu').style.display='none'; });
 
 // ── HELP ─────────────────────────────────────────────────
-window.openHelp = function () {
-  document.getElementById('profileMenu').style.display = 'none';
-  if (!chatStarted) startChatMode();
+window.openHelp=function(){
+  document.getElementById('profileMenu').style.display='none';
   addMsg(
     '<strong>🌟 Lumina — Full Capabilities</strong><br><br>' +
     '🏥 <strong>Medical:</strong> X-Ray, MRI, CT, Fundus/Retina, ECG, Skin Analysis, Wound, CLAHE, Denoise, Segmentation<br>' +
@@ -1450,39 +1466,37 @@ window.openHelp = function () {
     '🤖 <strong>Generate:</strong> Create images from text prompts using Gemini AI<br>' +
     '💬 <strong>Chat:</strong> Describe images, ask questions, get medical analysis<br>' +
     '🔗 <strong>Share:</strong> Share chats with links, download/copy output images<br><br>' +
-    '💡 <strong>Tip:</strong> Uploaded images are remembered — no need to re-upload!',
+    '💡 <strong>Tip:</strong> Uploaded images are remembered throughout the conversation — no need to re-upload!<br>' +
+    'Click <strong>⚡ Operations</strong> for quick access to all filters.',
     'bot', true
   );
+  if (!chatStarted) startChatMode();
 };
 
 // ── UTILS ─────────────────────────────────────────────────
-function trunc(s, n) { return s.length > n ? s.slice(0, n) + '…' : s; }
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function truncate(s,n){ return s.length>n?s.slice(0,n)+'…':s; }
+function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ── INIT ─────────────────────────────────────────────────
-(function checkExistingSession() {
-  const stored = JSON.parse(localStorage.getItem(LS_USER) || 'null');
-  if (stored && stored.hash) {
-    // Auto-login but do NOT restore pre-login guest chat
-    loginUser(stored);
-  }
-  // Handle shared chat URL
+// Auto-login if session still valid — but do NOT restore a pre-login chat
+(function checkExistingSession(){
+  const stored=JSON.parse(localStorage.getItem(LS_USER)||'null');
+  if (stored&&stored.hash){ loginUser(stored); }
+  // Check for shared chat in URL
   if (window.location.pathname.startsWith('/share/')) {
-    const shareId   = window.location.pathname.split('/share/')[1];
+    const shareId = window.location.pathname.split('/share/')[1];
     const shareData = localStorage.getItem('lumina_share_' + shareId);
     if (shareData) {
       try {
         const data = JSON.parse(shareData);
-        setTimeout(() => {
-          document.getElementById('chatArea').innerHTML = data.html || '';
+        setTimeout(()=>{
+          document.getElementById('chatArea').innerHTML = data.html||'';
           currentChatTitle = data.title;
-          currentChatKey   = null;
+          currentChatKey = null;
           startChatMode();
           toast('📤 Viewing shared chat: ' + data.title);
         }, 300);
-      } catch (e) {}
+      } catch(e) {}
     }
   }
 })();
