@@ -15,8 +15,8 @@ app.secret_key = secrets.token_hex(32)
 #  GEMINI SETUP — safe initialization
 # ─────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
-gemini_client = None
-GEMINI_MODEL  = "gemini-2.0-flash"
+gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+GEMINI_MODEL  = "gemini-2.5-flash"
 
 try:
     if GEMINI_API_KEY:
