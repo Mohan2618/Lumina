@@ -38,14 +38,10 @@ body {
   background: radial-gradient(circle, #ffffff 60%, #cfd8dc);
   display: flex; justify-content: center; align-items: center;
 }
-.eye {
-  width: 44%; height: 44%; border-radius: 50%;
-  background: #020a2a; position: relative;
-}
+.eye { width: 44%; height: 44%; border-radius: 50%; background: #020a2a; position: relative; }
 .eye::after {
   content: ""; position: absolute; top: 18%; left: 18%;
-  width: 22%; height: 22%; border-radius: 50%;
-  background: rgba(255,255,255,0.45);
+  width: 22%; height: 22%; border-radius: 50%; background: rgba(255,255,255,0.45);
 }
 .base {
   position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
@@ -94,22 +90,55 @@ body {
 #chatWrapper::-webkit-scrollbar { width: 5px; }
 #chatWrapper::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
 #chatArea { display: flex; flex-direction: column; gap: 14px; padding: 12px 0 24px; }
+
+/* ── MESSAGE BUBBLES ── */
+.chat-msg-wrapper {
+  display: flex; flex-direction: column; animation: fadeUp 0.22s ease;
+}
+.chat-msg-wrapper.user-wrapper { align-items: flex-end; }
+.chat-msg-wrapper.bot-wrapper { align-items: flex-start; }
 .chat-msg {
   padding: 12px 16px; border-radius: 20px; max-width: 78%;
-  word-wrap: break-word; line-height: 1.6; font-size: 15px; animation: fadeUp 0.22s ease;
+  word-wrap: break-word; line-height: 1.6; font-size: 15px;
 }
 @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-.user-msg { align-self: flex-end; background: rgba(255,255,255,0.88); color: #1a1a2e; border-bottom-right-radius: 4px; }
-.bot-msg { align-self: flex-start; background: var(--glass-dark); color: white; border-bottom-left-radius: 4px; backdrop-filter: blur(8px); }
+.user-msg { background: rgba(255,255,255,0.88); color: #1a1a2e; border-bottom-right-radius: 4px; }
+.bot-msg { background: var(--glass-dark); color: white; border-bottom-left-radius: 4px; backdrop-filter: blur(8px); }
 .bot-msg code { background: rgba(255,255,255,0.15); padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; }
 .bot-msg strong { color: #41e1ae; }
+
+/* ── MESSAGE ATTACHMENTS (below text for user) ── */
+.msg-attachments {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;
+  max-width: 78%;
+}
+.msg-attachments.user-side { align-self: flex-end; justify-content: flex-end; }
+.msg-attachments.bot-side { align-self: flex-start; }
+.msg-attach-img {
+  height: 120px; border-radius: 12px; object-fit: cover; cursor: zoom-in;
+  border: 2px solid rgba(255,255,255,0.3); transition: transform 0.15s;
+  max-width: 180px;
+}
+.msg-attach-img:hover { transform: scale(1.03); }
+
+/* ── MESSAGE ACTIONS ── */
+.msg-actions {
+  display: flex; gap: 4px; margin-top: 4px; opacity: 0; transition: opacity 0.2s;
+}
+.chat-msg-wrapper:hover .msg-actions { opacity: 1; }
+.msg-action-btn {
+  background: rgba(0,0,0,0.35); border: none; color: white; cursor: pointer;
+  padding: 4px 8px; border-radius: 12px; font-size: 11px; display: flex;
+  align-items: center; gap: 3px; transition: background 0.15s; backdrop-filter: blur(6px);
+}
+.msg-action-btn:hover { background: rgba(0,0,0,0.6); }
+.msg-action-btn .material-icons { font-size: 14px; }
+
 .chat-image-large { max-width: 100%; max-height: 380px; border-radius: 14px; margin-top: 8px; display: block; cursor: zoom-in; object-fit: contain; }
-/* Medical badge */
 .medical-badge {
   display: inline-flex; align-items: center; gap: 5px;
   background: rgba(255,107,107,0.2); border: 1px solid rgba(255,107,107,0.5);
-  color: #ff9999; padding: 3px 10px; border-radius: 20px; font-size: 12px;
-  margin-bottom: 6px;
+  color: #ff9999; padding: 3px 10px; border-radius: 20px; font-size: 12px; margin-bottom: 6px;
 }
 /* ── PROMPT ── */
 .prompt-wrap {
@@ -124,13 +153,15 @@ body {
 }
 .prompt-container:focus-within { border-color: rgba(255,255,255,0.6); }
 .prompt-container.dragover { border: 2px dashed white; background: rgba(255,255,255,0.28); }
-#attachmentPreview { display: flex; gap: 8px; flex-wrap: wrap; }
-.attach-thumb { position: relative; height: 64px; }
-.attach-thumb img { height: 64px; border-radius: 10px; object-fit: cover; cursor: zoom-in; }
+#attachmentPreview { display: none; gap: 8px; flex-wrap: wrap; padding: 4px 0; }
+#attachmentPreview.has-files { display: flex; }
+.attach-thumb { position: relative; height: 72px; }
+.attach-thumb img { height: 72px; width: 72px; border-radius: 10px; object-fit: cover; cursor: zoom-in; border: 2px solid rgba(255,255,255,0.4); }
 .attach-remove {
   position: absolute; top: -6px; right: -6px; width: 20px; height: 20px;
   background: white; color: #333; border-radius: 50%; display: flex;
   align-items: center; justify-content: center; font-size: 13px; cursor: pointer; font-weight: bold;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 }
 .input-row { display: flex; align-items: center; gap: 10px; }
 .prompt-input { flex: 1; background: transparent; border: none; outline: none; font-size: 15px; color: white; min-width: 0; }
@@ -148,6 +179,9 @@ body {
 }
 .send-btn:hover { transform: scale(1.08); }
 .send-btn .material-icons { color: #6a7bd1; font-size: 22px; }
+.send-btn.stop-mode { background: #ff6b6b; }
+.send-btn.stop-mode .material-icons { color: white; }
+
 /* ── BOTTOM TOOLS ── */
 .bottom-tools {
   position: fixed; bottom: 22px; right: 22px; display: flex; gap: 12px;
@@ -197,7 +231,7 @@ body {
 }
 .profile-menu .menu-item:hover { background: rgba(255,255,255,0.1); }
 .profile-menu .menu-item .material-icons { font-size: 20px; opacity: 0.8; }
-/* ── AUTH MODAL (enhanced) ── */
+/* ── AUTH MODAL ── */
 .modal-overlay {
   display: none; position: fixed; inset: 0; backdrop-filter: blur(12px);
   background: rgba(0,0,0,0.3); justify-content: center; align-items: center; z-index: 2000;
@@ -220,7 +254,6 @@ body {
 .input-field-wrap { display: flex; flex-direction: column; gap: 4px; }
 .field-hint { font-size: 11px; color: rgba(255,255,255,0.55); padding-left: 4px; }
 .field-error { font-size: 11px; color: var(--err); padding-left: 4px; display: none; }
-/* Password strength meter */
 .pw-strength-wrap { display: flex; flex-direction: column; gap: 4px; }
 .pw-bars { display: flex; gap: 4px; }
 .pw-bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.2); transition: background 0.3s; }
@@ -229,15 +262,12 @@ body {
 .pw-req { font-size: 11px; display: flex; align-items: center; gap: 4px; }
 .pw-req.met { color: var(--ok); }
 .pw-req.unmet { color: rgba(255,255,255,0.45); }
-/* Password eye toggle */
 .pw-wrap { position: relative; }
 .pw-wrap .modal-input { padding-right: 42px; }
 .pw-eye {
   position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-  cursor: pointer; color: rgba(255,255,255,0.6); font-size: 20px;
-  user-select: none;
+  cursor: pointer; color: rgba(255,255,255,0.6); font-size: 20px; user-select: none;
 }
-/* OTP */
 .otp-grid { display: flex; gap: 8px; justify-content: center; }
 .otp-digit {
   width: 44px; height: 52px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,0.3);
@@ -262,12 +292,8 @@ body {
 }
 .modal-alert.error { background: rgba(255,107,107,0.2); border: 1px solid rgba(255,107,107,0.5); color: #ffaaaa; }
 .modal-alert.success { background: rgba(107,203,119,0.2); border: 1px solid rgba(107,203,119,0.5); color: #aaffbb; }
-/* Rate limit badge */
-.rate-limit-timer {
-  text-align: center; font-size: 12px; color: var(--warn);
-  display: none;
-}
-/* ── MEDICAL PANEL ── */
+.rate-limit-timer { text-align: center; font-size: 12px; color: var(--warn); display: none; }
+/* ── OPS PANEL ── */
 .medical-panel {
   display: none; position: fixed; left: 0; top: 0; width: 300px; height: 100%;
   background: rgba(10,10,30,0.85); backdrop-filter: blur(16px);
@@ -288,7 +314,20 @@ body {
 .op-chip.detection { border-color: rgba(106,123,209,0.6); color: #b3baff; }
 /* ── LIGHTBOX ── */
 .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); justify-content: center; align-items: center; z-index: 3000; cursor: zoom-out; }
-.lightbox img { max-width: 92%; max-height: 92%; border-radius: 12px; object-fit: contain; }
+.lightbox-inner { position: relative; max-width: 92%; max-height: 92%; }
+.lightbox img { max-width: 100%; max-height: 90vh; border-radius: 12px; object-fit: contain; display: block; }
+.lightbox-actions {
+  position: absolute; top: -44px; right: 0; display: flex; gap: 8px;
+}
+.lightbox-btn {
+  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+  color: white; padding: 6px 14px; border-radius: 20px; cursor: pointer;
+  font-size: 13px; display: flex; align-items: center; gap: 5px; backdrop-filter: blur(8px);
+  transition: background 0.15s;
+}
+.lightbox-btn:hover { background: rgba(255,255,255,0.3); }
+.lightbox-btn .material-icons { font-size: 16px; }
+
 body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 /* ── TOAST ── */
 .toast {
@@ -299,6 +338,8 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15);
 }
 .toast.show { opacity: 1; }
+/* ── FORGOT/CHANGE PW MODALS ── */
+.modal-box.small { max-width: 380px; }
 </style>
 </head>
 <body>
@@ -327,6 +368,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   <div class="menu-item" onclick="openOpsPanel()"><span class="material-icons">auto_awesome</span> Operations</div>
   <div class="menu-item" onclick="newChat()"><span class="material-icons">add_circle_outline</span> New Chat</div>
   <div class="menu-item" onclick="showChangePassword()"><span class="material-icons">lock</span> Change Password</div>
+  <div class="menu-item" onclick="shareChat()"><span class="material-icons">share</span> Share Chat</div>
   <div class="menu-item" onclick="logout()"><span class="material-icons">logout</span> Log Out</div>
 </div>
 
@@ -347,7 +389,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
         placeholder="Ask Lumina anything about your image… or generate one!"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}">
       <button class="icon-btn" onclick="micAction()" title="Voice input"><span class="material-icons">mic</span></button>
-      <button class="send-btn" onclick="sendMessage()" title="Send">
+      <button class="send-btn" id="sendBtn" onclick="handleSendOrStop()" title="Send">
         <span class="material-icons" id="actionIcon">arrow_upward</span>
       </button>
     </div>
@@ -377,7 +419,6 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     <h3><span class="material-icons" style="color:#41e1ae;font-size:18px;">auto_awesome</span> Quick Operations</h3>
     <span class="material-icons" style="cursor:pointer;" onclick="closeOpsPanel()">close</span>
   </div>
-
   <div class="op-category">
     <div class="op-category-title">🏥 Medical</div>
     <span class="op-chip medical" onclick="quickOp('enhance this xray')">X-Ray Enhance</span>
@@ -390,7 +431,6 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     <span class="op-chip medical" onclick="quickOp('denoise image')">Denoise</span>
     <span class="op-chip medical" onclick="quickOp('segment image')">Segmentation</span>
   </div>
-
   <div class="op-category">
     <div class="op-category-title">🎨 Creative Filters</div>
     <span class="op-chip creative" onclick="quickOp('apply cartoon effect')">Cartoon</span>
@@ -415,7 +455,6 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     <span class="op-chip creative" onclick="quickOp('apply mosaic effect')">Mosaic</span>
     <span class="op-chip creative" onclick="quickOp('cross process effect')">Cross Process</span>
   </div>
-
   <div class="op-category">
     <div class="op-category-title">🔬 Detection & Analysis</div>
     <span class="op-chip detection" onclick="quickOp('detect faces')">Face Detect</span>
@@ -426,7 +465,6 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     <span class="op-chip detection" onclick="quickOp('analyze colors')">Color Analysis</span>
     <span class="op-chip detection" onclick="quickOp('histogram equalization')">Histogram Eq</span>
   </div>
-
   <div class="op-category">
     <div class="op-category-title">✨ Restoration</div>
     <span class="op-chip" onclick="quickOp('super resolution upscale')">Super Resolution</span>
@@ -434,7 +472,6 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     <span class="op-chip" onclick="quickOp('colorize black and white')">Colorize B&W</span>
     <span class="op-chip" onclick="quickOp('restore old photo')">Restore Old Photo</span>
   </div>
-
   <div class="op-category">
     <div class="op-category-title">⚙️ Basic</div>
     <span class="op-chip" onclick="quickOp('rotate 90 degrees')">Rotate 90°</span>
@@ -453,10 +490,8 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     <span class="op-chip" onclick="quickOp('add film grain')">Film Grain</span>
     <span class="op-chip" onclick="quickOp('warm white balance')">Warm Tone</span>
     <span class="op-chip" onclick="quickOp('cool white balance')">Cool Tone</span>
-    <span class="op-chip" onclick="quickOp('apply HDR effect')">HDR</span>
     <span class="op-chip" onclick="quickOp('image info')">Image Info</span>
   </div>
-
   <div class="op-category">
     <div class="op-category-title">🤖 Generate</div>
     <span class="op-chip creative" onclick="promptGenerate()">Generate from Text</span>
@@ -467,14 +502,8 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 <div class="modal-overlay" id="authModal">
   <div class="modal-box" id="authBox">
     <h3 id="authTitle">Sign In</h3>
-
-    <!-- Alert -->
     <div class="modal-alert" id="authAlert"></div>
-
-    <!-- Rate limit -->
     <div class="rate-limit-timer" id="rateLimitMsg">⏳ Too many attempts. Please wait <span id="rateLimitCountdown">30</span>s</div>
-
-    <!-- SIGNUP FIELDS -->
     <div id="signupSection" style="display:none;flex-direction:column;gap:10px;">
       <div style="display:flex;gap:10px;">
         <div class="input-field-wrap" style="flex:1">
@@ -501,20 +530,15 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
         <span class="field-error" id="dobErr">Must be 13+</span>
       </div>
     </div>
-
-    <!-- LOGIN IDENTIFIER -->
     <div class="input-field-wrap" id="loginIdentifierWrap">
       <input class="modal-input" id="loginIdentifier" placeholder="Email or Username">
       <span class="field-error" id="identifierErr">Required</span>
     </div>
-
-    <!-- PASSWORD -->
     <div class="input-field-wrap">
       <div class="pw-wrap">
         <input class="modal-input" id="password" type="password" placeholder="Password" oninput="onPasswordInput()">
         <span class="pw-eye material-icons" onclick="togglePwEye('password','eyeIcon1')" id="eyeIcon1">visibility</span>
       </div>
-      <!-- Signup: strength meter -->
       <div id="pwStrengthWrap" style="display:none;" class="pw-strength-wrap">
         <div class="pw-bars">
           <div class="pw-bar" id="bar1"></div><div class="pw-bar" id="bar2"></div>
@@ -531,8 +555,6 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
       </div>
       <span class="field-error" id="passwordErr">Required</span>
     </div>
-
-    <!-- CONFIRM PASSWORD (signup only) -->
     <div class="input-field-wrap" id="confirmPwWrap" style="display:none;">
       <div class="pw-wrap">
         <input class="modal-input" id="confirmPassword" type="password" placeholder="Confirm Password" oninput="validateConfirmPw()">
@@ -540,15 +562,12 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
       </div>
       <span class="field-error" id="confirmPwErr">Passwords don't match</span>
     </div>
-
-    <!-- Terms (signup) -->
     <div id="termsWrap" style="display:none;">
       <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
         <input type="checkbox" id="agreeTerms" style="margin-top:2px;flex-shrink:0;">
         <span class="modal-terms">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>. I am 13 years of age or older.</span>
       </label>
     </div>
-
     <button class="modal-btn-primary" id="authSubmitBtn" onclick="submitAuth()">Submit</button>
     <button class="modal-btn-text" id="forgotBtn" onclick="showForgotPassword()">Forgot Password?</button>
     <div class="modal-divider" id="switchDivider">or</div>
@@ -559,7 +578,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 
 <!-- ── FORGOT PASSWORD MODAL ── -->
 <div class="modal-overlay" id="forgotModal">
-  <div class="modal-box" style="max-width:380px;">
+  <div class="modal-box small">
     <h3>Reset Password</h3>
     <div class="modal-alert" id="forgotAlert"></div>
     <div id="forgotStep1">
@@ -611,7 +630,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 
 <!-- ── CHANGE PASSWORD MODAL ── -->
 <div class="modal-overlay" id="changePwModal">
-  <div class="modal-box" style="max-width:380px;">
+  <div class="modal-box small">
     <h3>Change Password</h3>
     <div class="modal-alert" id="changePwAlert"></div>
     <div class="input-field-wrap">
@@ -645,8 +664,15 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 </div>
 
 <!-- ── LIGHTBOX ── -->
-<div class="lightbox" id="lightbox" onclick="this.style.display='none'">
-  <img id="lightboxImg" alt="Preview">
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <div class="lightbox-inner" onclick="event.stopPropagation()">
+    <div class="lightbox-actions">
+      <button class="lightbox-btn" onclick="downloadLightboxImage()"><span class="material-icons">download</span> Download</button>
+      <button class="lightbox-btn" onclick="copyLightboxImage()"><span class="material-icons">content_copy</span> Copy</button>
+      <button class="lightbox-btn" onclick="document.getElementById('lightbox').style.display='none'"><span class="material-icons">close</span></button>
+    </div>
+    <img id="lightboxImg" alt="Preview">
+  </div>
 </div>
 
 <!-- ── TOAST ── -->
@@ -663,32 +689,76 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 (function purgeOldImageChats() {
   try {
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('lumina_chat_') || key === 'berryChats') {
-        const val = localStorage.getItem(key) || '';
-        if (val.includes('data:image') || val.includes('base64')) localStorage.removeItem(key);
-      }
+      if (key === 'berryChats') localStorage.removeItem(key);
+      // Only purge legacy unkeyed chats
+      if (key === 'lumina_chat_index_legacy') localStorage.removeItem(key);
     });
-    if (localStorage.getItem('berryChats')) localStorage.removeItem('berryChats');
   } catch(e) {}
 })();
 
 // ── STATE ─────────────────────────────────────────────────
-let chatStarted=false, generating=false;
+let chatStarted=false, generating=false, abortController=null;
 let attachedFiles=[], conversationHistory=[];
 let currentChatTitle=null, currentChatKey=null;
 let authMode='signin';
 let loginAttempts=0, lockUntil=0;
 let otpCode='', otpExpiry=0, otpTimerInt=null;
+let currentUser=null;  // logged-in user object
+let lastImageB64=null; // track last image for context
+
 const MAX_SIZE=10*1024*1024;
 const ALLOWED=['image/jpeg','image/png','image/webp','image/gif','image/bmp'];
-const LS_INDEX='lumina_index', LS_PREFIX='lumina_chat_', LS_USER='luminaUser_v2';
+const LS_USER='luminaUser_v2';
 const MAX_LOGIN_ATTEMPTS=5, LOCK_DURATION=30;
+
+// Per-user storage helpers
+function userKey(suffix) {
+  const uid = currentUser ? currentUser.username : 'guest';
+  return `lumina_${uid}_${suffix}`;
+}
+function getChatIndex() {
+  try { return JSON.parse(localStorage.getItem(userKey('index')) || '[]'); } catch { return []; }
+}
+function updateChatIndex(a) {
+  localStorage.setItem(userKey('index'), JSON.stringify(a));
+}
 
 // ── TOAST ─────────────────────────────────────────────────
 function toast(msg, dur=2500) {
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),dur);
+  setTimeout(()=>t.classList.remove('show'), dur);
+}
+
+// ── SEND/STOP BUTTON ─────────────────────────────────────
+window.handleSendOrStop = function() {
+  if (generating) {
+    stopGeneration();
+  } else {
+    sendMessage();
+  }
+};
+
+function setGenerating(val) {
+  generating = val;
+  const btn = document.getElementById('sendBtn');
+  const icon = document.getElementById('actionIcon');
+  if (val) {
+    btn.classList.add('stop-mode');
+    icon.textContent = 'stop';
+  } else {
+    btn.classList.remove('stop-mode');
+    icon.textContent = 'arrow_upward';
+  }
+}
+
+function stopGeneration() {
+  if (abortController) {
+    abortController.abort();
+  }
+  setGenerating(false);
+  removeTyping();
+  addBotMsg('⛔ Generation stopped.');
 }
 
 // ── CHAT HELPERS ──────────────────────────────────────────
@@ -698,32 +768,106 @@ function startChatMode() {
   document.getElementById('homeSubtitle').style.display='none';
   document.getElementById('chatWrapper').style.display='block';
 }
-function addMsg(content, role, isHTML=false) {
-  const div=document.createElement('div');
-  div.classList.add('chat-msg', role==='user'?'user-msg':'bot-msg');
-  if (isHTML) div.innerHTML=content; else div.innerText=content;
-  document.getElementById('chatArea').appendChild(div);
-  scrollChat(); return div;
+
+// Create a message wrapper with action buttons
+function createMsgWrapper(role) {
+  const wrapper = document.createElement('div');
+  wrapper.className = `chat-msg-wrapper ${role === 'user' ? 'user-wrapper' : 'bot-wrapper'}`;
+  return wrapper;
 }
-function addImageMsg(src, role) {
-  const div=document.createElement('div');
-  div.classList.add('chat-msg', role==='user'?'user-msg':'bot-msg');
-  const img=document.createElement('img'); img.src=src; img.className='chat-image-large';
-  img.onclick=()=>openLightbox(src);
-  div.appendChild(img);
-  document.getElementById('chatArea').appendChild(div); scrollChat();
+
+function addUserMsg(text, images) {
+  const wrapper = createMsgWrapper('user');
+  
+  // Text bubble first
+  if (text) {
+    const div = document.createElement('div');
+    div.classList.add('chat-msg', 'user-msg');
+    div.innerText = text;
+    wrapper.appendChild(div);
+    
+    // Action buttons for user text
+    const actions = document.createElement('div');
+    actions.className = 'msg-actions';
+    actions.innerHTML = `
+      <button class="msg-action-btn" onclick="copyText(${JSON.stringify(text)})">
+        <span class="material-icons">content_copy</span> Copy
+      </button>`;
+    wrapper.appendChild(actions);
+  }
+  
+  // Attachments below text
+  if (images && images.length > 0) {
+    const attachBox = document.createElement('div');
+    attachBox.className = 'msg-attachments user-side';
+    images.forEach(src => {
+      const img = document.createElement('img');
+      img.src = src; img.className = 'msg-attach-img';
+      img.onclick = () => openLightbox(src);
+      attachBox.appendChild(img);
+    });
+    wrapper.appendChild(attachBox);
+  }
+  
+  document.getElementById('chatArea').appendChild(wrapper);
+  scrollChat();
+  return wrapper;
 }
+
+function addBotMsg(content, isHTML=false, imgSrc=null) {
+  const wrapper = createMsgWrapper('bot');
+  
+  const div = document.createElement('div');
+  div.classList.add('chat-msg', 'bot-msg');
+  if (isHTML) div.innerHTML = content; else div.innerText = content;
+  wrapper.appendChild(div);
+  
+  // Image output from bot
+  if (imgSrc) {
+    const attachBox = document.createElement('div');
+    attachBox.className = 'msg-attachments bot-side';
+    const img = document.createElement('img');
+    img.src = imgSrc; img.className = 'msg-attach-img';
+    img.style.maxWidth = '320px'; img.style.height = 'auto';
+    img.onclick = () => openLightbox(imgSrc);
+    attachBox.appendChild(img);
+    wrapper.appendChild(attachBox);
+  }
+  
+  // Action buttons for bot
+  const plainText = div.innerText || div.textContent;
+  const actions = document.createElement('div');
+  actions.className = 'msg-actions';
+  let actHtml = `<button class="msg-action-btn" onclick="copyText(${JSON.stringify(plainText)})"><span class="material-icons">content_copy</span> Copy</button>`;
+  if (imgSrc) {
+    actHtml += `<button class="msg-action-btn" onclick="downloadImage(${JSON.stringify(imgSrc)})"><span class="material-icons">download</span> Download</button>`;
+    actHtml += `<button class="msg-action-btn" onclick="copyImageToClipboard(${JSON.stringify(imgSrc)})"><span class="material-icons">image</span> Copy Image</button>`;
+  }
+  actions.innerHTML = actHtml;
+  wrapper.appendChild(actions);
+  
+  document.getElementById('chatArea').appendChild(wrapper);
+  scrollChat();
+  return wrapper;
+}
+
 function scrollChat() {
   const w=document.getElementById('chatWrapper');
   setTimeout(()=>{w.scrollTop=w.scrollHeight;},60);
 }
 function showTyping() {
+  const wrapper = createMsgWrapper('bot');
+  wrapper.id = 'typingWrapper';
   const div=document.createElement('div');
   div.classList.add('chat-msg','bot-msg'); div.id='typing';
   div.innerHTML='<div class="typing"><span></span><span></span><span></span></div>';
-  document.getElementById('chatArea').appendChild(div); scrollChat();
+  wrapper.appendChild(div);
+  document.getElementById('chatArea').appendChild(wrapper); scrollChat();
 }
-function removeTyping() { const t=document.getElementById('typing'); if(t) t.remove(); }
+function removeTyping() {
+  const t=document.getElementById('typingWrapper'); if(t) t.remove();
+  const t2=document.getElementById('typing'); if(t2) t2.remove();
+}
 function formatReply(text) {
   return text
     .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
@@ -732,6 +876,32 @@ function formatReply(text) {
     .replace(/\n/g,'<br>');
 }
 
+// ── COPY / DOWNLOAD HELPERS ───────────────────────────────
+window.copyText = function(text) {
+  navigator.clipboard.writeText(text).then(()=>toast('Copied to clipboard!')).catch(()=>{
+    const ta=document.createElement('textarea'); ta.value=text;
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta); toast('Copied!');
+  });
+};
+
+window.downloadImage = function(src, name='lumina-image.png') {
+  const a=document.createElement('a'); a.href=src; a.download=name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  toast('Image downloaded!');
+};
+
+window.copyImageToClipboard = async function(src) {
+  try {
+    const res = await fetch(src);
+    const blob = await res.blob();
+    await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+    toast('Image copied to clipboard!');
+  } catch(e) {
+    toast('Copy not supported in this browser. Use Download instead.');
+  }
+};
+
 // ── SEND MESSAGE ──────────────────────────────────────────
 window.sendMessage = async function() {
   if (generating) return;
@@ -739,40 +909,69 @@ window.sendMessage = async function() {
   const text=input.value.trim();
   const hasFiles=attachedFiles.length>0;
   if (!text && !hasFiles) return;
-  generating=true;
-  document.getElementById('actionIcon').textContent='stop';
+  
+  setGenerating(true);
   startChatMode();
+  
   if (!currentChatTitle) {
-    currentChatTitle=text||'Image uploaded';
-    currentChatKey=LS_PREFIX+Date.now();
+    currentChatTitle = text || 'Image uploaded';
+    currentChatKey = userKey('chat_' + Date.now());
   }
-  if (text) addMsg(text,'user');
-  if (hasFiles) attachedFiles.forEach(f=>addImageMsg(f,'user'));
+  
+  // Add user message (text first, then images)
+  addUserMsg(text, hasFiles ? [...attachedFiles] : []);
+  
   const promptText=text;
-  const fileToSend=attachedFiles[0]||null;
+  const filesToSend=[...attachedFiles];
   input.value=''; attachedFiles=[]; renderPreviews();
   showTyping();
+  
+  abortController = new AbortController();
+  
   try {
     const fd=new FormData();
-    fd.append('prompt',promptText);
-    fd.append('history',JSON.stringify(conversationHistory));
-    if (fileToSend) {
-      const blob=await (await fetch(fileToSend)).blob();
-      fd.append('image',blob,'upload.jpg');
+    fd.append('prompt', promptText);
+    fd.append('history', JSON.stringify(conversationHistory));
+    
+    // Send last known image for context if no new image uploaded
+    if (lastImageB64 && filesToSend.length === 0) {
+      fd.append('last_image', lastImageB64);
     }
-    const res=await fetch('/process',{method:'POST',body:fd});
+    
+    if (filesToSend.length > 0) {
+      const blob = await (await fetch(filesToSend[0])).blob();
+      fd.append('image', blob, 'upload.jpg');
+    }
+    
+    const res = await fetch('/process', {
+      method: 'POST',
+      body: fd,
+      signal: abortController.signal
+    });
+    
     removeTyping();
-    if (!res.ok) { addMsg('⚠️ Server error: '+await res.text(),'bot'); return; }
-    const data=await res.json();
-    if (data.history) conversationHistory=data.history;
-    if (data.message) addMsg(formatReply(data.message),'bot',true);
-    if (data.image) addImageMsg(data.image,'bot');
+    if (!res.ok) { addBotMsg('⚠️ Server error: ' + await res.text()); return; }
+    
+    const data = await res.json();
+    if (data.history) conversationHistory = data.history;
+    
+    // Update last image tracking
+    if (data.last_image) lastImageB64 = data.last_image;
+    else if (filesToSend.length > 0) lastImageB64 = filesToSend[0];
+    
+    const resultImg = data.image || null;
+    if (data.message) addBotMsg(formatReply(data.message), true, resultImg);
+    else if (resultImg) addBotMsg('Here is your processed image:', false, resultImg);
+    
     saveChatHistory();
   } catch(err) {
-    removeTyping(); addMsg('⚠️ Connection error: '+err.message,'bot');
+    removeTyping();
+    if (err.name !== 'AbortError') {
+      addBotMsg('⚠️ Connection error: ' + err.message);
+    }
   } finally {
-    generating=false;
-    document.getElementById('actionIcon').textContent='arrow_upward';
+    setGenerating(false);
+    abortController = null;
   }
 };
 
@@ -786,7 +985,7 @@ window.promptGenerate = function() {
   closeOpsPanel();
   const p=prompt('Enter a text prompt to generate an image:');
   if (p && p.trim()) {
-    document.getElementById('promptInput').value='generate '+p.trim();
+    document.getElementById('promptInput').value='generate image of ' + p.trim();
     sendMessage();
   }
 };
@@ -799,41 +998,84 @@ window.newChat = function() {
   document.getElementById('homeSubtitle').style.display='block';
   chatStarted=false; attachedFiles=[]; conversationHistory=[];
   currentChatTitle=null; currentChatKey=null;
+  lastImageB64=null;
   renderPreviews();
   document.getElementById('profileMenu').style.display='none';
+  if (generating) { stopGeneration(); }
+};
+
+// ── SHARE CHAT ────────────────────────────────────────────
+window.shareChat = function() {
+  document.getElementById('profileMenu').style.display='none';
+  // Build a plain text version of the chat
+  const msgs = document.querySelectorAll('.chat-msg');
+  if (!msgs.length) { toast('No chat to share yet.'); return; }
+  let text = '=== Lumina Chat ===\n\n';
+  document.querySelectorAll('.chat-msg-wrapper').forEach(wrapper => {
+    const isUser = wrapper.classList.contains('user-wrapper');
+    const bubble = wrapper.querySelector('.chat-msg');
+    if (bubble) {
+      text += (isUser ? 'You: ' : 'Lumina: ') + (bubble.innerText || bubble.textContent).trim() + '\n\n';
+    }
+  });
+  copyText(text);
+  toast('Chat copied to clipboard! Share it anywhere.');
 };
 
 // ── HISTORY ───────────────────────────────────────────────
 function saveChatHistory() {
-  if (!currentChatKey||!currentChatTitle) return;
-  const rawHTML=document.getElementById('chatArea').innerHTML;
-  const cleanHTML=rawHTML.replace(/<img[^>]*>/gi,'<span style="color:rgba(255,255,255,0.45);font-size:12px;">[image]</span>');
-  const chatData={title:currentChatTitle,html:cleanHTML,history:conversationHistory,ts:Date.now()};
-  const serialized=JSON.stringify(chatData);
-  if (serialized.length>200000) return;
+  if (!currentChatKey || !currentChatTitle) return;
+  const rawHTML = document.getElementById('chatArea').innerHTML;
+  // Strip images from saved HTML to save space
+  const cleanHTML = rawHTML
+    .replace(/<img[^>]+src="data:[^"]*"[^>]*>/gi, '<span style="color:rgba(255,255,255,0.45);font-size:12px;">[image]</span>')
+    .replace(/src="data:[^"]*"/gi, 'src=""');
+  
+  const chatData = {
+    title: currentChatTitle,
+    html: cleanHTML,
+    history: conversationHistory.map(h => ({
+      ...h,
+      parts: h.parts.map(p => typeof p === 'object' && p.mime_type ? '[image]' : p)
+    })),
+    ts: Date.now()
+  };
+  
+  const serialized = JSON.stringify(chatData);
+  if (serialized.length > 300000) { toast('Chat too large to save fully.'); return; }
+  
   try {
-    localStorage.setItem(currentChatKey,serialized);
+    localStorage.setItem(currentChatKey, serialized);
   } catch(e) {
+    // Clear old chats to free space
     try {
-      Object.keys(localStorage).forEach(k=>{
-        if (k.startsWith('lumina_chat_')||k.startsWith('berry')) localStorage.removeItem(k);
-      });
-      localStorage.removeItem(LS_INDEX);
-      localStorage.setItem(currentChatKey,serialized);
-    } catch(e2) {}
+      const idx = getChatIndex();
+      if (idx.length > 5) {
+        const toRemove = idx.slice(0, idx.length - 5);
+        toRemove.forEach(c => localStorage.removeItem(c.key));
+      }
+      localStorage.setItem(currentChatKey, serialized);
+    } catch(e2) { console.error('Could not save chat:', e2); }
   }
-  const idx=getChatIndex().filter(c=>c.key!==currentChatKey).slice(-19);
-  idx.push({key:currentChatKey,title:currentChatTitle,ts:Date.now()});
+  
+  const idx = getChatIndex().filter(c=>c.key!==currentChatKey).slice(-29);
+  idx.push({key:currentChatKey, title:currentChatTitle, ts:Date.now()});
   updateChatIndex(idx);
 }
-function getChatIndex() { try { return JSON.parse(localStorage.getItem(LS_INDEX)||'[]'); } catch { return []; } }
-function updateChatIndex(a) { localStorage.setItem(LS_INDEX,JSON.stringify(a)); }
-window.openHistory=function(){ document.getElementById('historyPanel').style.display='block'; renderHistoryList(); };
+
+window.openHistory=function(){
+  document.getElementById('historyPanel').style.display='block';
+  renderHistoryList();
+};
 window.closeHistory=function(){ document.getElementById('historyPanel').style.display='none'; };
+
 function renderHistoryList() {
   const list=document.getElementById('historyList'); list.innerHTML='';
   const idx=getChatIndex().slice().sort((a,b)=>b.ts-a.ts);
-  if (!idx.length) { list.innerHTML='<p style="opacity:.55;font-size:13px;">No saved chats yet.</p>'; return; }
+  if (!idx.length) {
+    list.innerHTML='<p style="opacity:.55;font-size:13px;">No saved chats yet.</p>';
+    return;
+  }
   idx.forEach(entry=>{
     const item=document.createElement('div'); item.className='history-item';
     const date=new Date(entry.ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});
@@ -843,15 +1085,21 @@ function renderHistoryList() {
         <div class="date">${date}</div>
       </div>
       <button class="del-btn" onclick="deleteChat(event,'${entry.key}')">×</button>`;
-    item.addEventListener('click',e=>{ if (e.target.classList.contains('del-btn')) return; loadChat(entry.key); });
+    item.addEventListener('click', e=>{
+      if (e.target.classList.contains('del-btn')) return;
+      loadChat(entry.key);
+    });
     list.appendChild(item);
   });
 }
+
 window.deleteChat=function(e,key){
-  e.stopPropagation(); localStorage.removeItem(key);
+  e.stopPropagation();
+  localStorage.removeItem(key);
   updateChatIndex(getChatIndex().filter(c=>c.key!==key));
   renderHistoryList();
 };
+
 function loadChat(key) {
   const raw=localStorage.getItem(key); if (!raw) return;
   try {
@@ -860,7 +1108,13 @@ function loadChat(key) {
     conversationHistory=data.history||[];
     currentChatTitle=data.title||null;
     currentChatKey=key;
-    document.querySelectorAll('.chat-image-large').forEach(img=>{img.onclick=()=>openLightbox(img.src);});
+    lastImageB64=null;
+    // Re-attach lightbox handlers
+    document.querySelectorAll('.msg-attach-img, .chat-image-large').forEach(img=>{
+      if (img.src && !img.src.endsWith('""')) {
+        img.onclick=()=>openLightbox(img.src);
+      }
+    });
     startChatMode(); closeHistory(); scrollChat();
   } catch(e) { console.error(e); }
 }
@@ -868,6 +1122,7 @@ function loadChat(key) {
 // ── FILE UPLOAD ───────────────────────────────────────────
 window.triggerUpload=function(){ document.getElementById('fileInput').click(); };
 window.handleFileInputChange=function(e){ handleFiles(Array.from(e.target.files)); e.target.value=''; };
+
 function handleFiles(files) {
   files.forEach(file=>{
     if (!ALLOWED.includes(file.type)) { toast('Only images allowed (JPG, PNG, WEBP, GIF, BMP).'); return; }
@@ -877,8 +1132,14 @@ function handleFiles(files) {
     reader.readAsDataURL(file);
   });
 }
+
 function renderPreviews() {
   const box=document.getElementById('attachmentPreview'); box.innerHTML='';
+  if (attachedFiles.length === 0) {
+    box.classList.remove('has-files');
+    return;
+  }
+  box.classList.add('has-files');
   attachedFiles.forEach((src,i)=>{
     const wrap=document.createElement('div'); wrap.className='attach-thumb';
     const img=document.createElement('img'); img.src=src; img.onclick=()=>openLightbox(src);
@@ -887,6 +1148,7 @@ function renderPreviews() {
     wrap.appendChild(img); wrap.appendChild(rm); box.appendChild(wrap);
   });
 }
+
 document.addEventListener('dragover',e=>{ e.preventDefault(); document.body.classList.add('dragging-over'); });
 document.addEventListener('dragleave',e=>{ if (!e.relatedTarget) document.body.classList.remove('dragging-over'); });
 document.addEventListener('drop',e=>{ e.preventDefault(); document.body.classList.remove('dragging-over'); handleFiles(Array.from(e.dataTransfer.files)); });
@@ -901,7 +1163,23 @@ window.micAction=function(){
 };
 
 // ── LIGHTBOX ─────────────────────────────────────────────
-function openLightbox(src){ document.getElementById('lightboxImg').src=src; document.getElementById('lightbox').style.display='flex'; }
+function openLightbox(src) {
+  document.getElementById('lightboxImg').src=src;
+  document.getElementById('lightbox').style.display='flex';
+}
+window.closeLightbox = function(e) {
+  if (e.target === document.getElementById('lightbox')) {
+    document.getElementById('lightbox').style.display='none';
+  }
+};
+window.downloadLightboxImage = function() {
+  const src = document.getElementById('lightboxImg').src;
+  downloadImage(src, 'lumina-' + Date.now() + '.png');
+};
+window.copyLightboxImage = async function() {
+  const src = document.getElementById('lightboxImg').src;
+  await copyImageToClipboard(src);
+};
 
 // ── OPS PANEL ─────────────────────────────────────────────
 window.openOpsPanel=function(){
@@ -924,7 +1202,6 @@ function checkPasswordStrength(pw) {
 }
 function renderStrength(pw, barPrefix, labelId) {
   const {checks,score}=checkPasswordStrength(pw);
-  const bars=['bar','bar','bar','bar','bar'];
   const colors=['#ff4444','#ff8844','#ffcc44','#88cc44','#44cc77'];
   const labels=['Very Weak','Weak','Fair','Strong','Very Strong'];
   for (let i=1;i<=5;i++){
@@ -951,17 +1228,10 @@ window.onPasswordInput=function(){
     updateReqs(checks);
   }
 };
-window.onNewPasswordInput=function(){
-  const pw=document.getElementById('newPassword').value;
-  renderStrength(pw,'nbar','newPwLabel');
-};
-window.onChangePwInput=function(){
-  const pw=document.getElementById('newPwChange').value;
-  renderStrength(pw,'cbar','changePwLabel');
-};
+window.onNewPasswordInput=function(){ renderStrength(document.getElementById('newPassword').value,'nbar','newPwLabel'); };
+window.onChangePwInput=function(){ renderStrength(document.getElementById('newPwChange').value,'cbar','changePwLabel'); };
 window.togglePwEye=function(inputId, iconId){
-  const inp=document.getElementById(inputId);
-  const ico=document.getElementById(iconId);
+  const inp=document.getElementById(inputId); const ico=document.getElementById(iconId);
   if (!inp||!ico) return;
   if (inp.type==='password'){ inp.type='text'; ico.textContent='visibility_off'; }
   else { inp.type='password'; ico.textContent='visibility'; }
@@ -996,6 +1266,7 @@ window.showSignUp=function(){
 };
 window.switchAuthMode=function(){ authMode==='signin'?showSignUp():showSignIn(); };
 window.closeAuth=function(){ document.getElementById('authModal').style.display='none'; };
+
 function resetAuthModal() {
   document.getElementById('authAlert').style.display='none';
   document.getElementById('authAlert').className='modal-alert';
@@ -1011,9 +1282,7 @@ function showFieldError(errId, show=true) {
   const el=document.getElementById(errId);
   if (el) el.style.display=show?'block':'none';
 }
-window.clearFieldError=function(input){
-  input.classList.remove('input-error');
-};
+window.clearFieldError=function(input){ input.classList.remove('input-error'); };
 window.validateEmailField=function(){
   const val=document.getElementById('email').value;
   const ok=/^[^@]+@[^@]+\.[a-z]{2,}$/i.test(val);
@@ -1041,9 +1310,8 @@ window.validateConfirmPw=function(){
 function isRateLimited() {
   if (lockUntil && Date.now()<lockUntil) {
     const remaining=Math.ceil((lockUntil-Date.now())/1000);
-    const rlEl=document.getElementById('rateLimitMsg');
     document.getElementById('rateLimitCountdown').textContent=remaining;
-    rlEl.style.display='block';
+    document.getElementById('rateLimitMsg').style.display='block';
     document.getElementById('authSubmitBtn').disabled=true;
     return true;
   }
@@ -1055,9 +1323,7 @@ function recordFailedAttempt() {
   loginAttempts++;
   if (loginAttempts>=MAX_LOGIN_ATTEMPTS) {
     lockUntil=Date.now()+LOCK_DURATION*1000; loginAttempts=0;
-    const countdown=setInterval(()=>{
-      if (!isRateLimited()) clearInterval(countdown);
-    },1000);
+    const countdown=setInterval(()=>{ if (!isRateLimited()) clearInterval(countdown); },1000);
   }
 }
 
@@ -1080,44 +1346,54 @@ window.submitAuth = async function() {
     if (!dob){ document.getElementById('dob').classList.add('input-error'); showFieldError('dobErr'); ok=false; }
     else {
       const age=(Date.now()-new Date(dob).getTime())/(365.25*24*3600*1000);
-      if (age<13){ document.getElementById('dob').classList.add('input-error'); showFieldError('dobErr','Must be 13+'); ok=false; }
+      if (age<13){ document.getElementById('dob').classList.add('input-error'); showFieldError('dobErr'); ok=false; }
     }
     if (!agree){ showAuthAlert('You must agree to the Terms of Service.'); ok=false; }
     if (!ok) return;
-    // Check password strength
     const {score}=checkPasswordStrength(pw);
     if (score<3){ showAuthAlert('Password is too weak. Please meet all requirements.'); return; }
     if (pw!==document.getElementById('confirmPassword').value){ showAuthAlert('Passwords do not match.'); return; }
-    // Hash via server
     try {
       const r=await fetch('/api/auth/hash-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
       const d=await r.json();
       if (!r.ok){ showAuthAlert(d.error+(d.details?'\n'+d.details.join(', '):''),'error'); return; }
-      // Check duplicate
-      const existing=JSON.parse(localStorage.getItem(LS_USER)||'null');
-      if (existing && (existing.email===em||existing.username===un)){
-        showAuthAlert('An account with this email or username already exists.'); return;
-      }
+      const existing=JSON.parse(localStorage.getItem(LS_USER+'_'+un)||'null');
+      if (existing){ showAuthAlert('An account with this username already exists.'); return; }
       const userData={firstName:fn,lastName:ln,email:em,username:un,
         salt:d.salt,hash:d.hash,createdAt:Date.now(),plan:'Free'};
-      localStorage.setItem(LS_USER,JSON.stringify(userData));
+      localStorage.setItem(LS_USER+'_'+un, JSON.stringify(userData));
       showAuthAlert('Account created! Signing you in…','success');
-      setTimeout(()=>{ closeAuth(); loginUser(userData); },1000);
+      setTimeout(()=>{ closeAuth(); loginUserAndReset(userData); },1000);
     } catch(e){ showAuthAlert('Server error. Please try again.'); }
     return;
   }
   // SIGNIN
   const id=document.getElementById('loginIdentifier').value.trim();
   if (!id||!pw){ showAuthAlert('Please fill in all fields.'); return; }
-  const stored=JSON.parse(localStorage.getItem(LS_USER)||'null');
+  
+  // Find user by email or username
+  let stored = null;
+  // Try username lookup
+  const byUsername = JSON.parse(localStorage.getItem(LS_USER+'_'+id)||'null');
+  if (byUsername) stored = byUsername;
+  else {
+    // Search all users by email
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith(LS_USER+'_')) {
+        const u = JSON.parse(localStorage.getItem(k)||'null');
+        if (u && u.email === id) stored = u;
+      }
+    });
+  }
+  
   if (!stored){ showAuthAlert('No account found. Please sign up first.'); return; }
   try {
     const r=await fetch('/api/auth/verify-password',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({password:pw,salt:stored.salt,hash:stored.hash})});
     const d=await r.json();
-    if (d.valid && (stored.email===id||stored.username===id)){
+    if (d.valid){
       loginAttempts=0; lockUntil=0;
-      closeAuth(); loginUser(stored);
+      closeAuth(); loginUserAndReset(stored);
     } else {
       recordFailedAttempt();
       const remaining=MAX_LOGIN_ATTEMPTS-loginAttempts;
@@ -1125,13 +1401,21 @@ window.submitAuth = async function() {
     }
   } catch(e){ showAuthAlert('Server error. Please try again.'); }
 };
-function loginUser(user){
+
+function loginUserAndReset(user) {
+  currentUser = user;
+  // ALWAYS start a fresh new chat on login
+  newChat();
+  updateProfileUI(user);
+  toast('Welcome, '+user.firstName+'! 👋');
+}
+
+function updateProfileUI(user) {
   document.getElementById('authButtons').style.display='none';
   const av=document.getElementById('profileAvatar');
   av.style.display='flex'; av.innerText=user.firstName.charAt(0).toUpperCase();
   document.getElementById('profileName').innerText=user.firstName+' '+user.lastName;
   document.getElementById('planLabel').innerText=(user.plan||'Free')+' Plan';
-  toast('Welcome back, '+user.firstName+'! 👋');
 }
 
 // ── FORGOT PASSWORD ────────────────────────────────────────
@@ -1147,15 +1431,19 @@ window.closeForgot=function(){ document.getElementById('forgotModal').style.disp
 window.sendOTP=function(){
   const id=document.getElementById('forgotEmail').value.trim();
   if (!id){ showForgotAlert('Please enter your email or username.'); return; }
-  const stored=JSON.parse(localStorage.getItem(LS_USER)||'null');
-  if (!stored||(stored.email!==id&&stored.username!==id)){
-    showForgotAlert('No account found with that email or username.'); return;
+  let stored = JSON.parse(localStorage.getItem(LS_USER+'_'+id)||'null');
+  if (!stored) {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith(LS_USER+'_')) {
+        const u = JSON.parse(localStorage.getItem(k)||'null');
+        if (u && u.email === id) stored = u;
+      }
+    });
   }
-  // Generate 6-digit OTP
+  if (!stored){ showForgotAlert('No account found with that email or username.'); return; }
   otpCode=String(Math.floor(100000+Math.random()*900000));
   otpExpiry=Date.now()+5*60*1000;
-  // In production: send via email. Here we simulate.
-  showForgotAlert(`OTP sent! (Demo: your code is ${otpCode})`, 'success');
+  showForgotAlert(`OTP sent! (Demo: your code is ${otpCode})`,'success');
   setTimeout(()=>{
     document.getElementById('forgotStep1').style.display='none';
     document.getElementById('forgotStep2').style.display='flex';
@@ -1201,8 +1489,20 @@ window.resetPassword = async function(){
     const r=await fetch('/api/auth/hash-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:newPw})});
     const d=await r.json();
     if (!r.ok){ showForgotAlert(d.error); return; }
-    const stored=JSON.parse(localStorage.getItem(LS_USER)||'null');
-    if (stored){ stored.salt=d.salt; stored.hash=d.hash; localStorage.setItem(LS_USER,JSON.stringify(stored)); }
+    const id=document.getElementById('forgotEmail').value.trim();
+    let stored=JSON.parse(localStorage.getItem(LS_USER+'_'+id)||'null');
+    if (!stored) {
+      Object.keys(localStorage).forEach(k=>{
+        if (k.startsWith(LS_USER+'_')) {
+          const u=JSON.parse(localStorage.getItem(k)||'null');
+          if (u&&u.email===id) stored=u;
+        }
+      });
+    }
+    if (stored){
+      stored.salt=d.salt; stored.hash=d.hash;
+      localStorage.setItem(LS_USER+'_'+stored.username, JSON.stringify(stored));
+    }
     showForgotAlert('Password reset successfully!','success');
     setTimeout(()=>{ closeForgot(); showSignIn(); },1500);
   } catch(e){ showForgotAlert('Server error.'); }
@@ -1226,18 +1526,17 @@ window.submitChangePassword = async function(){
   if (newPw!==conPw){ showChangePwAlert('New passwords do not match.'); return; }
   const {score}=checkPasswordStrength(newPw);
   if (score<3){ showChangePwAlert('New password is too weak.'); return; }
-  const stored=JSON.parse(localStorage.getItem(LS_USER)||'null');
-  if (!stored){ showChangePwAlert('Not logged in.'); return; }
+  if (!currentUser){ showChangePwAlert('Not logged in.'); return; }
   try {
     const r=await fetch('/api/auth/verify-password',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({password:curPw,salt:stored.salt,hash:stored.hash})});
+      body:JSON.stringify({password:curPw,salt:currentUser.salt,hash:currentUser.hash})});
     const d=await r.json();
     if (!d.valid){ showChangePwAlert('Current password is incorrect.'); return; }
     const r2=await fetch('/api/auth/hash-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:newPw})});
     const d2=await r2.json();
     if (!r2.ok){ showChangePwAlert(d2.error); return; }
-    stored.salt=d2.salt; stored.hash=d2.hash;
-    localStorage.setItem(LS_USER,JSON.stringify(stored));
+    currentUser.salt=d2.salt; currentUser.hash=d2.hash;
+    localStorage.setItem(LS_USER+'_'+currentUser.username, JSON.stringify(currentUser));
     showChangePwAlert('Password changed successfully!','success');
     setTimeout(()=>{ document.getElementById('changePwModal').style.display='none'; },1500);
   } catch(e){ showChangePwAlert('Server error.'); }
@@ -1249,9 +1548,11 @@ function showChangePwAlert(msg,type='error'){
 
 // ── LOGOUT ────────────────────────────────────────────────
 window.logout=function(){
+  currentUser=null; lastImageB64=null;
   document.getElementById('authButtons').style.display='flex';
   document.getElementById('profileAvatar').style.display='none';
   document.getElementById('profileMenu').style.display='none';
+  newChat();
   toast('Signed out successfully.');
 };
 
@@ -1266,7 +1567,8 @@ document.addEventListener('click',()=>{ document.getElementById('profileMenu').s
 // ── HELP ─────────────────────────────────────────────────
 window.openHelp=function(){
   document.getElementById('profileMenu').style.display='none';
-  addMsg(
+  startChatMode();
+  addBotMsg(
     '<strong>🌟 Lumina — Full Capabilities</strong><br><br>' +
     '🏥 <strong>Medical:</strong> X-Ray, MRI, CT, Fundus, Skin Analysis, Wound, CLAHE, Denoise, Segmentation<br>' +
     '🎨 <strong>Creative:</strong> Cartoon, Watercolor, Sketch, Oil Painting, Neon Glow, Glitch, Halftone, Pop Art, Stained Glass, Pointillism, ASCII Art, Thermal, Duotone, Mosaic, Lomo, Cross Process<br>' +
@@ -1278,9 +1580,8 @@ window.openHelp=function(){
     '🤖 <strong>Generate:</strong> Create images from text prompts<br>' +
     '💬 <strong>Chat:</strong> Describe images, ask questions, get medical analysis<br><br>' +
     'Click <strong>⚡ Operations</strong> button for quick access!',
-    'bot', true
+    true
   );
-  if (!chatStarted) startChatMode();
 };
 
 // ── UTILS ─────────────────────────────────────────────────
@@ -1288,11 +1589,9 @@ function truncate(s,n){ return s.length>n?s.slice(0,n)+'…':s; }
 function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ── INIT ─────────────────────────────────────────────────
-// Auto-login if session still valid
-(function checkExistingSession(){
-  const stored=JSON.parse(localStorage.getItem(LS_USER)||'null');
-  if (stored&&stored.hash){ loginUser(stored); }
-})();
+// Do NOT auto-login on page load — require explicit sign in
+// (Users must sign in fresh; guest mode for unauthenticated users)
+// Guest users can still use the app; history is stored under 'guest' key
 
 })();
 </script>
