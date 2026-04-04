@@ -17,7 +17,8 @@ app.secret_key = secrets.token_hex(32)
 # ─────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
-GEMINI_MODEL  = "gemini-2.5-flash"
+GEMINI_MODEL  = "gemini-2.5-flash-preview-05-20"
+GEMINI_IMAGE_MODEL = "gemini-2.0-flash-preview-image-generation"
 
 # ─────────────────────────────────────────────────────────────
 #  ENHANCED SYSTEM PROMPT
@@ -30,7 +31,7 @@ You can:
 3. Answer ANY question naturally — about images or general topics
 4. Apply advanced image processing operations when the user asks
 5. Generate images from text descriptions
-6. Remember the full conversation context
+6. Remember the full conversation context including previously uploaded images
 
 MEDICAL IMAGING RULES:
 - When analyzing medical images (X-rays, MRI, CT, ultrasound, skin lesions, fundus, pathology slides, ECG), provide:
@@ -47,14 +48,14 @@ When the user asks to PERFORM an image operation, reply with a friendly explanat
 Available operations:
 BASIC: rotate, flip, resize, resize_pct, crop, thumbnail
 FILTERS: grayscale, invert, sepia, blur, sharpen, edge, emboss, cartoon, watercolor, sketch, oil_painting, pencil, neon_glow, glitch, halftone, vintage, lomo, cross_process, duotone
-COLOR: contrast, brightness, saturation, hue, color_balance, white_balance, shadows_highlights, curves, vibrance
+COLOR: contrast, brightness, saturation, hue, color_balance, white_balance, shadows_highlights, curves, vibrance, hdr
 MEDICAL: clahe, denoise, xray_enhance, segment, morphology, sobel, canny, mri_enhance, ct_enhance, fundus_enhance, skin_analyze, wound_analyze
-ADVANCED: pixelate, noise, vignette, fisheye, tilt_shift, miniature, bokeh, hdr, panorama_fix, perspective, barrel_distortion
-RESTORATION: super_resolution, deblur, denoise_ai, scratch_remove, colorize_bw, restore_old
-DETECTION: face_detect, object_highlight, color_palette, histogram_eq, texture_analyze, pattern_detect
-CREATIVE: double_exposure, mosaic, ascii_art, thermal_vision, infrared_sim, pop_art, stained_glass, pointillism
+ADVANCED: pixelate, noise, vignette, fisheye, tilt_shift, bokeh
+RESTORATION: super_resolution, deblur, colorize_bw, restore_old
+DETECTION: face_detect, color_palette, histogram_eq, quality_check, color_analysis
+CREATIVE: double_exposure, mosaic, ascii_art, thermal_vision, pop_art, stained_glass, pointillism
 GENERATE: generate_image (generates image from text prompt)
-INFO: info, color_analysis, quality_check
+INFO: info
 
 Examples:
 - "rotate 45 degrees"         → <OP>{"intent":"rotate","params":{"angle":45}}</OP>
@@ -62,7 +63,7 @@ Examples:
 - "enhance this X-ray"        → <OP>{"intent":"xray_enhance","params":{}}</OP>
 - "add neon glow effect"      → <OP>{"intent":"neon_glow","params":{}}</OP>
 - "detect faces"              → <OP>{"intent":"face_detect","params":{}}</OP>
-- "generate a sunset"         → <OP>{"intent":"generate_image","params":{"prompt":"a beautiful sunset"}}</OP>
+- "generate a sunset"         → <OP>{"intent":"generate_image","params":{"prompt":"a beautiful sunset over the ocean with golden sky"}}</OP>
 - "make it look like thermal" → <OP>{"intent":"thermal_vision","params":{}}</OP>
 - "extract color palette"     → <OP>{"intent":"color_palette","params":{}}</OP>
 - "describe this image"       → describe it naturally, NO <OP> tag
@@ -71,18 +72,17 @@ Examples:
 Rules:
 - For descriptions/questions: reply naturally, NO <OP> tag
 - For operations: friendly explanation + <OP> tag at the END only
-- If no image uploaded but operation requested, ask them to upload one
-- Be warm, concise, helpful, professional for medical queries"""
+- If no image uploaded but operation requested (and no image in history), ask them to upload one
+- If the user refers to "the image", "previous image", "that image" — use the most recent image from conversation history
+- Be warm, concise, helpful, professional for medical queries
+- For generate_image, always include a detailed descriptive prompt in params"""
 
 
 # ─────────────────────────────────────────────────────────────
-#  AUTH HELPERS — Strong password hashing
+#  AUTH HELPERS
 # ─────────────────────────────────────────────────────────────
-# In production, use a real DB. This uses localStorage on client side.
-# Server-side we just validate the submitted data format.
 
 def hash_password(password: str, salt: str = None) -> tuple:
-    """PBKDF2-based password hashing"""
     if salt is None:
         salt = secrets.token_hex(16)
     dk = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 310000)
@@ -128,8 +128,8 @@ def pil_to_cv2(img):
 def cv2_to_pil(arr):
     return Image.fromarray(cv2.cvtColor(arr, cv2.COLOR_BGR2RGB))
 
-def pil_to_bytes(img):
-    buf = io.BytesIO(); img.save(buf, format="JPEG", quality=85)
+def pil_to_bytes(img, quality=85):
+    buf = io.BytesIO(); img.save(buf, format="JPEG", quality=quality)
     return buf.getvalue()
 
 def is_rate_limit(err_str):
@@ -159,7 +159,8 @@ def call_gemini(history: list, user_text: str, image_pil=None) -> str:
                 ))
             else:
                 built.append(types.Part.from_text(text=str(p)))
-        contents.append(types.Content(role=role, parts=built))
+        if built:
+            contents.append(types.Content(role=role, parts=built))
 
     new_parts = []
     if image_pil:
@@ -192,6 +193,83 @@ def call_gemini(history: list, user_text: str, image_pil=None) -> str:
                 continue
             raise
     raise last_err
+
+
+# ─────────────────────────────────────────────────────────────
+#  IMAGE GENERATION
+# ─────────────────────────────────────────────────────────────
+
+def generate_image_from_prompt(prompt: str):
+    """Generate image using Gemini's image generation capability"""
+    if not gemini_client:
+        return create_placeholder_image(prompt)
+    
+    # Try multiple model variants
+    models_to_try = [
+        "gemini-2.0-flash-preview-image-generation",
+        "gemini-2.0-flash-exp-image-generation", 
+        "imagen-3.0-generate-002",
+    ]
+    
+    for model in models_to_try:
+        try:
+            if model.startswith("imagen"):
+                response = gemini_client.models.generate_images(
+                    model=model,
+                    prompt=prompt,
+                    config={"number_of_images": 1, "aspect_ratio": "1:1"}
+                )
+                if response.generated_images:
+                    img_bytes = response.generated_images[0].image.image_bytes
+                    return Image.open(io.BytesIO(img_bytes)).convert("RGB")
+            else:
+                response = gemini_client.models.generate_content(
+                    model=model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_modalities=["IMAGE", "TEXT"]
+                    )
+                )
+                for part in response.candidates[0].content.parts:
+                    if hasattr(part, 'inline_data') and part.inline_data and part.inline_data.mime_type.startswith("image/"):
+                        img_bytes = part.inline_data.data
+                        if isinstance(img_bytes, str):
+                            img_bytes = base64.b64decode(img_bytes)
+                        return Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        except Exception as e:
+            print(f"Image gen model {model} failed: {e}")
+            continue
+    
+    return create_placeholder_image(prompt)
+
+
+def create_placeholder_image(prompt: str):
+    """Create a gradient placeholder image with text"""
+    w, h = 512, 512
+    arr = np.zeros((h, w, 3), dtype=np.uint8)
+    for y in range(h):
+        ratio = y / h
+        arr[y, :] = [
+            int(106 + 59*ratio),
+            int(123 + 94*ratio),
+            int(209 - 63*ratio)
+        ]
+    pil_img = Image.fromarray(arr)
+    draw = ImageDraw.Draw(pil_img)
+    text = f'"{prompt[:40]}..."' if len(prompt) > 40 else f'"{prompt}"'
+    
+    # Try to use a font, fallback to default
+    try:
+        font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
+        font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14)
+    except:
+        font_large = ImageFont.load_default()
+        font_small = font_large
+    
+    draw.text((w//2, h//2 - 40), "🎨 Generated Image", fill=(255, 255, 255), anchor="mm", font=font_large)
+    draw.text((w//2, h//2 + 10), text, fill=(200, 240, 220), anchor="mm", font=font_small)
+    draw.text((w//2, h//2 + 50), "Set GEMINI_API_KEY for real AI generation", fill=(150, 200, 200), anchor="mm", font=font_small)
+    return pil_img
 
 
 # ─────────────────────────────────────────────────────────────
@@ -265,12 +343,11 @@ def detect_op(p):
         return "Cropping center!\n<OP>{\"intent\":\"crop\",\"params\":{\"box\":null}}</OP>"
     if re.search(r'\bthumbnail\b',p):
         return "Creating thumbnail!\n<OP>{\"intent\":\"thumbnail\",\"params\":{}}</OP>"
-    # FILTERS
     if re.search(r'\bgrayscale\b|\bgray\b|\bgrey\b|\bblack.?and.?white\b|\bb&w\b|\bmonochrome\b',p):
         return "Converting to grayscale!\n<OP>{\"intent\":\"grayscale\",\"params\":{}}</OP>"
     if re.search(r'\binvert\b|\bnegative\b',p):
         return "Inverting colors!\n<OP>{\"intent\":\"invert\",\"params\":{}}</OP>"
-    if re.search(r'\bsepia\b|\bvintage\b',p) and not re.search(r'vintage filter',p):
+    if re.search(r'\bsepia\b',p):
         return "Applying sepia tone!\n<OP>{\"intent\":\"sepia\",\"params\":{}}</OP>"
     if re.search(r'\bvintage filter\b|\blomo\b',p):
         return "Applying vintage/lomo effect!\n<OP>{\"intent\":\"lomo\",\"params\":{}}</OP>"
@@ -321,7 +398,6 @@ def detect_op(p):
         return f"Blurring!\n<OP>{{\"intent\":\"blur\",\"params\":{{\"radius\":{r}}}}}</OP>"
     if re.search(r'\bsharpen\b|\bsharp\b|\bcrisp\b',p):
         return "Sharpening!\n<OP>{\"intent\":\"sharpen\",\"params\":{}}</OP>"
-    # COLOR
     if re.search(r'\bcontrast\b',p):
         f=0.5 if re.search(r'decreas|reduc|lower|less',p) else 1.6
         return f"Adjusting contrast!\n<OP>{{\"intent\":\"contrast\",\"params\":{{\"factor\":{f}}}}}</OP>"
@@ -338,8 +414,7 @@ def detect_op(p):
         return f"Adjusting white balance!\n<OP>{{\"intent\":\"white_balance\",\"params\":{{\"temp\":\"{temp}\"}}}}</OP>"
     if re.search(r'\bshadow\b|\bhighlight\b',p):
         return "Adjusting shadows & highlights!\n<OP>{\"intent\":\"shadows_highlights\",\"params\":{}}</OP>"
-    # MEDICAL
-    if re.search(r'\bclahe\b|\bhistogram\b|\bequali\b',p):
+    if re.search(r'\bclahe\b|\bequali\b',p):
         return "Enhancing with CLAHE!\n<OP>{\"intent\":\"clahe\",\"params\":{}}</OP>"
     if re.search(r'\bdenois\b|\bclean\b|\bnoise.?remov\b',p):
         return "Denoising!\n<OP>{\"intent\":\"denoise\",\"params\":{}}</OP>"
@@ -357,17 +432,12 @@ def detect_op(p):
         return "Analyzing wound!\n<OP>{\"intent\":\"wound_analyze\",\"params\":{}}</OP>"
     if re.search(r'\bsegment\b|\botsu\b|\bthreshold\b|\bbinary\b',p):
         return "Segmenting!\n<OP>{\"intent\":\"segment\",\"params\":{}}</OP>"
-    if re.search(r'\bdilat\b',p):
-        return "Dilating!\n<OP>{\"intent\":\"morphology\",\"params\":{\"op\":\"dilate\"}}</OP>"
-    if re.search(r'\berod\b|\bmorpholog\b',p):
-        return "Eroding!\n<OP>{\"intent\":\"morphology\",\"params\":{\"op\":\"erode\"}}</OP>"
     if re.search(r'\bsobel\b|\bgradient\b',p):
         return "Sobel gradient!\n<OP>{\"intent\":\"sobel\",\"params\":{}}</OP>"
     if re.search(r'\bcanny\b',p):
         return "Canny edge detection!\n<OP>{\"intent\":\"canny\",\"params\":{}}</OP>"
     if re.search(r'\bedge\b|\boutline\b',p):
         return "Detecting edges!\n<OP>{\"intent\":\"edge\",\"params\":{}}</OP>"
-    # DETECTION
     if re.search(r'\bface.?detect\b|\bdetect.?face\b|\bfind.?face\b',p):
         return "Detecting faces!\n<OP>{\"intent\":\"face_detect\",\"params\":{}}</OP>"
     if re.search(r'\bcolor.?palette\b|\bextract.?color\b|\bpalette\b',p):
@@ -378,7 +448,6 @@ def detect_op(p):
         return "Checking image quality!\n<OP>{\"intent\":\"quality_check\",\"params\":{}}</OP>"
     if re.search(r'\bhistogram\b',p):
         return "Equalizing histogram!\n<OP>{\"intent\":\"histogram_eq\",\"params\":{}}</OP>"
-    # RESTORATION
     if re.search(r'\bsuper.?resol\b|\bupscale\b|\bupscal\b|\benlarge\b',p):
         return "Applying super resolution!\n<OP>{\"intent\":\"super_resolution\",\"params\":{}}</OP>"
     if re.search(r'\bdeblur\b|\bun.?blur\b|\bfix.?blur\b',p):
@@ -387,7 +456,6 @@ def detect_op(p):
         return "Colorizing image!\n<OP>{\"intent\":\"colorize_bw\",\"params\":{}}</OP>"
     if re.search(r'\bscratch\b|\bold.?photo\b|\brestore\b',p):
         return "Restoring image!\n<OP>{\"intent\":\"restore_old\",\"params\":{}}</OP>"
-    # CREATIVE
     if re.search(r'\bpixelat\b',p):
         m=re.search(r'(\d+)',p); sz=int(m.group(1)) if m else 10
         return f"Pixelating!\n<OP>{{\"intent\":\"pixelate\",\"params\":{{\"size\":{sz}}}}}</OP>"
@@ -395,10 +463,11 @@ def detect_op(p):
         return "Adding film grain!\n<OP>{\"intent\":\"noise\",\"params\":{}}</OP>"
     if re.search(r'\bvignet\b',p):
         return "Applying vignette!\n<OP>{\"intent\":\"vignette\",\"params\":{}}</OP>"
-    # GENERATE
     if re.search(r'\bgenerat\b|\bcreate.?image\b|\bmake.?image\b|\bdraw\b|\bpaint\b',p):
-        prompt_match = re.sub(r'\b(generate|create|make|draw|paint|an?|image|picture|photo|of)\b','',p).strip()
-        return f"Generating image!\n<OP>{{\"intent\":\"generate_image\",\"params\":{{\"prompt\":\"{prompt_match}\"}}}}</OP>"
+        prompt_match = re.sub(r'\b(generate|create|make|draw|paint|an?|the|image|picture|photo|of|a)\b','',p).strip()
+        if not prompt_match:
+            prompt_match = p
+        return f"Generating image from your prompt!\n<OP>{{\"intent\":\"generate_image\",\"params\":{{\"prompt\":\"{prompt_match}\"}}}}</OP>"
     if re.search(r'\binfo\b|\bsize\b|\bdimension\b',p):
         return "Getting info!\n<OP>{\"intent\":\"info\",\"params\":{}}</OP>"
     return None
@@ -420,71 +489,30 @@ def extract_op(reply):
 
 
 # ─────────────────────────────────────────────────────────────
-#  IMAGE GENERATION (using Gemini Imagen or fallback)
-# ─────────────────────────────────────────────────────────────
-
-def generate_image_from_prompt(prompt: str):
-    """Generate image using Gemini's image generation capability"""
-    try:
-        if not gemini_client:
-            return create_placeholder_image(prompt)
-        # Try Gemini image generation
-        response = gemini_client.models.generate_content(
-            model="gemini-2.0-flash-exp-image-generation",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_modalities=["IMAGE", "TEXT"]
-            )
-        )
-        for part in response.candidates[0].content.parts:
-            if part.inline_data and part.inline_data.mime_type.startswith("image/"):
-                img_bytes = part.inline_data.data
-                img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-                return img
-        return create_placeholder_image(prompt)
-    except Exception as e:
-        return create_placeholder_image(prompt)
-
-def create_placeholder_image(prompt: str):
-    """Create a gradient placeholder image with text"""
-    w, h = 512, 512
-    img = Image.new("RGB", (w, h))
-    arr = np.zeros((h, w, 3), dtype=np.uint8)
-    for y in range(h):
-        ratio = y / h
-        arr[y, :] = [
-            int(106 + 59*ratio),
-            int(123 + 94*ratio),
-            int(209 - 63*ratio)
-        ]
-    pil_img = Image.fromarray(arr)
-    draw = ImageDraw.Draw(pil_img)
-    # Draw text
-    text = f'"{prompt[:40]}..."' if len(prompt)>40 else f'"{prompt}"'
-    draw.text((w//2, h//2-20), "🎨 Generated", fill=(255,255,255), anchor="mm")
-    draw.text((w//2, h//2+20), text, fill=(200,240,220), anchor="mm")
-    draw.text((w//2, h//2+60), "Add GEMINI_API_KEY for real generation", fill=(150,200,200), anchor="mm")
-    return pil_img
-
-
-# ─────────────────────────────────────────────────────────────
-#  ADVANCED IMAGE PROCESSORS
+#  IMAGE PROCESSORS (COMPLETE & ACCURATE)
 # ─────────────────────────────────────────────────────────────
 
 def process_image(img, intent, params):
+    if img is None:
+        return None
+
     # ── BASIC ─────────────────────────────────────────────────
     if intent=='rotate':
-        return img.rotate(-params.get('angle',90),expand=True)
+        angle = params.get('angle', 90)
+        return img.rotate(-angle, expand=True, resample=Image.BICUBIC)
     if intent=='flip':
         return ImageOps.mirror(img) if params.get('axis','horizontal')=='horizontal' else ImageOps.flip(img)
     if intent=='resize':
         return img.resize((int(params.get('width',512)),int(params.get('height',512))),Image.LANCZOS)
     if intent=='resize_pct':
         p=params.get('pct',50)/100
-        return img.resize((int(img.width*p),int(img.height*p)),Image.LANCZOS)
+        return img.resize((max(1,int(img.width*p)),max(1,int(img.height*p))),Image.LANCZOS)
     if intent=='crop':
         box=params.get('box')
-        if not box: w,h=img.size; box=[w//4,h//4,3*w//4,3*h//4]
+        if not box:
+            w,h=img.size
+            pad_w, pad_h = w//8, h//8
+            box=[pad_w, pad_h, w-pad_w, h-pad_h]
         return img.crop(tuple(int(x) for x in box))
     if intent=='thumbnail':
         r=img.copy(); r.thumbnail((256,256),Image.LANCZOS); return r
@@ -495,19 +523,24 @@ def process_image(img, intent, params):
     if intent=='invert':
         return ImageOps.invert(img)
     if intent=='sepia':
-        g=np.array(ImageOps.grayscale(img))
-        return Image.fromarray(np.stack([
-            np.clip(g*1.08,0,255),
-            np.clip(g*0.85,0,255),
-            np.clip(g*0.66,0,255)],axis=2).astype(np.uint8))
+        gray = np.array(ImageOps.grayscale(img), dtype=np.float32)
+        r = np.clip(gray * 1.08, 0, 255).astype(np.uint8)
+        g = np.clip(gray * 0.85, 0, 255).astype(np.uint8)
+        b = np.clip(gray * 0.66, 0, 255).astype(np.uint8)
+        return Image.fromarray(np.stack([r, g, b], axis=2))
     if intent=='blur':
-        return img.filter(ImageFilter.GaussianBlur(radius=params.get('radius',3)))
+        radius = max(1, params.get('radius', 3))
+        return img.filter(ImageFilter.GaussianBlur(radius=radius))
     if intent=='sharpen':
-        return img.filter(ImageFilter.UnsharpMask(radius=2,percent=200,threshold=3))
+        return img.filter(ImageFilter.UnsharpMask(radius=2, percent=200, threshold=3))
     if intent=='edge':
-        return img.filter(ImageFilter.FIND_EDGES)
+        gray = ImageOps.grayscale(img)
+        edges = gray.filter(ImageFilter.FIND_EDGES)
+        # Boost edges for visibility
+        enhanced = ImageEnhance.Contrast(edges).enhance(3.0)
+        return enhanced.convert("RGB")
     if intent=='emboss':
-        return img.filter(ImageFilter.EMBOSS)
+        return img.filter(ImageFilter.EMBOSS).convert("RGB")
 
     # ── COLOR ADJUSTMENTS ─────────────────────────────────────
     if intent=='contrast':
@@ -517,435 +550,550 @@ def process_image(img, intent, params):
     if intent=='saturation':
         return ImageEnhance.Color(img).enhance(float(params.get('factor',1.5)))
     if intent=='hue':
-        cv_img=pil_to_cv2(img); hsv=cv2.cvtColor(cv_img,cv2.COLOR_BGR2HSV).astype(np.float32)
-        hsv[:,:,0]=(hsv[:,:,0]+30)%180
-        return cv2_to_pil(cv2.cvtColor(hsv.astype(np.uint8),cv2.COLOR_HSV2BGR))
+        cv_img = pil_to_cv2(img)
+        hsv = cv2.cvtColor(cv_img, cv2.COLOR_BGR2HSV).astype(np.int32)
+        shift = params.get('shift', 30)
+        hsv[:,:,0] = (hsv[:,:,0] + shift) % 180
+        return cv2_to_pil(cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR))
     if intent=='white_balance':
-        arr=np.array(img).astype(np.float32)
-        temp=params.get('temp','warm')
-        if temp=='warm':
-            arr[:,:,0]=np.clip(arr[:,:,0]*1.1,0,255)   # R up
-            arr[:,:,2]=np.clip(arr[:,:,2]*0.9,0,255)   # B down
+        arr = np.array(img).astype(np.float32)
+        temp = params.get('temp','warm')
+        if temp == 'warm':
+            arr[:,:,0] = np.clip(arr[:,:,0]*1.15, 0, 255)
+            arr[:,:,1] = np.clip(arr[:,:,1]*1.05, 0, 255)
+            arr[:,:,2] = np.clip(arr[:,:,2]*0.85, 0, 255)
         else:
-            arr[:,:,0]=np.clip(arr[:,:,0]*0.9,0,255)
-            arr[:,:,2]=np.clip(arr[:,:,2]*1.1,0,255)
+            arr[:,:,0] = np.clip(arr[:,:,0]*0.85, 0, 255)
+            arr[:,:,1] = np.clip(arr[:,:,1]*1.05, 0, 255)
+            arr[:,:,2] = np.clip(arr[:,:,2]*1.15, 0, 255)
         return Image.fromarray(arr.astype(np.uint8))
     if intent=='shadows_highlights':
-        cv_img=pil_to_cv2(img)
-        lab=cv2.cvtColor(cv_img,cv2.COLOR_BGR2LAB); l,a,b=cv2.split(lab)
-        # Brighten shadows, protect highlights
-        lut=np.array([min(255,int(i + max(0, (128-i)*0.3))) for i in range(256)],dtype=np.uint8)
-        l=cv2.LUT(l,lut)
-        return cv2_to_pil(cv2.cvtColor(cv2.merge([l,a,b]),cv2.COLOR_LAB2BGR))
-    if intent=='vibrance':
-        arr=np.array(img).astype(np.float32)
-        gray=arr.mean(axis=2,keepdims=True)
-        sat_mask=(arr.max(axis=2,keepdims=True)-arr.min(axis=2,keepdims=True))/255.0
-        factor=params.get('factor',0.5)
-        return Image.fromarray(np.clip(arr+(arr-gray)*factor*(1-sat_mask),0,255).astype(np.uint8))
+        cv_img = pil_to_cv2(img)
+        lab = cv2.cvtColor(cv_img, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        lut = np.array([min(255, int(i + max(0, (100-i)*0.4))) for i in range(256)], dtype=np.uint8)
+        l = cv2.LUT(l, lut)
+        return cv2_to_pil(cv2.cvtColor(cv2.merge([l,a,b]), cv2.COLOR_LAB2BGR))
     if intent=='hdr':
-        cv_img=pil_to_cv2(img)
-        # Simulate HDR: merge exposures
-        lab=cv2.cvtColor(cv_img,cv2.COLOR_BGR2LAB); l,a,b=cv2.split(lab)
-        cl=cv2.createCLAHE(clipLimit=4.0,tileGridSize=(8,8)); l=cl.apply(l)
-        enhanced=cv2_to_pil(cv2.cvtColor(cv2.merge([l,a,b]),cv2.COLOR_LAB2BGR))
-        # Boost saturation
-        return ImageEnhance.Color(ImageEnhance.Contrast(enhanced).enhance(1.3)).enhance(1.4)
+        cv_img = pil_to_cv2(img)
+        lab = cv2.cvtColor(cv_img, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        cl = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8,8))
+        l = cl.apply(l)
+        enhanced = cv2_to_pil(cv2.cvtColor(cv2.merge([l,a,b]), cv2.COLOR_LAB2BGR))
+        enhanced = ImageEnhance.Contrast(enhanced).enhance(1.4)
+        enhanced = ImageEnhance.Color(enhanced).enhance(1.5)
+        enhanced = ImageEnhance.Sharpness(enhanced).enhance(1.3)
+        return enhanced
 
     # ── CREATIVE FILTERS ──────────────────────────────────────
     if intent=='sketch':
-        gray=ImageOps.grayscale(img)
-        inv=ImageOps.invert(gray)
-        blurred=inv.filter(ImageFilter.GaussianBlur(radius=10))
-        inv_blur=ImageOps.invert(blurred)
-        arr_g=np.array(gray,dtype=np.float32)
-        arr_b=np.array(inv_blur,dtype=np.float32)
-        result=np.clip(arr_g*255/(arr_b+1e-5),0,255).astype(np.uint8)
+        gray = ImageOps.grayscale(img)
+        inv = ImageOps.invert(gray)
+        blurred = inv.filter(ImageFilter.GaussianBlur(radius=21))
+        inv_blur = ImageOps.invert(blurred)
+        arr_g = np.array(gray, dtype=np.float32)
+        arr_b = np.array(inv_blur, dtype=np.float32)
+        result = np.clip(arr_g * 255.0 / (arr_b + 1.0), 0, 255).astype(np.uint8)
         return Image.fromarray(result).convert("RGB")
+    
     if intent=='cartoon':
-        cv_img=pil_to_cv2(img)
-        gray=cv2.cvtColor(cv_img,cv2.COLOR_BGR2GRAY)
-        edges=cv2.adaptiveThreshold(cv2.medianBlur(gray,7),255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,9,9)
-        color=cv2.bilateralFilter(cv_img,9,300,300)
-        return cv2_to_pil(cv2.bitwise_and(color,color,mask=edges))
+        cv_img = pil_to_cv2(img)
+        # Bilateral filter multiple times for smooth colors
+        color = cv_img.copy()
+        for _ in range(4):
+            color = cv2.bilateralFilter(color, 9, 75, 75)
+        # Edge detection
+        gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
+        gray_blur = cv2.medianBlur(gray, 7)
+        edges = cv2.adaptiveThreshold(gray_blur, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 2)
+        # Combine
+        cartoon = cv2.bitwise_and(color, color, mask=edges)
+        return cv2_to_pil(cartoon)
+    
     if intent=='watercolor':
-        return cv2_to_pil(cv2.stylization(pil_to_cv2(img),sigma_s=60,sigma_r=0.45))
+        cv_img = pil_to_cv2(img)
+        # Stylization
+        result = cv2.stylization(cv_img, sigma_s=60, sigma_r=0.5)
+        pil_r = cv2_to_pil(result)
+        # Add slight color boost
+        return ImageEnhance.Color(pil_r).enhance(1.2)
+    
     if intent=='oil_painting':
-        cv_img=pil_to_cv2(img)
-        # Use xphoto module if available, else fallback
+        cv_img = pil_to_cv2(img)
         try:
-            result=cv2.xphoto.oilPainting(cv_img,7,1)
+            result = cv2.xphoto.oilPainting(cv_img, 7, 1)
         except:
-            result=cv2.bilateralFilter(cv_img,15,80,80)
-            result=cv2.bilateralFilter(result,10,60,60)
+            # Fallback: multiple bilateral filters
+            result = cv_img.copy()
+            for _ in range(5):
+                result = cv2.bilateralFilter(result, 9, 100, 100)
+            # Add texture via edge enhancement
+            gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+            edges = cv2.Canny(gray, 30, 100)
+            edges_colored = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+            result = cv2.subtract(result, edges_colored // 3)
         return cv2_to_pil(result)
+    
     if intent=='neon_glow':
-        gray=np.array(ImageOps.grayscale(img))
-        edges=cv2.Canny(gray,50,150)
-        neon=np.zeros((*gray.shape,3),dtype=np.uint8)
-        # Cyan + Magenta glow
-        neon[:,:,0]=edges//2; neon[:,:,1]=edges; neon[:,:,2]=edges
-        glow=cv2.GaussianBlur(neon,(21,21),0)
-        dark=np.array(img).astype(np.float32)*0.3
-        result=np.clip(dark+glow.astype(np.float32)*2,0,255).astype(np.uint8)
-        return Image.fromarray(result)
+        cv_img = pil_to_cv2(img)
+        gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
+        edges = cv2.Canny(gray, 50, 150)
+        # Create colored neon channels
+        neon = np.zeros_like(cv_img)
+        neon[:,:,0] = edges  # blue channel
+        neon[:,:,1] = edges  # green channel
+        # Apply thick gaussian blur for glow effect
+        glow1 = cv2.GaussianBlur(neon, (21,21), 0)
+        glow2 = cv2.GaussianBlur(neon, (61,61), 0)
+        # Dark background
+        dark = (cv_img.astype(np.float32) * 0.2).astype(np.uint8)
+        # Combine
+        result = cv2.addWeighted(dark, 1.0, glow1, 2.0, 0)
+        result = cv2.addWeighted(result, 1.0, glow2, 1.5, 0)
+        return cv2_to_pil(np.clip(result, 0, 255).astype(np.uint8))
+    
     if intent=='glitch':
-        arr=np.array(img).copy()
-        h,w=arr.shape[:2]
-        # Shift random horizontal slices
-        for _ in range(15):
-            y=np.random.randint(0,h); h2=np.random.randint(2,15)
-            shift=np.random.randint(-30,30)
-            arr[y:y+h2]=np.roll(arr[y:y+h2],shift,axis=1)
-        # Channel offset
-        arr[:,:,0]=np.roll(arr[:,:,0],5,axis=1)
-        arr[:,:,2]=np.roll(arr[:,:,2],-5,axis=1)
+        arr = np.array(img).copy()
+        h, w = arr.shape[:2]
+        # Multiple glitch passes
+        for _ in range(20):
+            y = np.random.randint(0, h)
+            h2 = np.random.randint(3, 20)
+            shift = np.random.randint(-50, 50)
+            arr[y:y+h2] = np.roll(arr[y:y+h2], shift, axis=1)
+        # Channel chromatic aberration
+        r, g, b = arr[:,:,0].copy(), arr[:,:,1].copy(), arr[:,:,2].copy()
+        arr[:,:,0] = np.roll(r, 8, axis=1)
+        arr[:,:,2] = np.roll(b, -8, axis=1)
         return Image.fromarray(arr)
+    
     if intent=='halftone':
-        gray=np.array(ImageOps.grayscale(img))
-        h,w=gray.shape; dot_size=6
-        result=np.ones((h,w,3),dtype=np.uint8)*255
-        for y in range(0,h,dot_size*2):
-            for x in range(0,w,dot_size*2):
-                region=gray[y:y+dot_size*2,x:x+dot_size*2]
-                avg=region.mean() if region.size>0 else 128
-                r=int((1-avg/255)*dot_size)
-                if r>0:
-                    cy,cx=y+dot_size,x+dot_size
-                    cv2.circle(result,(cx,cy),r,(0,0,0),-1)
+        gray = np.array(ImageOps.grayscale(img))
+        h, w = gray.shape
+        dot_size = max(4, min(w, h) // 80)
+        result = np.ones((h, w, 3), dtype=np.uint8) * 255
+        for y in range(0, h, dot_size*2):
+            for x in range(0, w, dot_size*2):
+                region = gray[y:y+dot_size*2, x:x+dot_size*2]
+                avg = region.mean() if region.size > 0 else 128
+                r = int((1 - avg/255) * dot_size * 0.9)
+                if r > 0:
+                    cy, cx = y + dot_size, x + dot_size
+                    cv2.circle(result, (cx, cy), r, (0,0,0), -1)
         return Image.fromarray(result)
+    
     if intent=='lomo':
-        arr=np.array(img).astype(np.float32)
-        # Boost reds, reduce blues
-        arr[:,:,0]=np.clip(arr[:,:,0]*1.2,0,255)
-        arr[:,:,2]=np.clip(arr[:,:,2]*0.8,0,255)
-        # Add vignette
-        h,w=arr.shape[:2]
-        cy,cx=h//2,w//2
-        Y,X=np.ogrid[:h,:w]
-        dist=np.sqrt((X-cx)**2+(Y-cy)**2)
-        vig=1-np.clip(dist/(max(h,w)*0.6),0,1)**2*0.6
-        arr=arr*vig[:,:,np.newaxis]
-        # Slight blur + grain
-        pil_r=Image.fromarray(np.clip(arr,0,255).astype(np.uint8))
+        arr = np.array(img).astype(np.float32)
+        # Boost reds, reduce blues (lomo characteristic)
+        arr[:,:,0] = np.clip(arr[:,:,0]*1.25, 0, 255)
+        arr[:,:,2] = np.clip(arr[:,:,2]*0.75, 0, 255)
+        # Heavy vignette
+        h, w = arr.shape[:2]
+        cy, cx = h//2, w//2
+        Y, X = np.ogrid[:h,:w]
+        dist = np.sqrt((X-cx)**2 + (Y-cy)**2)
+        vig = 1 - np.clip(dist/(max(h,w)*0.5), 0, 1)**1.5 * 0.8
+        arr = arr * vig[:,:,np.newaxis]
+        # Slight overexposure in center
+        center_boost = np.clip(1 - dist/(max(h,w)*0.3), 0, 1) * 0.15
+        arr = arr * (1 + center_boost[:,:,np.newaxis])
+        pil_r = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
         return pil_r.filter(ImageFilter.GaussianBlur(0.5))
+    
     if intent=='cross_process':
-        arr=np.array(img).astype(np.float32)
-        # Shift channels independently (film cross-processing look)
-        lut_r=np.array([min(255,int(i**1.1 if i<128 else 255-(255-i)**1.1)) for i in range(256)],dtype=np.float32)/255
-        lut_g=np.array([min(255,int(i*0.9)) for i in range(256)],dtype=np.float32)/255
-        lut_b=np.array([min(255,int(128+(i-128)*1.3)) for i in range(256)],dtype=np.float32)/255
-        arr[:,:,0]=np.clip(lut_r[(arr[:,:,0]).astype(np.uint8)]*255,0,255)
-        arr[:,:,1]=np.clip(lut_g[(arr[:,:,1]).astype(np.uint8)]*255,0,255)
-        arr[:,:,2]=np.clip(lut_b[(arr[:,:,2]).astype(np.uint8)]*255,0,255)
+        arr = np.array(img).astype(np.float32)
+        # Red: boost highlights
+        arr[:,:,0] = np.clip(np.power(arr[:,:,0]/255.0, 0.8) * 255 * 1.1, 0, 255)
+        # Green: slight reduction
+        arr[:,:,1] = np.clip(arr[:,:,1] * 0.85, 0, 255)
+        # Blue: boost shadows
+        b = arr[:,:,2] / 255.0
+        arr[:,:,2] = np.clip((b + 0.2 * (1-b)) * 255 * 1.15, 0, 255)
         return Image.fromarray(arr.astype(np.uint8))
+    
     if intent=='duotone':
-        gray=np.array(ImageOps.grayscale(img))
-        # Purple to cyan duotone
-        c1=np.array([106,41,209],dtype=np.float32)/255
-        c2=np.array([65,225,174],dtype=np.float32)/255
-        h2,w2=gray.shape
-        result=np.zeros((h2,w2,3),dtype=np.float32)
-        t=gray/255.0
+        gray = np.array(ImageOps.grayscale(img), dtype=np.float32) / 255.0
+        # Purple to teal
+        c1 = np.array([106, 41, 209], dtype=np.float32)
+        c2 = np.array([65, 225, 174], dtype=np.float32)
+        h2, w2 = gray.shape
+        result = np.zeros((h2, w2, 3), dtype=np.float32)
         for i in range(3):
-            result[:,:,i]=(1-t)*c1[i]*255+t*c2[i]*255
-        return Image.fromarray(np.clip(result,0,255).astype(np.uint8))
+            result[:,:,i] = (1-gray) * c1[i] + gray * c2[i]
+        return Image.fromarray(np.clip(result, 0, 255).astype(np.uint8))
+    
     if intent=='pop_art':
-        # Warhol-style quad
-        w,h=img.size; half_w,half_h=w//2,h//2
-        colors=[(255,50,50),(50,200,50),(50,50,255),(255,200,0)]
-        canvas=Image.new("RGB",(w,h))
-        for i,(c) in enumerate(colors):
-            x_off=(i%2)*half_w; y_off=(i//2)*half_h
-            small=img.resize((half_w,half_h),Image.LANCZOS)
-            gray=ImageOps.grayscale(small)
-            _,thresh=cv2.threshold(np.array(gray),128,255,cv2.THRESH_BINARY)
-            col=Image.new("RGB",(half_w,half_h),c)
-            white=Image.new("RGB",(half_w,half_h),(255,255,255))
-            mask=Image.fromarray(thresh)
-            result=Image.composite(white,col,mask)
-            canvas.paste(result,(x_off,y_off))
+        w, h = img.size
+        half_w, half_h = w//2, h//2
+        colors = [(220, 30, 30), (30, 180, 30), (30, 30, 220), (220, 180, 0)]
+        canvas = Image.new("RGB", (w, h))
+        for i, c in enumerate(colors):
+            x_off = (i%2)*half_w
+            y_off = (i//2)*half_h
+            small = img.resize((half_w, half_h), Image.LANCZOS)
+            gray_s = ImageOps.grayscale(small)
+            arr_g = np.array(gray_s)
+            _, thresh = cv2.threshold(arr_g, 128, 255, cv2.THRESH_BINARY)
+            col_bg = Image.new("RGB", (half_w, half_h), c)
+            col_fg = Image.new("RGB", (half_w, half_h), (255,255,255))
+            mask = Image.fromarray(thresh)
+            result = Image.composite(col_fg, col_bg, mask)
+            canvas.paste(result, (x_off, y_off))
         return canvas
+    
     if intent=='stained_glass':
-        cv_img=pil_to_cv2(img)
-        # Segment using watershed-like approach
-        gray=cv2.cvtColor(cv_img,cv2.COLOR_BGR2GRAY)
-        # Use Voronoi-ish segmentation via K-means
-        Z=cv_img.reshape((-1,3)).astype(np.float32)
-        K=min(16,max(8,Z.shape[0]//10000))
-        _,labels,centers=cv2.kmeans(Z,K,None,
-            (cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER,20,1.0),
-            10,cv2.KMEANS_RANDOM_CENTERS)
-        segmented=centers[labels.flatten()].reshape(cv_img.shape).astype(np.uint8)
-        # Add black edge lines
-        edges=cv2.Canny(gray,50,150)
-        edges_3=cv2.cvtColor(edges,cv2.COLOR_GRAY2BGR)
-        result=cv2.subtract(segmented,edges_3)
-        return cv2_to_pil(result)
+        cv_img = pil_to_cv2(img)
+        # K-means color segmentation
+        Z = cv_img.reshape((-1,3)).astype(np.float32)
+        K = 12
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
+        _, labels, centers = cv2.kmeans(Z, K, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+        segmented = centers[labels.flatten()].reshape(cv_img.shape).astype(np.uint8)
+        # Draw black contour lines
+        gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
+        edges = cv2.Canny(gray, 30, 100)
+        # Dilate edges for thicker lines
+        kernel = np.ones((2,2), np.uint8)
+        edges = cv2.dilate(edges, kernel, iterations=1)
+        # Apply black lines
+        mask = edges == 255
+        segmented[mask] = [0, 0, 0]
+        return cv2_to_pil(segmented)
+    
     if intent=='pointillism':
-        arr=np.array(img); h2,w2=arr.shape[:2]
-        canvas=np.ones((h2,w2,3),dtype=np.uint8)*245
-        dot_size=max(2,min(8,min(h2,w2)//100))
-        ys=np.random.randint(0,h2,size=min(50000,h2*w2//4))
-        xs=np.random.randint(0,w2,size=len(ys))
-        for y,x in zip(ys,xs):
-            color=tuple(int(c) for c in arr[y,x])
-            cv2.circle(canvas,(x,y),dot_size,color,-1)
+        arr = np.array(img)
+        h2, w2 = arr.shape[:2]
+        canvas = np.ones((h2, w2, 3), dtype=np.uint8) * 248
+        dot_size = max(2, min(6, min(h2, w2) // 120))
+        n_dots = min(80000, h2 * w2 // 2)
+        ys = np.random.randint(0, h2, size=n_dots)
+        xs = np.random.randint(0, w2, size=n_dots)
+        for y, x in zip(ys, xs):
+            color = tuple(int(c) for c in arr[y,x])
+            cv2.circle(canvas, (x, y), dot_size, color, -1)
         return Image.fromarray(canvas)
+    
     if intent=='ascii_art':
-        # Convert to ASCII art image
-        gray=np.array(ImageOps.grayscale(img))
-        h2,w2=gray.shape
-        chars=" .:-=+*#%@"
-        cell=max(4,min(12,min(h2,w2)//40))
-        rows=h2//cell; cols=w2//cell
-        canvas=Image.new("RGB",(cols*cell,rows*cell),(20,20,20))
-        draw=ImageDraw.Draw(canvas)
+        gray = np.array(ImageOps.grayscale(img))
+        h2, w2 = gray.shape
+        cell = max(6, min(14, min(h2,w2)//32))
+        rows = h2//cell
+        cols = w2//cell
+        canvas = Image.new("RGB", (cols*cell, rows*cell), (15, 15, 15))
+        draw = ImageDraw.Draw(canvas)
+        chars = " .'`^\",:;Il!i><~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"
         for r in range(rows):
             for c in range(cols):
-                patch=gray[r*cell:(r+1)*cell,c*cell:(c+1)*cell]
-                avg=patch.mean()
-                char=chars[int(avg/255*(len(chars)-1))]
-                brightness=int(avg)
-                draw.text((c*cell,r*cell),char,fill=(brightness,brightness,brightness))
+                patch = gray[r*cell:(r+1)*cell, c*cell:(c+1)*cell]
+                avg = patch.mean()
+                idx = int(avg/255 * (len(chars)-1))
+                char = chars[idx]
+                brightness = int(avg)
+                draw.text((c*cell, r*cell), char, fill=(brightness, brightness, brightness))
         return canvas
+    
     if intent=='thermal_vision':
-        gray=np.array(ImageOps.grayscale(img))
-        # Apply colormap
-        thermal=cv2.applyColorMap(gray,cv2.COLORMAP_JET)
+        gray = np.array(ImageOps.grayscale(img))
+        thermal = cv2.applyColorMap(gray, cv2.COLORMAP_JET)
         return cv2_to_pil(thermal)
+    
     if intent=='double_exposure':
-        # Blend original with inverted grayscale
-        gray=ImageOps.grayscale(img).convert("RGB")
-        inv=ImageOps.invert(img)
-        return Image.blend(gray,inv,0.5)
+        gray = ImageOps.grayscale(img).convert("RGB")
+        inv = ImageOps.invert(img)
+        blended = Image.blend(img, gray, 0.4)
+        return Image.blend(blended, inv, 0.35)
+    
     if intent=='tilt_shift':
-        arr=np.array(img); h2,w2=arr.shape[:2]
-        # Create focus strip in middle
-        blur=cv2.GaussianBlur(arr,(0,0),15)
-        mask=np.zeros((h2,w2),dtype=np.float32)
-        center=h2//2; zone=h2//6
+        arr = np.array(img)
+        h2, w2 = arr.shape[:2]
+        blur_strong = cv2.GaussianBlur(arr, (0,0), 15)
+        # Gradient mask - sharp in middle strip
+        mask = np.zeros((h2, w2), dtype=np.float32)
+        center = h2 // 2
+        zone = h2 // 5
         for y in range(h2):
-            dist=abs(y-center)
-            if dist<zone: mask[y]=1.0
-            elif dist<zone*3: mask[y]=1.0-(dist-zone)/(zone*2)
-        mask=mask[:,:,np.newaxis]
-        result=arr*mask+blur*(1-mask)
-        return Image.fromarray(np.clip(result,0,255).astype(np.uint8))
+            dist = abs(y - center)
+            if dist < zone:
+                mask[y] = 1.0
+            elif dist < zone * 3:
+                mask[y] = max(0, 1.0 - (dist - zone) / (zone*2))
+        mask = mask[:,:,np.newaxis]
+        result = arr.astype(np.float32) * mask + blur_strong.astype(np.float32) * (1 - mask)
+        # Boost saturation for toy-camera effect
+        pil_r = Image.fromarray(np.clip(result, 0, 255).astype(np.uint8))
+        return ImageEnhance.Color(pil_r).enhance(1.4)
+    
     if intent=='bokeh':
-        arr=np.array(img); h2,w2=arr.shape[:2]
-        # Blur everything except center
-        blur=cv2.GaussianBlur(arr,(0,0),20)
-        mask=np.zeros((h2,w2),dtype=np.float32)
-        cy,cx=h2//2,w2//2; rr=min(h2,w2)//4
-        Y,X=np.ogrid[:h2,:w2]
-        dist=np.sqrt((X-cx)**2+(Y-cy)**2)
-        mask=np.clip(1-dist/rr,0,1)[:,:,np.newaxis]
-        result=arr*mask+blur*(1-mask)
-        return Image.fromarray(np.clip(result,0,255).astype(np.uint8))
+        arr = np.array(img)
+        h2, w2 = arr.shape[:2]
+        blur = cv2.GaussianBlur(arr, (0,0), 25)
+        cy, cx = h2//2, w2//2
+        rr = min(h2,w2) // 3
+        Y, X = np.ogrid[:h2,:w2]
+        dist = np.sqrt((X-cx)**2 + (Y-cy)**2)
+        mask = np.clip(1 - dist/rr, 0, 1)
+        # Smooth the mask
+        mask = cv2.GaussianBlur(mask.astype(np.float32), (61,61), 0)
+        mask = mask[:,:,np.newaxis]
+        result = arr.astype(np.float32) * mask + blur.astype(np.float32) * (1 - mask)
+        return Image.fromarray(np.clip(result, 0, 255).astype(np.uint8))
+    
     if intent=='fisheye':
-        cv_img=pil_to_cv2(img); h2,w2=cv_img.shape[:2]
-        K=np.array([[w2,0,w2//2],[0,h2,h2//2],[0,0,1]],dtype=np.float32)
-        D=np.array([-0.5,0.1,0,0],dtype=np.float32)
-        result=cv2.undistort(cv_img,K,D)
+        cv_img = pil_to_cv2(img)
+        h2, w2 = cv_img.shape[:2]
+        # Build fisheye map manually for better results
+        K = np.float32([[w2*0.8, 0, w2//2],[0, h2*0.8, h2//2],[0,0,1]])
+        D = np.float32([-0.4, 0.2, 0, 0])
+        result = cv2.undistort(cv_img, K, D)
         return cv2_to_pil(result)
+    
     if intent=='mosaic':
-        arr=np.array(img); h2,w2=arr.shape[:2]
-        block=max(8,min(30,min(h2,w2)//20))
-        for y in range(0,h2,block):
-            for x in range(0,w2,block):
-                patch=arr[y:y+block,x:x+block]
-                arr[y:y+block,x:x+block]=patch.mean(axis=(0,1))
+        arr = np.array(img)
+        h2, w2 = arr.shape[:2]
+        block = max(8, min(32, min(h2,w2)//20))
+        for y in range(0, h2, block):
+            for x in range(0, w2, block):
+                patch = arr[y:y+block, x:x+block]
+                color = patch.mean(axis=(0,1)).astype(np.uint8)
+                arr[y:y+block, x:x+block] = color
         return Image.fromarray(arr)
+    
     if intent=='pixelate':
-        sz=max(2,int(params.get('size',10)))
-        small=img.resize((max(1,img.width//sz),max(1,img.height//sz)),Image.NEAREST)
-        return small.resize(img.size,Image.NEAREST)
+        sz = max(2, int(params.get('size', 10)))
+        small = img.resize((max(1, img.width//sz), max(1, img.height//sz)), Image.NEAREST)
+        return small.resize(img.size, Image.NEAREST)
+    
     if intent=='noise':
-        arr=np.array(img,dtype=np.float32)+np.random.normal(0,25,np.array(img).shape)
-        return Image.fromarray(np.clip(arr,0,255).astype(np.uint8))
+        arr = np.array(img, dtype=np.float32)
+        grain = np.random.normal(0, 20, arr.shape)
+        return Image.fromarray(np.clip(arr + grain, 0, 255).astype(np.uint8))
+    
     if intent=='vignette':
-        cv_img=pil_to_cv2(img); rows,cols=cv_img.shape[:2]
-        kx=cv2.getGaussianKernel(cols,cols*0.5); ky=cv2.getGaussianKernel(rows,rows*0.5)
-        mask=ky*kx.T; mask=mask/mask.max()
-        return cv2_to_pil((cv_img*mask[:,:,np.newaxis]).astype(np.uint8))
+        cv_img = pil_to_cv2(img)
+        rows, cols = cv_img.shape[:2]
+        kx = cv2.getGaussianKernel(cols, cols*0.5)
+        ky = cv2.getGaussianKernel(rows, rows*0.5)
+        mask = ky * kx.T
+        mask = mask / mask.max()
+        # Apply stronger vignette
+        mask = mask ** 0.5
+        return cv2_to_pil((cv_img * mask[:,:,np.newaxis]).astype(np.uint8))
 
     # ── MEDICAL ───────────────────────────────────────────────
     if intent=='clahe':
-        cv_img=pil_to_cv2(img); lab=cv2.cvtColor(cv_img,cv2.COLOR_BGR2LAB); l,a,b2=cv2.split(lab)
-        cl=cv2.createCLAHE(clipLimit=3.0,tileGridSize=(8,8))
-        return cv2_to_pil(cv2.cvtColor(cv2.merge([cl.apply(l),a,b2]),cv2.COLOR_LAB2BGR))
+        cv_img = pil_to_cv2(img)
+        lab = cv2.cvtColor(cv_img, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        cl = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+        return cv2_to_pil(cv2.cvtColor(cv2.merge([cl.apply(l), a, b]), cv2.COLOR_LAB2BGR))
+    
     if intent=='denoise':
-        return cv2_to_pil(cv2.fastNlMeansDenoisingColored(pil_to_cv2(img),None,10,10,7,21))
+        cv_img = pil_to_cv2(img)
+        return cv2_to_pil(cv2.fastNlMeansDenoisingColored(cv_img, None, 10, 10, 7, 21))
+    
     if intent=='xray_enhance':
-        g=np.array(ImageOps.grayscale(img))
-        cl=cv2.createCLAHE(clipLimit=4.0,tileGridSize=(8,8))
-        enhanced=cl.apply(g)
-        sharpened=cv2.filter2D(enhanced,-1,np.array([[-1,-1,-1],[-1,9,-1],[-1,-1,-1]]))
-        return Image.fromarray(sharpened).convert("RGB")
+        gray = np.array(ImageOps.grayscale(img))
+        # Normalize to full range
+        gray = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX)
+        # CLAHE
+        cl = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8,8))
+        enhanced = cl.apply(gray)
+        # Unsharp mask
+        blur = cv2.GaussianBlur(enhanced, (0,0), 3)
+        sharpened = cv2.addWeighted(enhanced, 1.5, blur, -0.5, 0)
+        return Image.fromarray(np.clip(sharpened, 0, 255).astype(np.uint8)).convert("RGB")
+    
     if intent=='mri_enhance':
-        gray=np.array(ImageOps.grayscale(img))
-        # Normalize + CLAHE + gamma correction
-        normalized=cv2.normalize(gray,None,0,255,cv2.NORM_MINMAX)
-        cl=cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8))
-        clahe=cl.apply(normalized)
+        gray = np.array(ImageOps.grayscale(img))
+        normalized = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX)
+        cl = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+        clahe = cl.apply(normalized)
         # Gamma correction
-        gamma=0.7; table=np.array([(i/255.0)**gamma*255 for i in range(256)],dtype=np.uint8)
-        result=cv2.LUT(clahe,table)
+        gamma = 0.75
+        table = np.array([(i/255.0)**gamma * 255 for i in range(256)], dtype=np.uint8)
+        result = cv2.LUT(clahe, table)
         return Image.fromarray(result).convert("RGB")
+    
     if intent=='ct_enhance':
-        gray=np.array(ImageOps.grayscale(img))
-        # Window/level adjustment (simulate HU windowing)
-        p5,p95=np.percentile(gray,5),np.percentile(gray,95)
-        windowed=np.clip((gray-p5)/(p95-p5+1e-5)*255,0,255).astype(np.uint8)
-        cl=cv2.createCLAHE(clipLimit=3.0,tileGridSize=(8,8))
+        gray = np.array(ImageOps.grayscale(img))
+        p2, p98 = np.percentile(gray, 2), np.percentile(gray, 98)
+        windowed = np.clip((gray - p2) / (p98 - p2 + 1e-5) * 255, 0, 255).astype(np.uint8)
+        cl = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
         return Image.fromarray(cl.apply(windowed)).convert("RGB")
+    
     if intent=='fundus_enhance':
-        cv_img=pil_to_cv2(img)
-        # Green channel (best for fundus)
-        g_ch=cv_img[:,:,1]
-        cl=cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8))
-        g_enhanced=cl.apply(g_ch)
-        cv_img[:,:,1]=g_enhanced
-        # Denoise
-        result=cv2.fastNlMeansDenoisingColored(cv_img,None,5,5,7,21)
+        cv_img = pil_to_cv2(img)
+        # Extract green channel (most information in fundus)
+        b_ch, g_ch, r_ch = cv2.split(cv_img)
+        cl = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+        g_enhanced = cl.apply(g_ch)
+        result = cv2.merge([b_ch, g_enhanced, r_ch])
+        result = cv2.fastNlMeansDenoisingColored(result, None, 5, 5, 7, 21)
         return cv2_to_pil(result)
+    
     if intent=='skin_analyze':
-        cv_img=pil_to_cv2(img)
-        # Enhance skin details
-        lab=cv2.cvtColor(cv_img,cv2.COLOR_BGR2LAB); l,a,b2=cv2.split(lab)
-        cl=cv2.createCLAHE(clipLimit=2.5,tileGridSize=(8,8)); l=cl.apply(l)
-        result=cv2.cvtColor(cv2.merge([l,a,b2]),cv2.COLOR_LAB2BGR)
-        # Mark potential lesion regions
-        hsv=cv2.cvtColor(result,cv2.COLOR_BGR2HSV)
-        # Highlight darker/different skin regions
-        gray=cv2.cvtColor(result,cv2.COLOR_BGR2GRAY)
-        _,mask=cv2.threshold(gray,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-        contours,_=cv2.findContours(mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-        for cnt in contours:
-            if cv2.contourArea(cnt)>500:
-                cv2.drawContours(result,[cnt],-1,(0,255,0),2)
-        return cv2_to_pil(result)
+        cv_img = pil_to_cv2(img)
+        lab = cv2.cvtColor(cv_img, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        cl = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8,8))
+        l = cl.apply(l)
+        enhanced = cv2.cvtColor(cv2.merge([l, a, b]), cv2.COLOR_LAB2BGR)
+        # Highlight texture and lesions
+        detail = cv2.detailEnhance(enhanced, sigma_s=10, sigma_r=0.15)
+        return cv2_to_pil(detail)
+    
     if intent=='wound_analyze':
-        cv_img=pil_to_cv2(img)
-        # Enhance wound visualization
-        enhanced=cv2.detailEnhance(cv_img,sigma_s=10,sigma_r=0.15)
-        # Add color segmentation overlay
-        lab=cv2.cvtColor(enhanced,cv2.COLOR_BGR2LAB); l,a,b2=cv2.split(lab)
-        cl=cv2.createCLAHE(clipLimit=3.0,tileGridSize=(8,8)); l=cl.apply(l)
-        result=cv2.cvtColor(cv2.merge([l,a,b2]),cv2.COLOR_LAB2BGR)
+        cv_img = pil_to_cv2(img)
+        detail = cv2.detailEnhance(cv_img, sigma_s=10, sigma_r=0.15)
+        lab = cv2.cvtColor(detail, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        cl = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+        l = cl.apply(l)
+        result = cv2.cvtColor(cv2.merge([l, a, b]), cv2.COLOR_LAB2BGR)
         return cv2_to_pil(result)
+    
     if intent=='segment':
-        g=np.array(ImageOps.grayscale(img)); _,t=cv2.threshold(g,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-        return Image.fromarray(t).convert("RGB")
+        gray = np.array(ImageOps.grayscale(img))
+        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        # Morphological cleanup
+        kernel = np.ones((3,3), np.uint8)
+        cleaned = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+        return Image.fromarray(cleaned).convert("RGB")
+    
     if intent=='morphology':
-        op=params.get('op','dilate'); g=np.array(ImageOps.grayscale(img)); k=np.ones((5,5),np.uint8)
-        return Image.fromarray(cv2.dilate(g,k) if op=='dilate' else cv2.erode(g,k)).convert("RGB")
+        op = params.get('op', 'dilate')
+        gray = np.array(ImageOps.grayscale(img))
+        k = np.ones((5,5), np.uint8)
+        if op == 'dilate':
+            result = cv2.dilate(gray, k)
+        else:
+            result = cv2.erode(gray, k)
+        return Image.fromarray(result).convert("RGB")
+    
     if intent=='sobel':
-        g=np.array(ImageOps.grayscale(img))
-        gx=cv2.Sobel(g,cv2.CV_64F,1,0,ksize=3); gy=cv2.Sobel(g,cv2.CV_64F,0,1,ksize=3)
-        mag=np.sqrt(gx**2+gy**2); mag=np.clip(mag/mag.max()*255,0,255).astype(np.uint8)
+        gray = np.array(ImageOps.grayscale(img), dtype=np.float32)
+        gx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
+        gy = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+        mag = np.sqrt(gx**2 + gy**2)
+        mag = np.clip(mag / mag.max() * 255, 0, 255).astype(np.uint8)
         return Image.fromarray(mag).convert("RGB")
+    
     if intent=='canny':
-        g=np.array(ImageOps.grayscale(img))
-        return Image.fromarray(cv2.Canny(g,50,150)).convert("RGB")
+        gray = np.array(ImageOps.grayscale(img))
+        edges = cv2.Canny(gray, 50, 150)
+        return Image.fromarray(edges).convert("RGB")
 
     # ── DETECTION ─────────────────────────────────────────────
     if intent=='face_detect':
-        cv_img=pil_to_cv2(img)
-        gray=cv2.cvtColor(cv_img,cv2.COLOR_BGR2GRAY)
-        # Use Haar cascade
-        cascade_path=cv2.data.haarcascades+'haarcascade_frontalface_default.xml'
+        cv_img = pil_to_cv2(img)
+        gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
+        cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
         if os.path.exists(cascade_path):
-            face_cascade=cv2.CascadeClassifier(cascade_path)
-            faces=face_cascade.detectMultiScale(gray,1.1,4,minSize=(30,30))
-            for (x,y,w2,h2) in faces:
-                cv2.rectangle(cv_img,(x,y),(x+w2,y+h2),(65,225,174),3)
-                cv2.putText(cv_img,'Face',(x,y-10),cv2.FONT_HERSHEY_SIMPLEX,0.8,(65,225,174),2)
+            face_cascade = cv2.CascadeClassifier(cascade_path)
+            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30,30))
+            count = len(faces) if faces is not None and len(faces) > 0 else 0
+            for (x, y, w2, h2) in faces:
+                cv2.rectangle(cv_img, (x,y), (x+w2, y+h2), (65,225,174), 3)
+                cv2.putText(cv_img, f'Face', (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (65,225,174), 2)
         return cv2_to_pil(cv_img)
+    
     if intent=='color_palette':
-        arr=np.array(img); h2,w2=arr.shape[:2]
-        Z=arr.reshape((-1,3)).astype(np.float32)
-        K=8
-        _,labels,centers=cv2.kmeans(Z,K,None,
-            (cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER,20,1.0),
-            10,cv2.KMEANS_RANDOM_CENTERS)
-        # Create palette image
-        pal_h=80; pal_w=max(w2,400)
-        palette=np.zeros((pal_h,pal_w,3),dtype=np.uint8)
-        block=pal_w//K
-        counts=np.bincount(labels.flatten())
-        sorted_idx=np.argsort(-counts)
-        for i,idx in enumerate(sorted_idx):
-            color=centers[idx].astype(np.uint8)
-            palette[:,i*block:(i+1)*block]=color
-        # Combine
-        combined=np.vstack([arr[:,:pal_w] if w2>=pal_w else np.pad(arr,((0,0),(0,pal_w-w2),(0,0)),'edge'),palette])
-        return Image.fromarray(np.clip(combined,0,255).astype(np.uint8))
+        arr = np.array(img)
+        h2, w2 = arr.shape[:2]
+        Z = arr.reshape((-1,3)).astype(np.float32)
+        K = 8
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
+        _, labels, centers = cv2.kmeans(Z, K, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+        counts = np.bincount(labels.flatten())
+        sorted_idx = np.argsort(-counts)
+        # Build palette strip
+        pal_w = max(w2, 400)
+        pal_h = 80
+        palette = np.zeros((pal_h, pal_w, 3), dtype=np.uint8)
+        block = pal_w // K
+        for i, idx in enumerate(sorted_idx):
+            color = centers[idx].astype(np.uint8)
+            palette[:, i*block:(i+1)*block] = color
+        # Resize original to match width
+        if w2 < pal_w:
+            img_resized = img.resize((pal_w, int(h2 * pal_w / w2)), Image.LANCZOS)
+        else:
+            img_resized = img
+        img_arr = np.array(img_resized)[:, :pal_w]
+        combined = np.vstack([img_arr, palette])
+        return Image.fromarray(combined.astype(np.uint8))
+    
     if intent=='histogram_eq':
-        cv_img=pil_to_cv2(img); yuv=cv2.cvtColor(cv_img,cv2.COLOR_BGR2YUV)
-        yuv[:,:,0]=cv2.equalizeHist(yuv[:,:,0])
-        return cv2_to_pil(cv2.cvtColor(yuv,cv2.COLOR_YUV2BGR))
-
-    # ── RESTORATION ───────────────────────────────────────────
-    if intent=='super_resolution':
-        # 2x upscale with bicubic + sharpening
-        new_w,new_h=img.width*2,img.height*2
-        upscaled=img.resize((new_w,new_h),Image.BICUBIC)
-        return upscaled.filter(ImageFilter.UnsharpMask(radius=1,percent=150,threshold=3))
-    if intent=='deblur':
-        cv_img=pil_to_cv2(img)
-        kernel=np.array([[-1,-1,-1],[-1,9,-1],[-1,-1,-1]])
-        result=cv2.filter2D(cv_img,-1,kernel)
-        result=cv2.fastNlMeansDenoisingColored(result,None,5,5,7,21)
-        return cv2_to_pil(result)
-    if intent=='colorize_bw':
-        # Sepia-toned colorization (without DNN)
-        gray=np.array(ImageOps.grayscale(img))
-        # Create warm colorized version
-        r=np.clip(gray*1.1,0,255).astype(np.uint8)
-        g=np.clip(gray*0.95,0,255).astype(np.uint8)
-        b=np.clip(gray*0.8,0,255).astype(np.uint8)
-        colored=np.stack([r,g,b],axis=2)
-        # Blend with original if it has color info
-        orig=np.array(img)
-        if orig.std()<10:  # truly grayscale
-            return Image.fromarray(colored)
-        return Image.fromarray((colored*0.6+orig*0.4).astype(np.uint8))
-    if intent=='restore_old':
-        cv_img=pil_to_cv2(img)
-        # Denoise + sharpen + normalize
-        denoised=cv2.fastNlMeansDenoisingColored(cv_img,None,10,10,7,21)
-        lab=cv2.cvtColor(denoised,cv2.COLOR_BGR2LAB); l,a,b2=cv2.split(lab)
-        cl=cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8)); l=cl.apply(l)
-        result=cv2.cvtColor(cv2.merge([l,a,b2]),cv2.COLOR_LAB2BGR)
-        return cv2_to_pil(result)
-
-    # ── ANALYSIS ─────────────────────────────────────────────
+        cv_img = pil_to_cv2(img)
+        yuv = cv2.cvtColor(cv_img, cv2.COLOR_BGR2YUV)
+        yuv[:,:,0] = cv2.equalizeHist(yuv[:,:,0])
+        return cv2_to_pil(cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR))
+    
     if intent=='quality_check':
-        arr=np.array(img); gray=cv2.cvtColor(pil_to_cv2(img),cv2.COLOR_BGR2GRAY)
-        # Blur score (Laplacian variance)
-        blur_score=cv2.Laplacian(gray,cv2.CV_64F).var()
-        # Noise estimate
-        noise=gray.std()
-        # Brightness
-        brightness=gray.mean()
-        # Create annotated image
-        result=pil_to_cv2(img)
-        quality="Excellent" if blur_score>500 else "Good" if blur_score>100 else "Fair" if blur_score>30 else "Blurry"
-        texts=[
+        cv_img = pil_to_cv2(img)
+        gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
+        blur_score = cv2.Laplacian(gray, cv2.CV_64F).var()
+        noise = float(gray.std())
+        brightness = float(gray.mean())
+        quality = "Excellent" if blur_score>500 else "Good" if blur_score>100 else "Fair" if blur_score>30 else "Blurry"
+        result = cv_img.copy()
+        overlay = result.copy()
+        cv2.rectangle(overlay, (0,0), (400, 150), (0,0,0), -1)
+        cv2.addWeighted(overlay, 0.6, result, 0.4, 0, result)
+        texts = [
             f"Sharpness: {quality} ({blur_score:.0f})",
             f"Brightness: {brightness:.0f}/255",
             f"Resolution: {img.width}x{img.height}",
             f"Noise level: {noise:.1f}"
         ]
-        for i,t in enumerate(texts):
-            cv2.putText(result,t,(10,30+i*35),cv2.FONT_HERSHEY_SIMPLEX,0.8,(65,225,174),2)
+        for i, t in enumerate(texts):
+            cv2.putText(result, t, (10, 30+i*32), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (65,225,174), 2)
         return cv2_to_pil(result)
+
+    # ── RESTORATION ───────────────────────────────────────────
+    if intent=='super_resolution':
+        new_w, new_h = img.width*2, img.height*2
+        upscaled = img.resize((new_w, new_h), Image.BICUBIC)
+        return upscaled.filter(ImageFilter.UnsharpMask(radius=1.5, percent=150, threshold=3))
+    
+    if intent=='deblur':
+        cv_img = pil_to_cv2(img)
+        # Wiener-like deconvolution
+        kernel = np.array([[-1,-1,-1,-1,-1],
+                           [-1, 2, 2, 2,-1],
+                           [-1, 2, 9, 2,-1],
+                           [-1, 2, 2, 2,-1],
+                           [-1,-1,-1,-1,-1]], dtype=np.float32)
+        kernel = kernel / kernel.sum()
+        result = cv2.filter2D(cv_img, -1, kernel)
+        result = cv2.fastNlMeansDenoisingColored(result, None, 5, 5, 7, 21)
+        return cv2_to_pil(result)
+    
+    if intent=='colorize_bw':
+        gray = np.array(ImageOps.grayscale(img), dtype=np.float32)
+        # Enhanced warm colorization
+        r = np.clip(gray * 1.05, 0, 255).astype(np.uint8)
+        g = np.clip(gray * 0.95, 0, 255).astype(np.uint8)
+        b = np.clip(gray * 0.85, 0, 255).astype(np.uint8)
+        colored = np.stack([r, g, b], axis=2)
+        return Image.fromarray(colored)
+    
+    if intent=='restore_old':
+        cv_img = pil_to_cv2(img)
+        denoised = cv2.fastNlMeansDenoisingColored(cv_img, None, 10, 10, 7, 21)
+        lab = cv2.cvtColor(denoised, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        cl = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+        l = cl.apply(l)
+        result = cv2.cvtColor(cv2.merge([l,a,b]), cv2.COLOR_LAB2BGR)
+        # Sharpen slightly
+        pil_r = cv2_to_pil(result)
+        return pil_r.filter(ImageFilter.UnsharpMask(radius=1, percent=100, threshold=3))
 
     # ── GENERATE ──────────────────────────────────────────────
     if intent=='generate_image':
-        prompt=params.get('prompt','beautiful artwork')
+        prompt = params.get('prompt', 'beautiful artwork, high quality, detailed')
         return generate_image_from_prompt(prompt)
 
     return None
@@ -1012,79 +1160,115 @@ def process():
         prompt      = request.form.get("prompt","").strip()
         history_raw = request.form.get("history","[]")
         file        = request.files.get("image")
+        
+        # Get the last image from history if no new image uploaded
+        last_image_data = request.form.get("last_image","")
 
         try:    history=json.loads(history_raw)
         except: history=[]
 
-        image_pil=None
+        image_pil = None
         if file and file.filename:
-            image_pil=file_to_pil(file)
+            image_pil = file_to_pil(file)
+        elif last_image_data and last_image_data.startswith("data:image"):
+            # Use the last image from conversation for operations
+            try:
+                header, b64data = last_image_data.split(",", 1)
+                img_bytes = base64.b64decode(b64data)
+                image_pil = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+            except Exception as e:
+                print(f"Failed to decode last_image: {e}")
 
         # ── AI reply ────────────────────────────────────────────
         if gemini_client:
-            raw_reply=call_gemini(history,prompt,image_pil)
+            raw_reply = call_gemini(history, prompt, image_pil if file and file.filename else None)
         else:
-            raw_reply=free_reply(prompt,image_pil is not None,image_pil)
+            raw_reply = free_reply(prompt, image_pil is not None, image_pil)
 
         # ── Extract operation ───────────────────────────────────
-        clean_reply,intent,params=extract_op(raw_reply)
-        result_b64=None
+        clean_reply, intent, params = extract_op(raw_reply)
+        result_b64 = None
 
-        if intent=='info' and image_pil:
-            w,h=image_pil.size; arr=np.array(image_pil)
-            mr,mg,mb=arr[:,:,0].mean(),arr[:,:,1].mean(),arr[:,:,2].mean()
-            gray=cv2.cvtColor(pil_to_cv2(image_pil),cv2.COLOR_BGR2GRAY)
-            blur_score=cv2.Laplacian(gray,cv2.CV_64F).var()
-            clean_reply+=(f"\n\n**📊 Image Info:**\n"
+        if intent == 'info' and image_pil:
+            w, h = image_pil.size
+            arr = np.array(image_pil)
+            mr, mg, mb = arr[:,:,0].mean(), arr[:,:,1].mean(), arr[:,:,2].mean()
+            gray = cv2.cvtColor(pil_to_cv2(image_pil), cv2.COLOR_BGR2GRAY)
+            blur_score = cv2.Laplacian(gray, cv2.CV_64F).var()
+            clean_reply += (f"\n\n**📊 Image Info:**\n"
                           f"**Size:** {w}×{h}px | **Pixels:** {w*h:,}\n"
                           f"**Avg RGB:** ({mr:.0f}, {mg:.0f}, {mb:.0f})\n"
                           f"**Sharpness:** {'Sharp' if blur_score>100 else 'Moderate' if blur_score>30 else 'Blurry'} ({blur_score:.1f})")
-        elif intent=='color_analysis' and image_pil:
-            arr=np.array(image_pil)
-            mr,mg,mb=arr[:,:,0].mean(),arr[:,:,1].mean(),arr[:,:,2].mean()
-            hsv=cv2.cvtColor(pil_to_cv2(image_pil),cv2.COLOR_BGR2HSV)
-            hue=hsv[:,:,0].mean(); sat=hsv[:,:,1].mean()/255; val=hsv[:,:,2].mean()/255
-            clean_reply+=(f"\n\n**🎨 Color Analysis:**\n"
+        
+        elif intent == 'color_analysis' and image_pil:
+            arr = np.array(image_pil)
+            mr, mg, mb = arr[:,:,0].mean(), arr[:,:,1].mean(), arr[:,:,2].mean()
+            hsv = cv2.cvtColor(pil_to_cv2(image_pil), cv2.COLOR_BGR2HSV)
+            hue = hsv[:,:,0].mean()
+            sat = hsv[:,:,1].mean()/255
+            val = hsv[:,:,2].mean()/255
+            clean_reply += (f"\n\n**🎨 Color Analysis:**\n"
                           f"**Avg RGB:** ({mr:.0f}, {mg:.0f}, {mb:.0f})\n"
                           f"**Hue:** {hue*2:.0f}° | **Saturation:** {sat*100:.0f}% | **Value:** {val*100:.0f}%\n"
-                          f"**Dominant channel:** {'Red' if mr>mg and mr>mb else 'Green' if mg>mr and mg>mb else 'Blue'}")
-        elif intent=='generate_image':
-            result_img=process_image(image_pil or Image.new("RGB",(2,2)),intent,params or {})
-            if result_img: result_b64=pil_to_base64(result_img)
+                          f"**Dominant:** {'Red' if mr>mg and mr>mb else 'Green' if mg>mr and mg>mb else 'Blue'}")
+        
+        elif intent == 'generate_image':
+            result_img = process_image(Image.new("RGB",(8,8)), intent, params or {})
+            if result_img:
+                result_b64 = pil_to_base64(result_img)
+        
         elif intent and image_pil:
-            result_img=process_image(image_pil,intent,params or {})
-            if result_img: result_b64=pil_to_base64(result_img)
-        elif intent and not image_pil and intent!='generate_image':
-            clean_reply+="\n\n📎 Please upload an image first!"
+            result_img = process_image(image_pil, intent, params or {})
+            if result_img:
+                result_b64 = pil_to_base64(result_img)
+        
+        elif intent and not image_pil and intent != 'generate_image':
+            clean_reply += "\n\n📎 Please upload an image first to apply this operation!"
 
         # ── Update history ──────────────────────────────────────
-        new_user_parts=[]
-        if image_pil:
-            new_user_parts.append({"mime_type":"image/jpeg","data":base64.b64encode(pil_to_bytes(image_pil)).decode()})
+        new_user_parts = []
+        if file and file.filename and image_pil:
+            new_user_parts.append({
+                "mime_type": "image/jpeg",
+                "data": base64.b64encode(pil_to_bytes(image_pil)).decode()
+            })
         new_user_parts.append(prompt or "Analyze this image.")
 
-        updated_history=list(history)+[
-            {"role":"user",  "parts":new_user_parts},
-            {"role":"model", "parts":[clean_reply]}
+        updated_history = list(history) + [
+            {"role": "user",  "parts": new_user_parts},
+            {"role": "model", "parts": [clean_reply]}
         ]
-        if len(updated_history)>20:
-            updated_history=updated_history[-20:]
+        # Keep last 20 turns
+        if len(updated_history) > 20:
+            updated_history = updated_history[-20:]
 
-        return jsonify({"message":clean_reply,"image":result_b64,"history":updated_history})
+        # Build last_image_b64 to return to client (for future op calls)
+        new_last_image = None
+        if image_pil and file and file.filename:
+            new_last_image = pil_to_base64(image_pil)
+        elif result_b64:
+            new_last_image = result_b64
+
+        return jsonify({
+            "message": clean_reply,
+            "image": result_b64,
+            "history": updated_history,
+            "last_image": new_last_image
+        })
 
     except Exception as e:
-        err=str(e)
+        err = str(e)
         if "API_KEY_INVALID" in err or "API key not valid" in err:
-            msg="⚠️ Invalid Gemini API key. Check GEMINI_API_KEY in HF Space → Settings → Secrets."
+            msg = "⚠️ Invalid Gemini API key. Check GEMINI_API_KEY in Settings → Secrets."
         elif is_rate_limit(err):
-            msg="⚠️ Rate limit hit even after retrying. Please wait 2 minutes and try again."
+            msg = "⚠️ Rate limit hit. Please wait a minute and try again."
         elif "not found" in err.lower() or "404" in err:
-            msg=f"⚠️ Model not found. Error: {err}"
+            msg = f"⚠️ Model not found. Error: {err}"
         else:
-            msg=f"⚠️ Error: {err}"
-        return jsonify({"message":msg}),200
+            msg = f"⚠️ Error: {err}"
+        return jsonify({"message": msg}), 200
 
 
 if __name__ == "__main__":
-    port=int(os.environ.get("PORT",7860))
-    app.run(host="0.0.0.0",port=port,debug=False)
+    port = int(os.environ.get("PORT", 7860))
+    app.run(host="0.0.0.0", port=port, debug=False)
