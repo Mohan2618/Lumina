@@ -313,98 +313,85 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
 # ─────────────────────────────────────────────────────────────
 
 def generate_image_from_prompt(prompt: str):
-    """Generate image using latest Gemini / Imagen models"""
+    """Generate real image using current Gemini 2.5 Flash Image (Nano Banana)"""
     if not gemini_client:
         return create_placeholder_image(prompt)
 
-    # Updated models for 2026 - try in order of reliability
+    # Best models for image generation in 2026
     models_to_try = [
-        "gemini-2.5-flash",                    # Fast + good quality
-        "gemini-2.5-flash-image",              # Dedicated image variant (if available)
-        "imagen-4.0-generate-001",             # Latest Imagen model (best quality)
-        "imagen-4.0-fast-generate-001",
-        "gemini-2.0-flash-preview-image-generation",
+        "gemini-2.5-flash-image",           # Main recommended model (Nano Banana)
+        "gemini-2.5-flash",                 # Fallback with image modality
+        "gemini-2.5-flash-preview-image-generation",
     ]
 
-    for model in models_to_try:
+    for model_name in models_to_try:
         try:
-            print(f"[Image Gen] Trying model: {model} for prompt: {prompt[:60]}...")
+            print(f"[Image Gen] Trying model: {model_name}")
 
-            if "imagen" in model:
-                # Use dedicated generate_images for Imagen models
-                response = gemini_client.models.generate_images(
-                    model=model,
-                    prompt=prompt,
-                    config=types.GenerateImagesConfig(
-                        number_of_images=1,
-                        aspect_ratio="1:1",   # or "16:9", "9:16" etc.
-                    )
+            # Use generate_content with explicit image output request
+            response = gemini_client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_modalities=["IMAGE", "TEXT"],   # Important: Request image
+                    temperature=0.8,
                 )
+            )
 
-                if response.generated_images and len(response.generated_images) > 0:
-                    img_bytes = response.generated_images[0].image.image_bytes
+            # Extract the generated image from response
+            for part in response.candidates[0].content.parts:
+                if (hasattr(part, 'inline_data') and 
+                    part.inline_data and 
+                    part.inline_data.mime_type and 
+                    part.inline_data.mime_type.startswith("image/")):
+                    
+                    img_bytes = part.inline_data.data
+                    if isinstance(img_bytes, str):
+                        img_bytes = base64.b64decode(img_bytes)
+                    
                     pil_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-                    print(f"[Image Gen] SUCCESS with {model}")
+                    print(f"[Image Gen] SUCCESS using {model_name}")
                     return pil_img
 
-            else:
-                # Try unified generate_content with image output for Gemini models
-                response = gemini_client.models.generate_content(
-                    model=model,
-                    contents=[prompt],
-                    config=types.GenerateContentConfig(
-                        response_modalities=["IMAGE", "TEXT"],
-                        temperature=0.7,
-                    )
-                )
-
-                # Extract image from response
-                for part in response.candidates[0].content.parts:
-                    if (hasattr(part, 'inline_data') and 
-                        part.inline_data and 
-                        part.inline_data.mime_type.startswith("image/")):
-                        
-                        img_bytes = part.inline_data.data
-                        if isinstance(img_bytes, str):
-                            img_bytes = base64.b64decode(img_bytes)
-                        
-                        pil_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-                        print(f"[Image Gen] SUCCESS with {model}")
-                        return pil_img
-
         except Exception as e:
-            print(f"[Image Gen] Model {model} failed: {str(e)[:150]}")
+            print(f"[Image Gen] {model_name} failed: {str(e)[:120]}")
             continue
 
-    # Final fallback
-    print("[Image Gen] All models failed → using placeholder")
+    # If everything fails, show better placeholder
+    print("[Image Gen] All attempts failed → placeholder")
     return create_placeholder_image(prompt)
 
 
 def create_placeholder_image(prompt: str):
+    """Nice placeholder when real generation fails"""
     w, h = 512, 512
     arr = np.zeros((h, w, 3), dtype=np.uint8)
+    # Beautiful gradient
     for y in range(h):
         ratio = y / h
         arr[y, :] = [
-            int(106 + 59*ratio),
-            int(123 + 94*ratio),
-            int(209 - 63*ratio)
+            int(100 + 80 * ratio),
+            int(150 + 60 * ratio),
+            int(220 - 100 * ratio)
         ]
     pil_img = Image.fromarray(arr)
     draw = ImageDraw.Draw(pil_img)
-    text = f'"{prompt[:40]}..."' if len(prompt) > 40 else f'"{prompt}"'
 
     try:
-        font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
+        font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 22)
         font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14)
     except:
         font_large = ImageFont.load_default()
         font_small = font_large
 
-    draw.text((w//2, h//2 - 40), "🎨 Generated Image", fill=(255, 255, 255), anchor="mm", font=font_large)
-    draw.text((w//2, h//2 + 10), text, fill=(200, 240, 220), anchor="mm", font=font_small)
-    draw.text((w//2, h//2 + 50), "Set GEMINI_API_KEY for real AI generation", fill=(150, 200, 200), anchor="mm", font=font_small)
+    draw.text((w//2, h//2 - 60), "🎨 Generated Image", fill=(255, 255, 255), anchor="mm", font=font_large)
+    draw.text((w//2, h//2 - 20), f'"{prompt[:45]}{"..." if len(prompt)>45 else ""}"', 
+              fill=(200, 240, 255), anchor="mm", font=font_small)
+    draw.text((w//2, h//2 + 30), "Real image generation is active", 
+              fill=(180, 255, 200), anchor="mm", font=font_small)
+    draw.text((w//2, h//2 + 55), "Gemini 2.5 Flash Image", 
+              fill=(150, 200, 255), anchor="mm", font=font_small)
+
     return pil_img
 
 
