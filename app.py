@@ -23,15 +23,21 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
 gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
+# DEBUG: Print key status on startup
+print(f"[INIT] GEMINI_API_KEY present: {bool(GEMINI_API_KEY)}, length: {len(GEMINI_API_KEY)}")
+print(f"[INIT] ANTHROPIC_API_KEY present: {bool(ANTHROPIC_API_KEY)}, length: {len(ANTHROPIC_API_KEY)}")
+print(f"[INIT] gemini_client initialized: {gemini_client is not None}")
+print(f"[INIT] claude_client initialized: {claude_client is not None}")
+
 GEMINI_MODEL = "gemini-2.5-flash-preview-05-20"
 GEMINI_IMAGE_MODEL = "gemini-2.0-flash-preview-image-generation"
 CLAUDE_MODEL = "claude-sonnet-4-20250514"
 
-# Timeout for Gemini calls (seconds) — fail fast, fallback to Claude
+# Timeout for Gemini calls (seconds)
 GEMINI_TIMEOUT = 12
 
 # ─────────────────────────────────────────────────────────────
-#  SYSTEM PROMPT (shared for both Gemini and Claude)
+#  SYSTEM PROMPT
 # ─────────────────────────────────────────────────────────────
 SYSTEM_PROMPT = """You are Lumina, a friendly and expert AI image processing assistant with medical imaging capabilities.
 
@@ -155,18 +161,16 @@ def is_overloaded(err_str):
 
 
 # ─────────────────────────────────────────────────────────────
-#  CLAUDE API CALL (fast fallback & primary for text)
+#  CLAUDE API CALL
 # ─────────────────────────────────────────────────────────────
 
 def call_claude(history: list, user_text: str, image_pil=None) -> str:
-    """Call Claude API — used as fast fallback when Gemini is slow/rate-limited."""
     if not claude_client:
         raise Exception("No Claude API key configured")
 
     messages = []
 
-    # Convert history (skip image data to save tokens, keep text)
-    for turn in history[-10:]:  # last 10 turns max
+    for turn in history[-10:]:
         role = turn.get("role", "user")
         if role == "model":
             role = "assistant"
@@ -180,7 +184,6 @@ def call_claude(history: list, user_text: str, image_pil=None) -> str:
         if content.strip():
             messages.append({"role": role, "content": content.strip()})
 
-    # Build current user message
     if image_pil:
         img_bytes = pil_to_bytes(image_pil, quality=80)
         b64_img = base64.b64encode(img_bytes).decode()
@@ -204,16 +207,15 @@ def call_claude(history: list, user_text: str, image_pil=None) -> str:
 
 
 # ─────────────────────────────────────────────────────────────
-#  GEMINI API CALL (with strict timeout, no long retries)
+#  GEMINI API CALL
 # ─────────────────────────────────────────────────────────────
 
 def call_gemini_fast(history: list, user_text: str, image_pil=None) -> str:
-    """Call Gemini with a strict timeout. Raises on failure."""
     if not gemini_client:
         raise Exception("No Gemini API key configured")
 
     contents = []
-    for turn in history[-8:]:  # limit context to 8 turns
+    for turn in history[-8:]:
         role = turn.get("role", "user")
         parts_raw = turn.get("parts", [])
         built = []
@@ -287,8 +289,10 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
     # --- Try Gemini ---
     if gemini_client:
         try:
+            print(f"[AI] Trying Gemini for: {user_text[:60]}")
             reply = call_gemini_fast(history, user_text, image_pil)
             if reply and reply.strip():
+                print(f"[AI] Gemini success")
                 return reply, "gemini"
         except Exception as e:
             gemini_err = str(e)
@@ -297,14 +301,17 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
     # --- Try Claude ---
     if claude_client:
         try:
+            print(f"[AI] Trying Claude for: {user_text[:60]}")
             reply = call_claude(history, user_text, image_pil)
             if reply and reply.strip():
+                print(f"[AI] Claude success")
                 return reply, "claude"
         except Exception as e:
             claude_err = str(e)
             print(f"[Claude failed] {claude_err}")
 
     # --- Free fallback ---
+    print(f"[AI] Both APIs failed (gemini={gemini_err}, claude={claude_err}), using local fallback")
     has_image = image_pil is not None
     reply = free_reply(user_text or "", has_image, image_pil)
     return reply, "local"
@@ -315,7 +322,6 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
 # ─────────────────────────────────────────────────────────────
 
 def generate_image_from_prompt(prompt: str):
-    """Generate image using Gemini's image generation capability"""
     if not gemini_client:
         return create_placeholder_image(prompt)
 
@@ -358,7 +364,6 @@ def generate_image_from_prompt(prompt: str):
 
 
 def create_placeholder_image(prompt: str):
-    """Create a gradient placeholder image with text"""
     w, h = 512, 512
     arr = np.zeros((h, w, 3), dtype=np.uint8)
     for y in range(h):
@@ -434,15 +439,13 @@ def free_reply(prompt, has_image, img=None):
             "🤖 **Generate:** Create images from text prompts\n\nUpload an image and ask!"),
         r'thank':  "You're welcome! 😊 Let me know if you need anything else!",
         r'bye|goodbye': "Goodbye! Come back anytime! 👋",
-        r'what is ai|what is artificial intelligence': "**Artificial Intelligence (AI)** is the simulation of human intelligence in machines. It includes:\n\n🧠 **Machine Learning** — systems that learn from data\n👁️ **Computer Vision** — understanding images (like I do!)\n💬 **NLP** — understanding language\n🤖 **Robotics** — physical AI systems\n\nI use AI to analyze and process your images with models like Gemini and Claude!",
         r'how are you|how do you do': "I'm doing great, thanks for asking! 😊 Ready to help with your images or answer any questions. What would you like to do today?",
-        r'what\'s up|whats up': "All good! 🚀 Ready to process images, apply filters, analyze medical scans, or just chat. What can I help you with?",
         r'good morning|good afternoon|good evening|good night': "Hello! 😊 Hope you're having a wonderful day! I'm here to help with images or any questions you have.",
     }
     for pat,rep in replies.items():
         if re.search(pat,p): return rep
 
-    # Generic helpful response for any other text
+    # Generic helpful response
     if p:
         return (f"I understand you're asking about: *\"{prompt[:80]}{'...' if len(prompt)>80 else ''}\"*\n\n"
                 "I'm Lumina, an AI image processing assistant. While I specialize in images, I can help with general questions too when connected to AI APIs.\n\n"
@@ -451,10 +454,16 @@ def free_reply(prompt, has_image, img=None):
                 "• 🤖 Generate images from text descriptions\n"
                 "• 🏥 Medical image analysis\n"
                 "• 💬 General questions (with AI APIs connected)\n\n"
-                "*Tip: Add your GEMINI_API_KEY for full AI-powered responses!*")
+                "*Tip: Make sure to restart your Space after adding API keys in Settings → Secrets!*")
     return "Upload an image and ask me to describe it, apply any filter, analyze medically, or even generate a new image from a text prompt!"
 
 def detect_op(p):
+    # ── FIX: Changed \bgenerat\b to \bgenerat\w* to match "generate", "generates", "generating" ──
+    if re.search(r'\bgenerat\w*\b|\bcreate.?image\b|\bmake.?image\b|\bdraw\b|\bpaint\b',p):
+        prompt_match = re.sub(r'\b(generate|generates|generating|create|make|draw|paint|an?|the|image|picture|photo|of|a|please|me)\b','',p).strip()
+        if not prompt_match or len(prompt_match) < 3:
+            prompt_match = p
+        return f"✨ Generating image from your prompt!\n<OP>{{\"intent\":\"generate_image\",\"params\":{{\"prompt\":\"{prompt_match}\"}}}}</OP>"
     if re.search(r'\brotate\b',p):
         m=re.search(r'(\d+)',p); angle=int(m.group(1)) if m else 90
         if 'left' in p or 'counter' in p: angle=-abs(angle)
@@ -592,11 +601,6 @@ def detect_op(p):
         return "Adding film grain!\n<OP>{\"intent\":\"noise\",\"params\":{}}</OP>"
     if re.search(r'\bvignet\b',p):
         return "Applying vignette!\n<OP>{\"intent\":\"vignette\",\"params\":{}}</OP>"
-    if re.search(r'\bgenerat\b|\bcreate.?image\b|\bmake.?image\b|\bdraw\b|\bpaint\b',p):
-        prompt_match = re.sub(r'\b(generate|create|make|draw|paint|an?|the|image|picture|photo|of|a)\b','',p).strip()
-        if not prompt_match:
-            prompt_match = p
-        return f"Generating image from your prompt!\n<OP>{{\"intent\":\"generate_image\",\"params\":{{\"prompt\":\"{prompt_match}\"}}}}</OP>"
     if re.search(r'\binfo\b|\bsize\b|\bdimension\b',p):
         return "Getting info!\n<OP>{\"intent\":\"info\",\"params\":{}}</OP>"
     return None
@@ -618,7 +622,7 @@ def extract_op(reply):
 
 
 # ─────────────────────────────────────────────────────────────
-#  IMAGE PROCESSORS (COMPLETE & ACCURATE)
+#  IMAGE PROCESSORS
 # ─────────────────────────────────────────────────────────────
 
 def process_image(img, intent, params):
@@ -1119,7 +1123,6 @@ def process_image(img, intent, params):
         pil_r = cv2_to_pil(result)
         return pil_r.filter(ImageFilter.UnsharpMask(radius=1, percent=100, threshold=3))
     if intent=='generate_image':
-        # FIX: Call generate_image_from_prompt directly, not process_image with dummy image
         prompt = params.get('prompt', 'beautiful artwork, high quality, detailed')
         return generate_image_from_prompt(prompt)
 
@@ -1182,7 +1185,9 @@ def api_status():
     return jsonify({
         "gemini": bool(gemini_client),
         "claude": bool(claude_client),
-        "local": True
+        "local": True,
+        "gemini_key_len": len(GEMINI_API_KEY),
+        "claude_key_len": len(ANTHROPIC_API_KEY)
     })
 
 
@@ -1216,15 +1221,12 @@ def process():
             except Exception as e:
                 print(f"Failed to decode last_image: {e}")
 
-        # ── Smart AI reply (Gemini → Claude → local fallback) ──
-        # Pass image to AI only if it's a new upload, for context-aware descriptions
+        # Pass image to AI only if it's a new upload
         ai_image = image_pil if (file and file.filename) else None
-        
-        # For text-only messages with no image context, still call AI for general responses
+
         raw_reply, model_used = call_ai(history, prompt, ai_image)
         print(f"[AI] Replied using: {model_used}")
 
-        # ── Extract operation ───────────────────────────────────
         clean_reply, intent, params = extract_op(raw_reply)
         result_b64 = None
 
@@ -1252,8 +1254,8 @@ def process():
                           f"**Dominant:** {'Red' if mr>mg and mr>mb else 'Green' if mg>mr and mg>mb else 'Blue'}")
 
         elif intent == 'generate_image':
-            # FIX: Directly call generate_image_from_prompt, not through process_image with dummy image
             gen_prompt = params.get('prompt', 'beautiful artwork, high quality, detailed')
+            print(f"[GEN] Generating image for prompt: {gen_prompt}")
             result_img = generate_image_from_prompt(gen_prompt)
             if result_img:
                 result_b64 = pil_to_base64(result_img)
@@ -1268,7 +1270,7 @@ def process():
         elif intent and not image_pil and intent != 'generate_image':
             clean_reply += "\n\n📎 Please upload an image first to apply this operation!"
 
-        # ── Update history ──────────────────────────────────────
+        # Update history
         new_user_parts = []
         if file and file.filename and image_pil:
             new_user_parts.append({
@@ -1281,7 +1283,6 @@ def process():
             {"role": "user",  "parts": new_user_parts},
             {"role": "model", "parts": [clean_reply]}
         ]
-        # Keep last 16 turns to reduce payload size
         if len(updated_history) > 16:
             updated_history = updated_history[-16:]
 
@@ -1305,7 +1306,7 @@ def process():
         if "API_KEY_INVALID" in err or "API key not valid" in err:
             msg = "⚠️ Invalid API key. Check your GEMINI_API_KEY or ANTHROPIC_API_KEY in Settings → Secrets."
         elif is_rate_limit(err):
-            msg = "⚠️ API rate limit hit. Trying again shortly…"
+            msg = "⚠️ API rate limit hit. Please try again shortly."
         elif "not found" in err.lower() or "404" in err:
             msg = f"⚠️ Model not found. Error: {err}"
         else:
