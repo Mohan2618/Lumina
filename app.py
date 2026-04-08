@@ -478,11 +478,11 @@ def free_reply(prompt, has_image, img=None):
 def detect_op(p):
     # ── FIX: Changed \bgenerat\b to \bgenerat\w* to match "generate", "generates", "generating" ──
     if re.search(r'\bgenerat\w*\b', p):
-    # Better prompt extraction
-    prompt_match = re.sub(r'^(generate|create|make|draw|paint)\s+(a|an|the|image|picture|photo|of)?\s*', '', p, flags=re.I).strip()
-    if not prompt_match or len(prompt_match) < 5:
-        prompt_match = p
-    return f"✨ Generating your image...\n<OP>{{\"intent\":\"generate_image\",\"params\":{{\"prompt\":\"{prompt_match}\"}}}}</OP>"
+        # Better prompt extraction
+        prompt_match = re.sub(r'^(generate|create|make|draw|paint)\s+(a|an|the|image|picture|photo|of)?\s*', '', p, flags=re.I).strip()
+        if not prompt_match or len(prompt_match) < 5:
+            prompt_match = p
+        return f"✨ Generating your image...\n<OP>{{\"intent\":\"generate_image\",\"params\":{{\"prompt\":\"{prompt_match}\"}}}}</OP>"
     if re.search(r'\brotate\b',p):
         m=re.search(r'(\d+)',p); angle=int(m.group(1)) if m else 90
         if 'left' in p or 'counter' in p: angle=-abs(angle)
