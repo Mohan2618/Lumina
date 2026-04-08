@@ -15,7 +15,7 @@ app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024
 app.secret_key = secrets.token_hex(32)
 
 # ─────────────────────────────────────────────────────────────
-#  API SETUP
+# API SETUP - UPDATED FOR APRIL 2026
 # ─────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
@@ -29,11 +29,14 @@ print(f"[INIT] ANTHROPIC_API_KEY present: {bool(ANTHROPIC_API_KEY)}, length: {le
 print(f"[INIT] gemini_client initialized: {gemini_client is not None}")
 print(f"[INIT] claude_client initialized: {claude_client is not None}")
 
-GEMINI_MODEL = "gemini-2.5-flash-preview-05-20"
-GEMINI_IMAGE_MODEL = "gemini-2.0-flash-preview-image-generation"
-CLAUDE_MODEL = "claude-sonnet-4-20250514"
+# === UPDATED STABLE MODELS ===
+GEMINI_MODEL = "gemini-2.5-flash"                    # Best stable model for text + vision
+GEMINI_IMAGE_MODEL = "gemini-2.5-flash"              # Use same for image generation attempts
 
-# Timeout for Gemini calls (seconds)
+# Claude 4 series (current as of 2026)
+CLAUDE_MODEL = "claude-sonnet-4-6"                   # Good balance of speed & quality
+# Alternative: "claude-opus-4-6" for maximum intelligence (slower & more expensive)
+
 GEMINI_TIMEOUT = 12
 
 # ─────────────────────────────────────────────────────────────
