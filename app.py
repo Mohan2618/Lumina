@@ -313,84 +313,77 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
 # ─────────────────────────────────────────────────────────────
 
 def generate_image_from_prompt(prompt: str):
-    """Generate real image using current Gemini 2.5 Flash Image (Nano Banana)"""
+    """Generate real AI image using Gemini 2.5 Flash Image (Nano Banana)"""
     if not gemini_client:
         return create_placeholder_image(prompt)
 
-    # Best models for image generation in 2026
+    # Best working models for image generation in 2026
     models_to_try = [
-        "gemini-2.5-flash-image",           # Main recommended model (Nano Banana)
+        "gemini-2.5-flash-image",           # Primary: Nano Banana (recommended)
+        "gemini-2.5-flash-image-preview",   # Preview version if main fails
         "gemini-2.5-flash",                 # Fallback with image modality
-        "gemini-2.5-flash-preview-image-generation",
     ]
 
-    for model_name in models_to_try:
+    for model in models_to_try:
         try:
-            print(f"[Image Gen] Trying model: {model_name}")
+            print(f"[Image Gen] Trying: {model} | Prompt: {prompt[:70]}...")
 
-            # Use generate_content with explicit image output request
             response = gemini_client.models.generate_content(
-                model=model_name,
+                model=model,
                 contents=prompt,
                 config=types.GenerateContentConfig(
-                    response_modalities=["IMAGE", "TEXT"],   # Important: Request image
-                    temperature=0.8,
+                    response_modalities=["IMAGE", "TEXT"],   # Force image output
+                    temperature=0.85,
                 )
             )
 
-            # Extract the generated image from response
+            # Extract the generated image
             for part in response.candidates[0].content.parts:
                 if (hasattr(part, 'inline_data') and 
                     part.inline_data and 
                     part.inline_data.mime_type and 
-                    part.inline_data.mime_type.startswith("image/")):
-                    
+                    "image/" in part.inline_data.mime_type):
+
                     img_bytes = part.inline_data.data
                     if isinstance(img_bytes, str):
                         img_bytes = base64.b64decode(img_bytes)
-                    
+
                     pil_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-                    print(f"[Image Gen] SUCCESS using {model_name}")
+                    print(f"[Image Gen] SUCCESS with {model}!")
                     return pil_img
 
         except Exception as e:
-            print(f"[Image Gen] {model_name} failed: {str(e)[:120]}")
+            print(f"[Image Gen] {model} failed: {str(e)[:150]}")
             continue
 
-    # If everything fails, show better placeholder
-    print("[Image Gen] All attempts failed → placeholder")
+    # If all fail, show nice placeholder
+    print("[Image Gen] All models failed - showing placeholder")
     return create_placeholder_image(prompt)
 
 
 def create_placeholder_image(prompt: str):
-    """Nice placeholder when real generation fails"""
     w, h = 512, 512
     arr = np.zeros((h, w, 3), dtype=np.uint8)
-    # Beautiful gradient
     for y in range(h):
         ratio = y / h
-        arr[y, :] = [
-            int(100 + 80 * ratio),
-            int(150 + 60 * ratio),
-            int(220 - 100 * ratio)
-        ]
+        arr[y, :] = [int(80 + 100*ratio), int(140 + 80*ratio), int(220 - 110*ratio)]
+
     pil_img = Image.fromarray(arr)
     draw = ImageDraw.Draw(pil_img)
 
     try:
-        font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 22)
-        font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14)
+        font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
+        font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 13)
     except:
-        font_large = ImageFont.load_default()
-        font_small = font_large
+        font_large = font_small = ImageFont.load_default()
 
-    draw.text((w//2, h//2 - 60), "🎨 Generated Image", fill=(255, 255, 255), anchor="mm", font=font_large)
-    draw.text((w//2, h//2 - 20), f'"{prompt[:45]}{"..." if len(prompt)>45 else ""}"', 
-              fill=(200, 240, 255), anchor="mm", font=font_small)
-    draw.text((w//2, h//2 + 30), "Real image generation is active", 
+    draw.text((w//2, h//2 - 70), "🎨 Generated Image", fill=(255,255,255), anchor="mm", font=font_large)
+    draw.text((w//2, h//2 - 30), f'"{prompt[:50]}{"..." if len(prompt)>50 else ""}"', 
+              fill=(220, 240, 255), anchor="mm", font=font_small)
+    draw.text((w//2, h//2 + 20), "Real image generation is active", 
               fill=(180, 255, 200), anchor="mm", font=font_small)
-    draw.text((w//2, h//2 + 55), "Gemini 2.5 Flash Image", 
-              fill=(150, 200, 255), anchor="mm", font=font_small)
+    draw.text((w//2, h//2 + 45), "Gemini 2.5 Flash Image", 
+              fill=(150, 220, 255), anchor="mm", font=font_small)
 
     return pil_img
 
