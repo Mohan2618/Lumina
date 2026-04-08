@@ -107,7 +107,7 @@ body {
 .bot-msg code { background: rgba(255,255,255,0.15); padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; }
 .bot-msg strong { color: #41e1ae; }
 
-/* ── MESSAGE ATTACHMENTS (below text for user) ── */
+/* ── MESSAGE ATTACHMENTS ── */
 .msg-attachments {
   display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;
   max-width: 78%;
@@ -214,6 +214,7 @@ body {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
 }
 .history-item:hover { background: rgba(255,255,255,0.15); }
+.history-item.active-chat { background: rgba(65,225,174,0.15); border: 1px solid rgba(65,225,174,0.3); }
 .history-item .title { font-size: 13px; font-weight: 600; flex: 1; word-break: break-word; }
 .history-item .date { font-size: 11px; opacity: 0.5; white-space: nowrap; margin-top: 2px; }
 .history-item .del-btn { background: transparent; border: none; color: rgba(255,255,255,0.4); cursor: pointer; font-size: 16px; }
@@ -293,6 +294,41 @@ body {
 .modal-alert.error { background: rgba(255,107,107,0.2); border: 1px solid rgba(255,107,107,0.5); color: #ffaaaa; }
 .modal-alert.success { background: rgba(107,203,119,0.2); border: 1px solid rgba(107,203,119,0.5); color: #aaffbb; }
 .rate-limit-timer { text-align: center; font-size: 12px; color: var(--warn); display: none; }
+
+/* ── FREE TRIAL PROMPT MODAL ── */
+.trial-modal-overlay {
+  display: none; position: fixed; inset: 0; backdrop-filter: blur(16px);
+  background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2500;
+}
+.trial-modal-box {
+  width: 440px; padding: 36px 32px; text-align: center;
+  background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 24px; backdrop-filter: blur(24px); color: white;
+  display: flex; flex-direction: column; gap: 16px; align-items: center;
+}
+.trial-modal-box .trial-icon { font-size: 48px; line-height: 1; }
+.trial-modal-box h2 { font-size: 22px; font-weight: 700; }
+.trial-modal-box p { font-size: 14px; color: rgba(255,255,255,0.7); line-height: 1.6; }
+.trial-btns { display: flex; gap: 12px; width: 100%; }
+.trial-btns .btn-trial-primary {
+  flex: 1; padding: 12px; border-radius: 12px; border: none; background: white;
+  color: #6a7bd1; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform 0.15s;
+}
+.trial-btns .btn-trial-primary:hover { transform: scale(1.03); }
+.trial-btns .btn-trial-secondary {
+  flex: 1; padding: 12px; border-radius: 12px; border: 1.5px solid rgba(255,255,255,0.5);
+  background: transparent; color: white; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.trial-counter {
+  position: fixed; top: 70px; right: 18px; background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 20px; padding: 5px 14px; color: white; font-size: 12px;
+  z-index: 750; display: none; gap: 6px; align-items: center;
+}
+.trial-counter.show { display: flex; }
+.trial-dot { width: 6px; height: 6px; border-radius: 50%; background: #41e1ae; }
+.trial-dot.used { background: rgba(255,255,255,0.3); }
+
 /* ── OPS PANEL ── */
 .medical-panel {
   display: none; position: fixed; left: 0; top: 0; width: 300px; height: 100%;
@@ -360,6 +396,14 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   </div>
   <div class="profile-avatar" id="profileAvatar" onclick="toggleProfileMenu(event)">A</div>
 </header>
+
+<!-- ── FREE TRIAL COUNTER (top right, shown when guest) ── -->
+<div class="trial-counter" id="trialCounter">
+  <span class="trial-dot" id="td1"></span>
+  <span class="trial-dot" id="td2"></span>
+  <span class="trial-dot" id="td3"></span>
+  <span style="font-size:11px;opacity:0.8;" id="trialLabel">3 free messages left</span>
+</div>
 
 <!-- ── PROFILE MENU ── -->
 <div class="profile-menu" id="profileMenu">
@@ -576,6 +620,20 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   </div>
 </div>
 
+<!-- ── FREE TRIAL LIMIT MODAL ── -->
+<div class="trial-modal-overlay" id="trialModal">
+  <div class="trial-modal-box">
+    <div class="trial-icon">🔒</div>
+    <h2>You've used your free messages</h2>
+    <p>Create a free account to get unlimited access to Lumina's AI image processing, medical analysis, creative filters, and much more.</p>
+    <div class="trial-btns">
+      <button class="btn-trial-primary" onclick="closeTrialModal(); showSignUp();">Sign Up Free</button>
+      <button class="btn-trial-secondary" onclick="closeTrialModal(); showSignIn();">Sign In</button>
+    </div>
+    <button class="modal-btn-text" onclick="closeTrialModal()" style="font-size:12px;opacity:0.5;">Maybe later</button>
+  </div>
+</div>
+
 <!-- ── FORGOT PASSWORD MODAL ── -->
 <div class="modal-overlay" id="forgotModal">
   <div class="modal-box small">
@@ -690,7 +748,6 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   try {
     Object.keys(localStorage).forEach(key => {
       if (key === 'berryChats') localStorage.removeItem(key);
-      // Only purge legacy unkeyed chats
       if (key === 'lumina_chat_index_legacy') localStorage.removeItem(key);
     });
   } catch(e) {}
@@ -705,6 +762,10 @@ let loginAttempts=0, lockUntil=0;
 let otpCode='', otpExpiry=0, otpTimerInt=null;
 let currentUser=null;  // logged-in user object
 let lastImageB64=null; // track last image for context
+
+// ── FREE TRIAL TRACKING ────────────────────────────────────
+const FREE_TRIAL_LIMIT = 3;
+let guestMessageCount = 0; // messages used in this session for guests
 
 const MAX_SIZE=10*1024*1024;
 const ALLOWED=['image/jpeg','image/png','image/webp','image/gif','image/bmp'];
@@ -722,6 +783,35 @@ function getChatIndex() {
 function updateChatIndex(a) {
   localStorage.setItem(userKey('index'), JSON.stringify(a));
 }
+
+// ── TRIAL COUNTER UI ──────────────────────────────────────
+function updateTrialCounter() {
+  if (currentUser) {
+    document.getElementById('trialCounter').classList.remove('show');
+    return;
+  }
+  const remaining = FREE_TRIAL_LIMIT - guestMessageCount;
+  const counter = document.getElementById('trialCounter');
+  if (remaining <= 0) {
+    counter.classList.remove('show');
+    return;
+  }
+  counter.classList.add('show');
+  const dots = ['td1','td2','td3'];
+  dots.forEach((id, i) => {
+    const dot = document.getElementById(id);
+    dot.className = 'trial-dot' + (i >= remaining ? ' used' : '');
+  });
+  document.getElementById('trialLabel').textContent =
+    remaining === 1 ? '1 free message left' : `${remaining} free messages left`;
+}
+
+function showTrialModal() {
+  document.getElementById('trialModal').style.display = 'flex';
+}
+window.closeTrialModal = function() {
+  document.getElementById('trialModal').style.display = 'none';
+};
 
 // ── TOAST ─────────────────────────────────────────────────
 function toast(msg, dur=2500) {
@@ -778,15 +868,15 @@ function createMsgWrapper(role) {
 
 function addUserMsg(text, images) {
   const wrapper = createMsgWrapper('user');
-  
+
   // Text bubble first
   if (text) {
     const div = document.createElement('div');
     div.classList.add('chat-msg', 'user-msg');
     div.innerText = text;
     wrapper.appendChild(div);
-    
-    // Action buttons for user text
+
+    // Action buttons for user text — including Copy
     const actions = document.createElement('div');
     actions.className = 'msg-actions';
     actions.innerHTML = `
@@ -795,7 +885,7 @@ function addUserMsg(text, images) {
       </button>`;
     wrapper.appendChild(actions);
   }
-  
+
   // Attachments below text
   if (images && images.length > 0) {
     const attachBox = document.createElement('div');
@@ -808,7 +898,7 @@ function addUserMsg(text, images) {
     });
     wrapper.appendChild(attachBox);
   }
-  
+
   document.getElementById('chatArea').appendChild(wrapper);
   scrollChat();
   return wrapper;
@@ -816,12 +906,12 @@ function addUserMsg(text, images) {
 
 function addBotMsg(content, isHTML=false, imgSrc=null) {
   const wrapper = createMsgWrapper('bot');
-  
+
   const div = document.createElement('div');
   div.classList.add('chat-msg', 'bot-msg');
   if (isHTML) div.innerHTML = content; else div.innerText = content;
   wrapper.appendChild(div);
-  
+
   // Image output from bot
   if (imgSrc) {
     const attachBox = document.createElement('div');
@@ -833,7 +923,7 @@ function addBotMsg(content, isHTML=false, imgSrc=null) {
     attachBox.appendChild(img);
     wrapper.appendChild(attachBox);
   }
-  
+
   // Action buttons for bot
   const plainText = div.innerText || div.textContent;
   const actions = document.createElement('div');
@@ -845,7 +935,7 @@ function addBotMsg(content, isHTML=false, imgSrc=null) {
   }
   actions.innerHTML = actHtml;
   wrapper.appendChild(actions);
-  
+
   document.getElementById('chatArea').appendChild(wrapper);
   scrollChat();
   return wrapper;
@@ -909,60 +999,75 @@ window.sendMessage = async function() {
   const text=input.value.trim();
   const hasFiles=attachedFiles.length>0;
   if (!text && !hasFiles) return;
-  
+
+  // ── FREE TRIAL CHECK ─────────────────────────────────────
+  if (!currentUser) {
+    if (guestMessageCount >= FREE_TRIAL_LIMIT) {
+      showTrialModal();
+      return;
+    }
+  }
+
   setGenerating(true);
   startChatMode();
-  
+
   if (!currentChatTitle) {
     currentChatTitle = text || 'Image uploaded';
     currentChatKey = userKey('chat_' + Date.now());
   }
-  
+
   // Add user message (text first, then images)
   addUserMsg(text, hasFiles ? [...attachedFiles] : []);
-  
+
   const promptText=text;
   const filesToSend=[...attachedFiles];
   input.value=''; attachedFiles=[]; renderPreviews();
   showTyping();
-  
+
   abortController = new AbortController();
-  
+
   try {
     const fd=new FormData();
     fd.append('prompt', promptText);
     fd.append('history', JSON.stringify(conversationHistory));
-    
+
     // Send last known image for context if no new image uploaded
     if (lastImageB64 && filesToSend.length === 0) {
       fd.append('last_image', lastImageB64);
     }
-    
+
     if (filesToSend.length > 0) {
       const blob = await (await fetch(filesToSend[0])).blob();
       fd.append('image', blob, 'upload.jpg');
     }
-    
+
     const res = await fetch('/process', {
       method: 'POST',
       body: fd,
       signal: abortController.signal
     });
-    
+
     removeTyping();
-    if (!res.ok) { addBotMsg('⚠️ Server error: ' + await res.text()); return; }
-    
+    if (!res.ok) { addBotMsg('⚠️ Server error: ' + await res.text()); setGenerating(false); return; }
+
     const data = await res.json();
     if (data.history) conversationHistory = data.history;
-    
+
     // Update last image tracking
     if (data.last_image) lastImageB64 = data.last_image;
     else if (filesToSend.length > 0) lastImageB64 = filesToSend[0];
-    
+
     const resultImg = data.image || null;
     if (data.message) addBotMsg(formatReply(data.message), true, resultImg);
     else if (resultImg) addBotMsg('Here is your processed image:', false, resultImg);
-    
+
+    // Increment guest message counter after successful response
+    if (!currentUser) {
+      guestMessageCount++;
+      updateTrialCounter();
+      // If they just used their last message, prompt for signup next time
+    }
+
     saveChatHistory();
   } catch(err) {
     removeTyping();
@@ -1007,7 +1112,6 @@ window.newChat = function() {
 // ── SHARE CHAT ────────────────────────────────────────────
 window.shareChat = function() {
   document.getElementById('profileMenu').style.display='none';
-  // Build a plain text version of the chat
   const msgs = document.querySelectorAll('.chat-msg');
   if (!msgs.length) { toast('No chat to share yet.'); return; }
   let text = '=== Lumina Chat ===\n\n';
@@ -1030,7 +1134,7 @@ function saveChatHistory() {
   const cleanHTML = rawHTML
     .replace(/<img[^>]+src="data:[^"]*"[^>]*>/gi, '<span style="color:rgba(255,255,255,0.45);font-size:12px;">[image]</span>')
     .replace(/src="data:[^"]*"/gi, 'src=""');
-  
+
   const chatData = {
     title: currentChatTitle,
     html: cleanHTML,
@@ -1040,14 +1144,13 @@ function saveChatHistory() {
     })),
     ts: Date.now()
   };
-  
+
   const serialized = JSON.stringify(chatData);
   if (serialized.length > 300000) { toast('Chat too large to save fully.'); return; }
-  
+
   try {
     localStorage.setItem(currentChatKey, serialized);
   } catch(e) {
-    // Clear old chats to free space
     try {
       const idx = getChatIndex();
       if (idx.length > 5) {
@@ -1057,7 +1160,7 @@ function saveChatHistory() {
       localStorage.setItem(currentChatKey, serialized);
     } catch(e2) { console.error('Could not save chat:', e2); }
   }
-  
+
   const idx = getChatIndex().filter(c=>c.key!==currentChatKey).slice(-29);
   idx.push({key:currentChatKey, title:currentChatTitle, ts:Date.now()});
   updateChatIndex(idx);
@@ -1077,7 +1180,8 @@ function renderHistoryList() {
     return;
   }
   idx.forEach(entry=>{
-    const item=document.createElement('div'); item.className='history-item';
+    const item=document.createElement('div');
+    item.className='history-item' + (entry.key === currentChatKey ? ' active-chat' : '');
     const date=new Date(entry.ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});
     item.innerHTML=`
       <div style="flex:1;min-width:0;">
@@ -1093,10 +1197,24 @@ function renderHistoryList() {
   });
 }
 
+// ── FIX: Delete chat also clears the live chat if it's the current one ──
 window.deleteChat=function(e,key){
   e.stopPropagation();
+  // Remove from localStorage
   localStorage.removeItem(key);
+  // Update index
   updateChatIndex(getChatIndex().filter(c=>c.key!==key));
+  // If deleting the currently active chat, clear the live view too
+  if (key === currentChatKey) {
+    document.getElementById('chatArea').innerHTML='';
+    document.getElementById('chatWrapper').style.display='none';
+    document.getElementById('watermark').style.display='block';
+    document.getElementById('homeSubtitle').style.display='block';
+    chatStarted=false; conversationHistory=[];
+    currentChatTitle=null; currentChatKey=null;
+    lastImageB64=null;
+    toast('Chat deleted.');
+  }
   renderHistoryList();
 };
 
@@ -1370,14 +1488,12 @@ window.submitAuth = async function() {
   // SIGNIN
   const id=document.getElementById('loginIdentifier').value.trim();
   if (!id||!pw){ showAuthAlert('Please fill in all fields.'); return; }
-  
+
   // Find user by email or username
   let stored = null;
-  // Try username lookup
   const byUsername = JSON.parse(localStorage.getItem(LS_USER+'_'+id)||'null');
   if (byUsername) stored = byUsername;
   else {
-    // Search all users by email
     Object.keys(localStorage).forEach(k => {
       if (k.startsWith(LS_USER+'_')) {
         const u = JSON.parse(localStorage.getItem(k)||'null');
@@ -1385,7 +1501,7 @@ window.submitAuth = async function() {
       }
     });
   }
-  
+
   if (!stored){ showAuthAlert('No account found. Please sign up first.'); return; }
   try {
     const r=await fetch('/api/auth/verify-password',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -1402,11 +1518,14 @@ window.submitAuth = async function() {
   } catch(e){ showAuthAlert('Server error. Please try again.'); }
 };
 
+// ── FIX: Login always starts fresh new chat, clears guest state ──
 function loginUserAndReset(user) {
   currentUser = user;
-  // ALWAYS start a fresh new chat on login
+  guestMessageCount = 0; // Reset guest counter
+  // Always start a fresh new chat on login
   newChat();
   updateProfileUI(user);
+  updateTrialCounter(); // Hide trial counter
   toast('Welcome, '+user.firstName+'! 👋');
 }
 
@@ -1549,10 +1668,12 @@ function showChangePwAlert(msg,type='error'){
 // ── LOGOUT ────────────────────────────────────────────────
 window.logout=function(){
   currentUser=null; lastImageB64=null;
+  guestMessageCount=0;
   document.getElementById('authButtons').style.display='flex';
   document.getElementById('profileAvatar').style.display='none';
   document.getElementById('profileMenu').style.display='none';
   newChat();
+  updateTrialCounter();
   toast('Signed out successfully.');
 };
 
@@ -1578,7 +1699,7 @@ window.openHelp=function(){
     '🎛️ <strong>Color:</strong> Contrast, Brightness, Saturation, Hue, White Balance, Shadows/Highlights<br>' +
     '⚙️ <strong>Basic:</strong> Rotate, Flip, Resize, Crop, Grayscale, Sepia, Invert, Blur, Sharpen<br>' +
     '🤖 <strong>Generate:</strong> Create images from text prompts<br>' +
-    '💬 <strong>Chat:</strong> Describe images, ask questions, get medical analysis<br><br>' +
+    '💬 <strong>Chat:</strong> Describe images, ask questions, get medical analysis, answer any question<br><br>' +
     'Click <strong>⚡ Operations</strong> button for quick access!',
     true
   );
@@ -1589,9 +1710,8 @@ function truncate(s,n){ return s.length>n?s.slice(0,n)+'…':s; }
 function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ── INIT ─────────────────────────────────────────────────
-// Do NOT auto-login on page load — require explicit sign in
-// (Users must sign in fresh; guest mode for unauthenticated users)
-// Guest users can still use the app; history is stored under 'guest' key
+// Show trial counter for guest users on load
+updateTrialCounter();
 
 })();
 </script>
