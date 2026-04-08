@@ -313,44 +313,71 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
 # ─────────────────────────────────────────────────────────────
 
 def generate_image_from_prompt(prompt: str):
+    """Generate image using latest Gemini / Imagen models"""
     if not gemini_client:
         return create_placeholder_image(prompt)
 
+    # Updated models for 2026 - try in order of reliability
     models_to_try = [
+        "gemini-2.5-flash",                    # Fast + good quality
+        "gemini-2.5-flash-image",              # Dedicated image variant (if available)
+        "imagen-4.0-generate-001",             # Latest Imagen model (best quality)
+        "imagen-4.0-fast-generate-001",
         "gemini-2.0-flash-preview-image-generation",
-        "gemini-2.0-flash-exp-image-generation",
-        "imagen-3.0-generate-002",
     ]
 
     for model in models_to_try:
         try:
-            if model.startswith("imagen"):
+            print(f"[Image Gen] Trying model: {model} for prompt: {prompt[:60]}...")
+
+            if "imagen" in model:
+                # Use dedicated generate_images for Imagen models
                 response = gemini_client.models.generate_images(
                     model=model,
                     prompt=prompt,
-                    config={"number_of_images": 1, "aspect_ratio": "1:1"}
-                )
-                if response.generated_images:
-                    img_bytes = response.generated_images[0].image.image_bytes
-                    return Image.open(io.BytesIO(img_bytes)).convert("RGB")
-            else:
-                response = gemini_client.models.generate_content(
-                    model=model,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        response_modalities=["IMAGE", "TEXT"]
+                    config=types.GenerateImagesConfig(
+                        number_of_images=1,
+                        aspect_ratio="1:1",   # or "16:9", "9:16" etc.
                     )
                 )
+
+                if response.generated_images and len(response.generated_images) > 0:
+                    img_bytes = response.generated_images[0].image.image_bytes
+                    pil_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+                    print(f"[Image Gen] SUCCESS with {model}")
+                    return pil_img
+
+            else:
+                # Try unified generate_content with image output for Gemini models
+                response = gemini_client.models.generate_content(
+                    model=model,
+                    contents=[prompt],
+                    config=types.GenerateContentConfig(
+                        response_modalities=["IMAGE", "TEXT"],
+                        temperature=0.7,
+                    )
+                )
+
+                # Extract image from response
                 for part in response.candidates[0].content.parts:
-                    if hasattr(part, 'inline_data') and part.inline_data and part.inline_data.mime_type.startswith("image/"):
+                    if (hasattr(part, 'inline_data') and 
+                        part.inline_data and 
+                        part.inline_data.mime_type.startswith("image/")):
+                        
                         img_bytes = part.inline_data.data
                         if isinstance(img_bytes, str):
                             img_bytes = base64.b64decode(img_bytes)
-                        return Image.open(io.BytesIO(img_bytes)).convert("RGB")
+                        
+                        pil_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+                        print(f"[Image Gen] SUCCESS with {model}")
+                        return pil_img
+
         except Exception as e:
-            print(f"Image gen model {model} failed: {e}")
+            print(f"[Image Gen] Model {model} failed: {str(e)[:150]}")
             continue
 
+    # Final fallback
+    print("[Image Gen] All models failed → using placeholder")
     return create_placeholder_image(prompt)
 
 
@@ -450,11 +477,12 @@ def free_reply(prompt, has_image, img=None):
 
 def detect_op(p):
     # ── FIX: Changed \bgenerat\b to \bgenerat\w* to match "generate", "generates", "generating" ──
-    if re.search(r'\bgenerat\w*\b|\bcreate.?image\b|\bmake.?image\b|\bdraw\b|\bpaint\b',p):
-        prompt_match = re.sub(r'\b(generate|generates|generating|create|make|draw|paint|an?|the|image|picture|photo|of|a|please|me)\b','',p).strip()
-        if not prompt_match or len(prompt_match) < 3:
-            prompt_match = p
-        return f"✨ Generating image from your prompt!\n<OP>{{\"intent\":\"generate_image\",\"params\":{{\"prompt\":\"{prompt_match}\"}}}}</OP>"
+    if re.search(r'\bgenerat\w*\b', p):
+    # Better prompt extraction
+    prompt_match = re.sub(r'^(generate|create|make|draw|paint)\s+(a|an|the|image|picture|photo|of)?\s*', '', p, flags=re.I).strip()
+    if not prompt_match or len(prompt_match) < 5:
+        prompt_match = p
+    return f"✨ Generating your image...\n<OP>{{\"intent\":\"generate_image\",\"params\":{{\"prompt\":\"{prompt_match}\"}}}}</OP>"
     if re.search(r'\brotate\b',p):
         m=re.search(r'(\d+)',p); angle=int(m.group(1)) if m else 90
         if 'left' in p or 'counter' in p: angle=-abs(angle)
