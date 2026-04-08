@@ -43,6 +43,8 @@ You can:
 5. Generate images from text descriptions
 6. Remember the full conversation context including previously uploaded images
 
+IMPORTANT: You MUST respond to ALL user messages, including general questions, greetings, and topics unrelated to images. Be helpful, friendly, and informative for any topic.
+
 MEDICAL IMAGING RULES:
 - When analyzing medical images (X-rays, MRI, CT, ultrasound, skin lesions, fundus, pathology slides, ECG), provide:
   a) Detailed radiological/clinical description
@@ -85,7 +87,8 @@ Rules:
 - If no image uploaded but operation requested (and no image in history), ask them to upload one
 - If the user refers to "the image", "previous image", "that image" — use the most recent image from conversation history
 - Be warm, concise, helpful, professional for medical queries
-- For generate_image, always include a detailed descriptive prompt in params"""
+- For generate_image, always include a detailed descriptive prompt in params
+- NEVER refuse to answer general questions. Always respond helpfully to any topic."""
 
 
 # ─────────────────────────────────────────────────────────────
@@ -414,24 +417,41 @@ def free_reply(prompt, has_image, img=None):
                 f"*Add GEMINI_API_KEY or ANTHROPIC_API_KEY for full AI-powered image understanding.*")
     op=detect_op(p)
     if op: return op
+
+    # General conversational replies
     replies={
-        r'hello|hi|hey':                 "Hi! I'm **Lumina**, your AI image assistant. Upload an image and ask me anything!",
-        r'who are you|what are you':     "I'm **Lumina** — an advanced AI image processing assistant powered by Gemini and Claude!",
-        r'what can you do|help|feature': (
-            "**What I can do:**\n\n🖼️ **Describe:** What's in this? Mood, objects, text\n"
+        r'hello|hi\b|hey\b':             "Hi there! 👋 I'm **Lumina**, your AI image assistant. I can process images, analyze medical scans, apply creative filters, generate images, and answer any questions. What can I help you with?",
+        r'who are you|what are you':     "I'm **Lumina** — an advanced AI image processing assistant powered by Gemini and Claude! I can analyze images, apply filters, do medical imaging, generate art, and much more. Just upload an image or ask me anything!",
+        r'what can you do|help\b|feature': (
+            "**What I can do:**\n\n🖼️ **Describe & Analyze** images in detail\n"
             "⚙️ **Basic:** Rotate, flip, resize, crop\n"
-            "🎨 **Filters:** Grayscale, sepia, blur, sharpen, cartoon, watercolor, sketch, oil painting, neon glow, glitch, halftone, vintage, pop art\n"
+            "🎨 **Filters:** Cartoon, watercolor, sketch, oil painting, neon glow, glitch, halftone, vintage, pop art\n"
             "🌈 **Color:** Contrast, brightness, saturation, hue, white balance, HDR\n"
-            "🏥 **Medical:** CLAHE, denoise, X-ray enhance, MRI enhance, CT enhance, skin analysis, fundus analysis\n"
-            "🔬 **Detection:** Face detect, edge detection, Canny, Sobel, object highlight, color palette\n"
-            "✨ **Restoration:** Super resolution, deblur, colorize B&W, scratch removal\n"
-            "🎭 **Creative:** Double exposure, thermal vision, infrared, stained glass, pointillism, ASCII art\n"
+            "🏥 **Medical:** CLAHE, denoise, X-ray/MRI/CT enhance, skin & wound analysis\n"
+            "🔬 **Detection:** Face detect, edge detection, color palette extraction\n"
+            "✨ **Restoration:** Super resolution, deblur, colorize B&W\n"
+            "🎭 **Creative:** Thermal vision, stained glass, pointillism, ASCII art\n"
             "🤖 **Generate:** Create images from text prompts\n\nUpload an image and ask!"),
-        r'thank': "You're welcome! 😊",
-        r'bye':   "Goodbye! Come back anytime!",
+        r'thank':  "You're welcome! 😊 Let me know if you need anything else!",
+        r'bye|goodbye': "Goodbye! Come back anytime! 👋",
+        r'what is ai|what is artificial intelligence': "**Artificial Intelligence (AI)** is the simulation of human intelligence in machines. It includes:\n\n🧠 **Machine Learning** — systems that learn from data\n👁️ **Computer Vision** — understanding images (like I do!)\n💬 **NLP** — understanding language\n🤖 **Robotics** — physical AI systems\n\nI use AI to analyze and process your images with models like Gemini and Claude!",
+        r'how are you|how do you do': "I'm doing great, thanks for asking! 😊 Ready to help with your images or answer any questions. What would you like to do today?",
+        r'what\'s up|whats up': "All good! 🚀 Ready to process images, apply filters, analyze medical scans, or just chat. What can I help you with?",
+        r'good morning|good afternoon|good evening|good night': "Hello! 😊 Hope you're having a wonderful day! I'm here to help with images or any questions you have.",
     }
     for pat,rep in replies.items():
         if re.search(pat,p): return rep
+
+    # Generic helpful response for any other text
+    if p:
+        return (f"I understand you're asking about: *\"{prompt[:80]}{'...' if len(prompt)>80 else ''}\"*\n\n"
+                "I'm Lumina, an AI image processing assistant. While I specialize in images, I can help with general questions too when connected to AI APIs.\n\n"
+                "**I can help you with:**\n"
+                "• 🖼️ Upload an image to analyze, filter, or process it\n"
+                "• 🤖 Generate images from text descriptions\n"
+                "• 🏥 Medical image analysis\n"
+                "• 💬 General questions (with AI APIs connected)\n\n"
+                "*Tip: Add your GEMINI_API_KEY for full AI-powered responses!*")
     return "Upload an image and ask me to describe it, apply any filter, analyze medically, or even generate a new image from a text prompt!"
 
 def detect_op(p):
@@ -1099,6 +1119,7 @@ def process_image(img, intent, params):
         pil_r = cv2_to_pil(result)
         return pil_r.filter(ImageFilter.UnsharpMask(radius=1, percent=100, threshold=3))
     if intent=='generate_image':
+        # FIX: Call generate_image_from_prompt directly, not process_image with dummy image
         prompt = params.get('prompt', 'beautiful artwork, high quality, detailed')
         return generate_image_from_prompt(prompt)
 
@@ -1196,7 +1217,11 @@ def process():
                 print(f"Failed to decode last_image: {e}")
 
         # ── Smart AI reply (Gemini → Claude → local fallback) ──
-        raw_reply, model_used = call_ai(history, prompt, image_pil if file and file.filename else None)
+        # Pass image to AI only if it's a new upload, for context-aware descriptions
+        ai_image = image_pil if (file and file.filename) else None
+        
+        # For text-only messages with no image context, still call AI for general responses
+        raw_reply, model_used = call_ai(history, prompt, ai_image)
         print(f"[AI] Replied using: {model_used}")
 
         # ── Extract operation ───────────────────────────────────
@@ -1227,9 +1252,13 @@ def process():
                           f"**Dominant:** {'Red' if mr>mg and mr>mb else 'Green' if mg>mr and mg>mb else 'Blue'}")
 
         elif intent == 'generate_image':
-            result_img = process_image(Image.new("RGB",(8,8)), intent, params or {})
+            # FIX: Directly call generate_image_from_prompt, not through process_image with dummy image
+            gen_prompt = params.get('prompt', 'beautiful artwork, high quality, detailed')
+            result_img = generate_image_from_prompt(gen_prompt)
             if result_img:
                 result_b64 = pil_to_base64(result_img)
+                if not clean_reply:
+                    clean_reply = f"✨ Here's your generated image for: *\"{gen_prompt[:60]}{'...' if len(gen_prompt)>60 else ''}\"*"
 
         elif intent and image_pil:
             result_img = process_image(image_pil, intent, params or {})
