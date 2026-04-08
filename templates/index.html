@@ -969,13 +969,13 @@ function addBotMsg(content, isHTML=false, imgSrc=null, modelUsed='') {
   wrapper.appendChild(div);
 
   // Model badge
-  if (modelUsed) {
-    const badge = document.createElement('span');
-    badge.className = 'model-badge badge-' + modelUsed;
-    const labels = { gemini: '⚡ Gemini', claude: '🤖 Claude', local: '📦 Local' };
-    badge.textContent = labels[modelUsed] || modelUsed;
-    wrapper.appendChild(badge);
-  }
+  // Model badge - Always show Lumina
+if (modelUsed) {
+  const badge = document.createElement('span');
+  badge.className = 'model-badge badge-gemini';  // or create a new style
+  badge.textContent = '🌟 Lumina';
+  wrapper.appendChild(badge);
+}
 
   if (imgSrc) {
     const attachBox = document.createElement('div');
