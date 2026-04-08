@@ -15,7 +15,7 @@ app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024
 app.secret_key = secrets.token_hex(32)
 
 # ─────────────────────────────────────────────────────────────
-# API SETUP - UPDATED FOR APRIL 2026
+# API SETUP - FIXED FOR 2026
 # ─────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
@@ -23,21 +23,18 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
 gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
-# DEBUG: Print key status on startup
-print(f"[INIT] GEMINI_API_KEY present: {bool(GEMINI_API_KEY)}, length: {len(GEMINI_API_KEY)}")
-print(f"[INIT] ANTHROPIC_API_KEY present: {bool(ANTHROPIC_API_KEY)}, length: {len(ANTHROPIC_API_KEY)}")
-print(f"[INIT] gemini_client initialized: {gemini_client is not None}")
-print(f"[INIT] claude_client initialized: {claude_client is not None}")
+print(f"[INIT] GEMINI key present: {bool(GEMINI_API_KEY)} | length: {len(GEMINI_API_KEY)}")
+print(f"[INIT] ANTHROPIC key present: {bool(ANTHROPIC_API_KEY)} | length: {len(ANTHROPIC_API_KEY)}")
+print(f"[INIT] Gemini client: {'OK' if gemini_client else 'MISSING'}")
+print(f"[INIT] Claude client: {'OK' if claude_client else 'MISSING'}")
 
-# === UPDATED STABLE MODELS ===
-GEMINI_MODEL = "gemini-2.5-flash"                    # Best stable model for text + vision
-GEMINI_IMAGE_MODEL = "gemini-2.5-flash"              # Use same for image generation attempts
+# Stable models - April 2026
+GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_IMAGE_MODEL = "gemini-2.5-flash"
 
-# Claude 4 series (current as of 2026)
-CLAUDE_MODEL = "claude-sonnet-4-6"                   # Good balance of speed & quality
-# Alternative: "claude-opus-4-6" for maximum intelligence (slower & more expensive)
+CLAUDE_MODEL = "claude-3-5-sonnet-20241022"   # Most reliable Claude model right now
 
-GEMINI_TIMEOUT = 12
+GEMINI_TIMEOUT = 15
 
 # ─────────────────────────────────────────────────────────────
 #  SYSTEM PROMPT
@@ -279,44 +276,35 @@ def call_gemini_fast(history: list, user_text: str, image_pil=None) -> str:
 # ─────────────────────────────────────────────────────────────
 
 def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
-    """
-    Returns (reply_text, model_used).
-    Strategy:
-      1. Try Gemini (fast timeout)
-      2. If Gemini fails/times out → try Claude
-      3. If both fail → use rule-based free_reply
-    """
-    gemini_err = None
-    claude_err = None
+    if not user_text:
+        user_text = "Hello!"
 
-    # --- Try Gemini ---
+    # Try Gemini first
     if gemini_client:
         try:
-            print(f"[AI] Trying Gemini for: {user_text[:60]}")
+            print(f"[Gemini] Attempting for: {user_text[:80]}...")
             reply = call_gemini_fast(history, user_text, image_pil)
             if reply and reply.strip():
-                print(f"[AI] Gemini success")
-                return reply, "gemini"
+                print(f"[SUCCESS] Gemini replied")
+                return reply.strip(), "gemini"
         except Exception as e:
-            gemini_err = str(e)
-            print(f"[Gemini failed] {gemini_err}")
+            print(f"[Gemini FAILED] {type(e).__name__}: {str(e)[:200]}")
 
-    # --- Try Claude ---
+    # Try Claude as fallback
     if claude_client:
         try:
-            print(f"[AI] Trying Claude for: {user_text[:60]}")
+            print(f"[Claude] Attempting...")
             reply = call_claude(history, user_text, image_pil)
             if reply and reply.strip():
-                print(f"[AI] Claude success")
-                return reply, "claude"
+                print(f"[SUCCESS] Claude replied")
+                return reply.strip(), "claude"
         except Exception as e:
-            claude_err = str(e)
-            print(f"[Claude failed] {claude_err}")
+            print(f"[Claude FAILED] {type(e).__name__}: {str(e)[:200]}")
 
-    # --- Free fallback ---
-    print(f"[AI] Both APIs failed (gemini={gemini_err}, claude={claude_err}), using local fallback")
+    # Final fallback
+    print("[FALLBACK] Both APIs failed → Using local reply")
     has_image = image_pil is not None
-    reply = free_reply(user_text or "", has_image, image_pil)
+    reply = free_reply(user_text, has_image, image_pil)
     return reply, "local"
 
 
