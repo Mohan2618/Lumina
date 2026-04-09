@@ -829,8 +829,8 @@ async function checkApiStatus() {
     if (d.gemini || d.claude) {
       dot.className = 'dot dot-green';
       const parts = [];
-      if (d.gemini) parts.push('Gemini ✓');
-      if (d.claude) parts.push('Claude ✓');
+      if (d.gemini) parts.push('Lumina ✓');
+      if (d.claude) parts.push('Luminus ✓');
       txt.textContent = parts.join(' · ') + ' — AI Ready';
     } else {
       dot.className = 'dot dot-red';
