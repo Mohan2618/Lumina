@@ -99,7 +99,7 @@ body {
 /* ── CHAT ── */
 #chatWrapper {
   position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
-  width: min(94%, 760px); bottom: 110px; display: none;
+  width: min(94%, 760px); bottom: 130px; display: none;
   overflow-y: auto; scroll-behavior: smooth;
 }
 #chatWrapper::-webkit-scrollbar { width: 5px; }
@@ -164,6 +164,7 @@ body {
   background: rgba(255,107,107,0.2); border: 1px solid rgba(255,107,107,0.5);
   color: #ff9999; padding: 3px 10px; border-radius: 20px; font-size: 12px; margin-bottom: 6px;
 }
+
 /* ── PROMPT ── */
 .prompt-wrap {
   position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
@@ -171,7 +172,7 @@ body {
 }
 .prompt-container {
   background: var(--glass); backdrop-filter: blur(18px);
-  border: 1px solid rgba(255,255,255,0.3); border-radius: 28px;
+  border: 1px solid rgba(255,255,255,0.3); border-radius: 22px;
   padding: 10px 14px 10px 18px; display: flex; flex-direction: column; gap: 8px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.2);
 }
@@ -187,12 +188,35 @@ body {
   align-items: center; justify-content: center; font-size: 13px; cursor: pointer; font-weight: bold;
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 }
-.input-row { display: flex; align-items: center; gap: 10px; }
-.prompt-input { flex: 1; background: transparent; border: none; outline: none; font-size: 15px; color: white; min-width: 0; }
+.input-row { display: flex; align-items: flex-end; gap: 10px; }
+
+/* ── FIX 1: TEXTAREA INSTEAD OF INPUT ── */
+.prompt-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  color: white;
+  min-width: 0;
+  resize: none;
+  overflow-y: auto;
+  min-height: 24px;
+  max-height: 160px;
+  line-height: 1.5;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  padding: 2px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.3) transparent;
+}
+.prompt-input::-webkit-scrollbar { width: 4px; }
+.prompt-input::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
 .prompt-input::placeholder { color: rgba(255,255,255,0.55); }
+
 .icon-btn {
   background: transparent; border: none; color: white; cursor: pointer;
   padding: 4px; border-radius: 50%; display: flex; align-items: center; transition: background 0.15s;
+  flex-shrink: 0;
 }
 .icon-btn:hover { background: rgba(255,255,255,0.15); }
 .icon-btn .material-icons { font-size: 24px; }
@@ -256,6 +280,7 @@ body {
 }
 .profile-menu .menu-item:hover { background: rgba(255,255,255,0.1); }
 .profile-menu .menu-item .material-icons { font-size: 20px; opacity: 0.8; }
+
 /* ── AUTH MODAL ── */
 .modal-overlay {
   display: none; position: fixed; inset: 0; backdrop-filter: blur(12px);
@@ -276,7 +301,7 @@ body {
 .modal-input:focus { border-color: rgba(255,255,255,0.7); }
 .modal-input.input-error { border-color: var(--err) !important; }
 .modal-input.input-ok { border-color: var(--ok) !important; }
-.input-field-wrap { display: flex; flex-direction: column; gap: 4px; }
+.input-field-wrap { display: flex; flex-direction: column; gap: 4px; position: relative; }
 .field-hint { font-size: 11px; color: rgba(255,255,255,0.55); padding-left: 4px; }
 .field-error { font-size: 11px; color: var(--err); padding-left: 4px; display: none; }
 .pw-strength-wrap { display: flex; flex-direction: column; gap: 4px; }
@@ -318,6 +343,33 @@ body {
 .modal-alert.error { background: rgba(255,107,107,0.2); border: 1px solid rgba(255,107,107,0.5); color: #ffaaaa; }
 .modal-alert.success { background: rgba(107,203,119,0.2); border: 1px solid rgba(107,203,119,0.5); color: #aaffbb; }
 .rate-limit-timer { text-align: center; font-size: 12px; color: var(--warn); display: none; }
+
+/* ── FIX 2: SAVED ACCOUNTS DROPDOWN ── */
+.saved-accounts-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 100;
+  background: rgba(20,20,50,0.95); border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 10px; backdrop-filter: blur(20px); overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4); display: none;
+}
+.saved-accounts-dropdown.show { display: block; }
+.saved-account-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  cursor: pointer; transition: background 0.15s; color: white;
+}
+.saved-account-item:hover { background: rgba(255,255,255,0.12); }
+.saved-account-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, #41e1ae, #6a7bd1);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; color: white; flex-shrink: 0;
+}
+.saved-account-info { flex: 1; min-width: 0; }
+.saved-account-name { font-size: 13px; font-weight: 600; }
+.saved-account-email { font-size: 11px; opacity: 0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.saved-accounts-header {
+  padding: 8px 14px 4px; font-size: 10px; text-transform: uppercase;
+  letter-spacing: 1px; color: rgba(255,255,255,0.4); border-bottom: 1px solid rgba(255,255,255,0.1);
+}
 
 /* ── FREE TRIAL PROMPT MODAL ── */
 .trial-modal-overlay {
@@ -460,9 +512,11 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     <div id="attachmentPreview"></div>
     <div class="input-row">
       <button class="icon-btn" onclick="triggerUpload()" title="Attach image"><span class="material-icons">add_photo_alternate</span></button>
-      <input type="text" class="prompt-input" id="promptInput"
+      <!-- FIX: textarea instead of input for multi-line support -->
+      <textarea class="prompt-input" id="promptInput" rows="1"
         placeholder="Ask Lumina anything about your image… or generate one!"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}">
+        oninput="autoResizeTextarea(this)"
+        onkeydown="handlePromptKeydown(event)"></textarea>
       <button class="icon-btn" onclick="micAction()" title="Voice input"><span class="material-icons">mic</span></button>
       <button class="send-btn" id="sendBtn" onclick="handleSendOrStop()" title="Send">
         <span class="material-icons" id="actionIcon">arrow_upward</span>
@@ -605,10 +659,17 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
         <span class="field-error" id="dobErr">Must be 13+</span>
       </div>
     </div>
-    <div class="input-field-wrap" id="loginIdentifierWrap">
-      <input class="modal-input" id="loginIdentifier" placeholder="Email or Username">
+
+    <!-- FIX 2: Login identifier with saved accounts dropdown -->
+    <div class="input-field-wrap" id="loginIdentifierWrap" style="position:relative;">
+      <input class="modal-input" id="loginIdentifier" placeholder="Email or Username"
+        oninput="onLoginIdentifierInput()"
+        onfocus="showSavedAccountsDropdown()"
+        autocomplete="off">
       <span class="field-error" id="identifierErr">Required</span>
+      <div class="saved-accounts-dropdown" id="savedAccountsDropdown"></div>
     </div>
+
     <div class="input-field-wrap">
       <div class="pw-wrap">
         <input class="modal-input" id="password" type="password" placeholder="Password" oninput="onPasswordInput()">
@@ -814,6 +875,98 @@ function updateChatIndex(a) {
   localStorage.setItem(userKey('index'), JSON.stringify(a));
 }
 
+// ── FIX 1: TEXTAREA AUTO-RESIZE ───────────────────────────
+window.autoResizeTextarea = function(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+};
+
+window.handlePromptKeydown = function(event) {
+  // Enter without Shift = send; Shift+Enter = new line
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    sendMessage();
+  }
+};
+
+// ── FIX 2: SAVED ACCOUNTS DROPDOWN ────────────────────────
+function getAllSavedAccounts() {
+  const accounts = [];
+  try {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith(LS_USER + '_')) {
+        const u = JSON.parse(localStorage.getItem(k) || 'null');
+        if (u && u.username && u.firstName) {
+          accounts.push(u);
+        }
+      }
+    });
+  } catch(e) {}
+  return accounts;
+}
+
+window.showSavedAccountsDropdown = function() {
+  if (authMode !== 'signin') return;
+  const accounts = getAllSavedAccounts();
+  const dropdown = document.getElementById('savedAccountsDropdown');
+  if (!accounts.length) { dropdown.classList.remove('show'); return; }
+
+  let html = '<div class="saved-accounts-header">Saved Accounts</div>';
+  accounts.forEach(u => {
+    html += `
+      <div class="saved-account-item" onclick="selectSavedAccount(${JSON.stringify(u.username)})">
+        <div class="saved-account-avatar">${u.firstName.charAt(0).toUpperCase()}</div>
+        <div class="saved-account-info">
+          <div class="saved-account-name">${escapeHtml(u.firstName + ' ' + u.lastName)}</div>
+          <div class="saved-account-email">${escapeHtml(u.email || u.username)}</div>
+        </div>
+      </div>`;
+  });
+  dropdown.innerHTML = html;
+  dropdown.classList.add('show');
+};
+
+window.selectSavedAccount = function(username) {
+  document.getElementById('loginIdentifier').value = username;
+  document.getElementById('savedAccountsDropdown').classList.remove('show');
+  document.getElementById('password').focus();
+};
+
+window.onLoginIdentifierInput = function() {
+  const val = document.getElementById('loginIdentifier').value.toLowerCase();
+  const dropdown = document.getElementById('savedAccountsDropdown');
+  if (!val) { showSavedAccountsDropdown(); return; }
+
+  const accounts = getAllSavedAccounts().filter(u =>
+    u.username.toLowerCase().includes(val) ||
+    (u.email && u.email.toLowerCase().includes(val))
+  );
+  if (!accounts.length) { dropdown.classList.remove('show'); return; }
+
+  let html = '<div class="saved-accounts-header">Matching Accounts</div>';
+  accounts.forEach(u => {
+    html += `
+      <div class="saved-account-item" onclick="selectSavedAccount(${JSON.stringify(u.username)})">
+        <div class="saved-account-avatar">${u.firstName.charAt(0).toUpperCase()}</div>
+        <div class="saved-account-info">
+          <div class="saved-account-name">${escapeHtml(u.firstName + ' ' + u.lastName)}</div>
+          <div class="saved-account-email">${escapeHtml(u.email || u.username)}</div>
+        </div>
+      </div>`;
+  });
+  dropdown.innerHTML = html;
+  dropdown.classList.add('show');
+};
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  const dropdown = document.getElementById('savedAccountsDropdown');
+  const wrap = document.getElementById('loginIdentifierWrap');
+  if (dropdown && wrap && !wrap.contains(e.target)) {
+    dropdown.classList.remove('show');
+  }
+});
+
 // ── API STATUS CHECK ──────────────────────────────────────
 async function checkApiStatus() {
   document.getElementById('profileMenu').style.display='none';
@@ -882,11 +1035,7 @@ function toast(msg, dur=2500) {
 
 // ── SEND/STOP BUTTON ─────────────────────────────────────
 window.handleSendOrStop = function() {
-  if (generating) {
-    stopGeneration();
-  } else {
-    sendMessage();
-  }
+  if (generating) { stopGeneration(); } else { sendMessage(); }
 };
 
 function setGenerating(val) {
@@ -894,18 +1043,14 @@ function setGenerating(val) {
   const btn = document.getElementById('sendBtn');
   const icon = document.getElementById('actionIcon');
   if (val) {
-    btn.classList.add('stop-mode');
-    icon.textContent = 'stop';
+    btn.classList.add('stop-mode'); icon.textContent = 'stop';
   } else {
-    btn.classList.remove('stop-mode');
-    icon.textContent = 'arrow_upward';
+    btn.classList.remove('stop-mode'); icon.textContent = 'arrow_upward';
   }
 }
 
 function stopGeneration() {
-  if (abortController) {
-    abortController.abort();
-  }
+  if (abortController) abortController.abort();
   setGenerating(false);
   removeTyping();
   addBotMsg('⛔ Generation stopped.', false, null, 'local');
@@ -927,22 +1072,16 @@ function createMsgWrapper(role) {
 
 function addUserMsg(text, images) {
   const wrapper = createMsgWrapper('user');
-
   if (text) {
     const div = document.createElement('div');
     div.classList.add('chat-msg', 'user-msg');
     div.innerText = text;
     wrapper.appendChild(div);
-
     const actions = document.createElement('div');
     actions.className = 'msg-actions';
-    actions.innerHTML = `
-      <button class="msg-action-btn" onclick="copyText(${JSON.stringify(text)})">
-        <span class="material-icons">content_copy</span> Copy
-      </button>`;
+    actions.innerHTML = `<button class="msg-action-btn" onclick="copyText(${JSON.stringify(text)})"><span class="material-icons">content_copy</span> Copy</button>`;
     wrapper.appendChild(actions);
   }
-
   if (images && images.length > 0) {
     const attachBox = document.createElement('div');
     attachBox.className = 'msg-attachments user-side';
@@ -954,7 +1093,6 @@ function addUserMsg(text, images) {
     });
     wrapper.appendChild(attachBox);
   }
-
   document.getElementById('chatArea').appendChild(wrapper);
   scrollChat();
   return wrapper;
@@ -962,20 +1100,17 @@ function addUserMsg(text, images) {
 
 function addBotMsg(content, isHTML=false, imgSrc=null, modelUsed='') {
   const wrapper = createMsgWrapper('bot');
-
   const div = document.createElement('div');
   div.classList.add('chat-msg', 'bot-msg');
   if (isHTML) div.innerHTML = content; else div.innerText = content;
   wrapper.appendChild(div);
 
-  // Model badge
-  // Model badge - Always show Lumina
-if (modelUsed) {
-  const badge = document.createElement('span');
-  badge.className = 'model-badge badge-gemini';  // or create a new style
-  badge.textContent = '🌟 Lumina';
-  wrapper.appendChild(badge);
-}
+  if (modelUsed) {
+    const badge = document.createElement('span');
+    badge.className = 'model-badge badge-gemini';
+    badge.textContent = '🌟 Lumina';
+    wrapper.appendChild(badge);
+  }
 
   if (imgSrc) {
     const attachBox = document.createElement('div');
@@ -998,7 +1133,6 @@ if (modelUsed) {
   }
   actions.innerHTML = actHtml;
   wrapper.appendChild(actions);
-
   document.getElementById('chatArea').appendChild(wrapper);
   scrollChat();
   return wrapper;
@@ -1064,10 +1198,7 @@ window.sendMessage = async function() {
   if (!text && !hasFiles) return;
 
   if (!currentUser) {
-    if (guestMessageCount >= FREE_TRIAL_LIMIT) {
-      showTrialModal();
-      return;
-    }
+    if (guestMessageCount >= FREE_TRIAL_LIMIT) { showTrialModal(); return; }
   }
 
   setGenerating(true);
@@ -1082,7 +1213,10 @@ window.sendMessage = async function() {
 
   const promptText=text;
   const filesToSend=[...attachedFiles];
-  input.value=''; attachedFiles=[]; renderPreviews();
+  // Reset textarea
+  input.value='';
+  input.style.height = 'auto';
+  attachedFiles=[]; renderPreviews();
   showTyping();
 
   abortController = new AbortController();
@@ -1102,9 +1236,7 @@ window.sendMessage = async function() {
     }
 
     const res = await fetch('/process', {
-      method: 'POST',
-      body: fd,
-      signal: abortController.signal
+      method: 'POST', body: fd, signal: abortController.signal
     });
 
     removeTyping();
@@ -1112,7 +1244,6 @@ window.sendMessage = async function() {
 
     const data = await res.json();
     if (data.history) conversationHistory = data.history;
-
     if (data.last_image) lastImageB64 = data.last_image;
     else if (filesToSend.length > 0) lastImageB64 = filesToSend[0];
 
@@ -1122,17 +1253,12 @@ window.sendMessage = async function() {
     if (data.message) addBotMsg(formatReply(data.message), true, resultImg, modelUsed);
     else if (resultImg) addBotMsg('Here is your processed image:', false, resultImg, modelUsed);
 
-    if (!currentUser) {
-      guestMessageCount++;
-      updateTrialCounter();
-    }
+    if (!currentUser) { guestMessageCount++; updateTrialCounter(); }
 
     saveChatHistory();
   } catch(err) {
     removeTyping();
-    if (err.name !== 'AbortError') {
-      addBotMsg('⚠️ Connection error: ' + err.message);
-    }
+    if (err.name !== 'AbortError') addBotMsg('⚠️ Connection error: ' + err.message);
   } finally {
     setGenerating(false);
     abortController = null;
@@ -1141,7 +1267,9 @@ window.sendMessage = async function() {
 
 // ── QUICK OP ─────────────────────────────────────────────
 window.quickOp = function(cmd) {
-  document.getElementById('promptInput').value=cmd;
+  const input = document.getElementById('promptInput');
+  input.value = cmd;
+  autoResizeTextarea(input);
   closeOpsPanel();
   sendMessage();
 };
@@ -1149,7 +1277,9 @@ window.promptGenerate = function() {
   closeOpsPanel();
   const p=prompt('Enter a text prompt to generate an image:');
   if (p && p.trim()) {
-    document.getElementById('promptInput').value='generate image of ' + p.trim();
+    const input = document.getElementById('promptInput');
+    input.value = 'generate image of ' + p.trim();
+    autoResizeTextarea(input);
     sendMessage();
   }
 };
@@ -1163,9 +1293,11 @@ window.newChat = function() {
   chatStarted=false; attachedFiles=[]; conversationHistory=[];
   currentChatTitle=null; currentChatKey=null;
   lastImageB64=null;
+  const input = document.getElementById('promptInput');
+  input.value=''; input.style.height='auto';
   renderPreviews();
   document.getElementById('profileMenu').style.display='none';
-  if (generating) { stopGeneration(); }
+  if (generating) stopGeneration();
 };
 
 // ── SHARE CHAT ────────────────────────────────────────────
@@ -1177,9 +1309,7 @@ window.shareChat = function() {
   document.querySelectorAll('.chat-msg-wrapper').forEach(wrapper => {
     const isUser = wrapper.classList.contains('user-wrapper');
     const bubble = wrapper.querySelector('.chat-msg');
-    if (bubble) {
-      text += (isUser ? 'You: ' : 'Lumina: ') + (bubble.innerText || bubble.textContent).trim() + '\n\n';
-    }
+    if (bubble) text += (isUser ? 'You: ' : 'Lumina: ') + (bubble.innerText || bubble.textContent).trim() + '\n\n';
   });
   copyText(text);
   toast('Chat copied to clipboard! Share it anywhere.');
@@ -1224,19 +1354,13 @@ function saveChatHistory() {
   updateChatIndex(idx);
 }
 
-window.openHistory=function(){
-  document.getElementById('historyPanel').style.display='block';
-  renderHistoryList();
-};
+window.openHistory=function(){ document.getElementById('historyPanel').style.display='block'; renderHistoryList(); };
 window.closeHistory=function(){ document.getElementById('historyPanel').style.display='none'; };
 
 function renderHistoryList() {
   const list=document.getElementById('historyList'); list.innerHTML='';
   const idx=getChatIndex().slice().sort((a,b)=>b.ts-a.ts);
-  if (!idx.length) {
-    list.innerHTML='<p style="opacity:.55;font-size:13px;">No saved chats yet.</p>';
-    return;
-  }
+  if (!idx.length) { list.innerHTML='<p style="opacity:.55;font-size:13px;">No saved chats yet.</p>'; return; }
   idx.forEach(entry=>{
     const item=document.createElement('div');
     item.className='history-item' + (entry.key === currentChatKey ? ' active-chat' : '');
@@ -1265,8 +1389,7 @@ window.deleteChat=function(e,key){
     document.getElementById('watermark').style.display='block';
     document.getElementById('homeSubtitle').style.display='block';
     chatStarted=false; conversationHistory=[];
-    currentChatTitle=null; currentChatKey=null;
-    lastImageB64=null;
+    currentChatTitle=null; currentChatKey=null; lastImageB64=null;
     toast('Chat deleted.');
   }
   renderHistoryList();
@@ -1279,12 +1402,9 @@ function loadChat(key) {
     document.getElementById('chatArea').innerHTML=data.html||'';
     conversationHistory=data.history||[];
     currentChatTitle=data.title||null;
-    currentChatKey=key;
-    lastImageB64=null;
+    currentChatKey=key; lastImageB64=null;
     document.querySelectorAll('.msg-attach-img, .chat-image-large').forEach(img=>{
-      if (img.src && !img.src.endsWith('""')) {
-        img.onclick=()=>openLightbox(img.src);
-      }
+      if (img.src && !img.src.endsWith('""')) img.onclick=()=>openLightbox(img.src);
     });
     startChatMode(); closeHistory(); scrollChat();
   } catch(e) { console.error(e); }
@@ -1306,10 +1426,7 @@ function handleFiles(files) {
 
 function renderPreviews() {
   const box=document.getElementById('attachmentPreview'); box.innerHTML='';
-  if (attachedFiles.length === 0) {
-    box.classList.remove('has-files');
-    return;
-  }
+  if (attachedFiles.length === 0) { box.classList.remove('has-files'); return; }
   box.classList.add('has-files');
   attachedFiles.forEach((src,i)=>{
     const wrap=document.createElement('div'); wrap.className='attach-thumb';
@@ -1329,7 +1446,11 @@ window.micAction=function(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if (!SR) { toast('Voice input requires Chrome or Edge.'); return; }
   const rec=new SR(); rec.lang='en-US';
-  rec.onresult=e=>{ document.getElementById('promptInput').value=e.results[0][0].transcript; };
+  rec.onresult=e=>{
+    const input = document.getElementById('promptInput');
+    input.value=e.results[0][0].transcript;
+    autoResizeTextarea(input);
+  };
   rec.start();
 };
 
@@ -1339,17 +1460,13 @@ function openLightbox(src) {
   document.getElementById('lightbox').style.display='flex';
 }
 window.closeLightbox = function(e) {
-  if (e.target === document.getElementById('lightbox')) {
-    document.getElementById('lightbox').style.display='none';
-  }
+  if (e.target === document.getElementById('lightbox')) document.getElementById('lightbox').style.display='none';
 };
 window.downloadLightboxImage = function() {
-  const src = document.getElementById('lightboxImg').src;
-  downloadImage(src, 'lumina-' + Date.now() + '.png');
+  downloadImage(document.getElementById('lightboxImg').src, 'lumina-' + Date.now() + '.png');
 };
 window.copyLightboxImage = async function() {
-  const src = document.getElementById('lightboxImg').src;
-  await copyImageToClipboard(src);
+  await copyImageToClipboard(document.getElementById('lightboxImg').src);
 };
 
 // ── OPS PANEL ─────────────────────────────────────────────
@@ -1362,10 +1479,8 @@ window.closeOpsPanel=function(){ document.getElementById('opsPanel').style.displ
 // ── PASSWORD STRENGTH ─────────────────────────────────────
 function checkPasswordStrength(pw) {
   const checks={
-    len: pw.length>=8,
-    upper: /[A-Z]/.test(pw),
-    lower: /[a-z]/.test(pw),
-    num: /\d/.test(pw),
+    len: pw.length>=8, upper: /[A-Z]/.test(pw),
+    lower: /[a-z]/.test(pw), num: /\d/.test(pw),
     special: /[!@#$%^&*(),.?":{}|<>]/.test(pw)
   };
   const score=Object.values(checks).filter(Boolean).length;
@@ -1394,10 +1509,7 @@ function updateReqs(checks) {
 }
 window.onPasswordInput=function(){
   const pw=document.getElementById('password').value;
-  if (authMode==='signup') {
-    const checks=renderStrength(pw,'bar','pwLabel');
-    updateReqs(checks);
-  }
+  if (authMode==='signup') { const checks=renderStrength(pw,'bar','pwLabel'); updateReqs(checks); }
 };
 window.onNewPasswordInput=function(){ renderStrength(document.getElementById('newPassword').value,'nbar','newPwLabel'); };
 window.onChangePwInput=function(){ renderStrength(document.getElementById('newPwChange').value,'cbar','changePwLabel'); };
@@ -1421,6 +1533,8 @@ window.showSignIn=function(){
   document.getElementById('switchBtn').textContent="Don't have an account? Sign Up";
   document.getElementById('authSubmitBtn').textContent='Sign In';
   document.getElementById('authModal').style.display='flex';
+  // Auto-show saved accounts
+  setTimeout(showSavedAccountsDropdown, 100);
 };
 window.showSignUp=function(){
   authMode='signup'; resetAuthModal();
@@ -1442,12 +1556,12 @@ function resetAuthModal() {
   document.getElementById('authAlert').style.display='none';
   document.getElementById('authAlert').className='modal-alert';
   document.querySelectorAll('#authModal .field-error').forEach(e=>e.style.display='none');
-  document.querySelectorAll('#authModal .modal-input').forEach(e=>{ e.classList.remove('input-error','input-ok'); });
+  document.querySelectorAll('#authModal .modal-input').forEach(e=>{ e.classList.remove('input-error','input-ok'); e.value=''; });
+  document.getElementById('savedAccountsDropdown').classList.remove('show');
 }
 function showAuthAlert(msg, type='error') {
   const el=document.getElementById('authAlert');
-  el.textContent=msg; el.className='modal-alert '+type;
-  el.style.display='flex';
+  el.textContent=msg; el.className='modal-alert '+type; el.style.display='flex';
 }
 function showFieldError(errId, show=true) {
   const el=document.getElementById(errId);
@@ -1717,13 +1831,11 @@ function showChangePwAlert(msg,type='error'){
 
 // ── LOGOUT ────────────────────────────────────────────────
 window.logout=function(){
-  currentUser=null; lastImageB64=null;
-  guestMessageCount=0;
+  currentUser=null; lastImageB64=null; guestMessageCount=0;
   document.getElementById('authButtons').style.display='flex';
   document.getElementById('profileAvatar').style.display='none';
   document.getElementById('profileMenu').style.display='none';
-  newChat();
-  updateTrialCounter();
+  newChat(); updateTrialCounter();
   toast('Signed out successfully.');
 };
 
@@ -1761,7 +1873,6 @@ function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 
 // ── INIT ─────────────────────────────────────────────────
 updateTrialCounter();
-// Auto-check API status on load (silent — only shows if there's a problem)
 setTimeout(async () => {
   try {
     const r = await fetch('/api/status');
