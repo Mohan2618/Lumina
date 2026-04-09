@@ -15,7 +15,7 @@ app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024
 app.secret_key = secrets.token_hex(32)
 
 # ─────────────────────────────────────────────────────────────
-# API SETUP - FIXED FOR 2026
+# API SETUP
 # ─────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
@@ -28,12 +28,9 @@ print(f"[INIT] ANTHROPIC key present: {bool(ANTHROPIC_API_KEY)} | length: {len(A
 print(f"[INIT] Gemini client: {'OK' if gemini_client else 'MISSING'}")
 print(f"[INIT] Claude client: {'OK' if claude_client else 'MISSING'}")
 
-# Stable models - April 2026
+# Stable models
 GEMINI_MODEL = "gemini-2.5-flash"
-GEMINI_IMAGE_MODEL = "gemini-2.5-flash"
-
-CLAUDE_MODEL = "claude-3-5-sonnet-20241022"   # Most reliable Claude model right now
-
+CLAUDE_MODEL = "claude-3-5-sonnet-20241022"
 GEMINI_TIMEOUT = 15
 
 # ─────────────────────────────────────────────────────────────
@@ -169,7 +166,6 @@ def call_claude(history: list, user_text: str, image_pil=None) -> str:
         raise Exception("No Claude API key configured")
 
     messages = []
-
     for turn in history[-10:]:
         role = turn.get("role", "user")
         if role == "model":
@@ -279,7 +275,6 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
     if not user_text:
         user_text = "Hello!"
 
-    # Try Gemini first
     if gemini_client:
         try:
             print(f"[Gemini] Attempting for: {user_text[:80]}...")
@@ -290,7 +285,6 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
         except Exception as e:
             print(f"[Gemini FAILED] {type(e).__name__}: {str(e)[:200]}")
 
-    # Try Claude as fallback
     if claude_client:
         try:
             print(f"[Claude] Attempting...")
@@ -301,7 +295,6 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
         except Exception as e:
             print(f"[Claude FAILED] {type(e).__name__}: {str(e)[:200]}")
 
-    # Final fallback
     print("[FALLBACK] Both APIs failed → Using local reply")
     has_image = image_pil is not None
     reply = free_reply(user_text, has_image, image_pil)
@@ -309,61 +302,115 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
 
 
 # ─────────────────────────────────────────────────────────────
-#  IMAGE GENERATION
+#  FIX 3: IMAGE GENERATION — Better model list & fallback
 # ─────────────────────────────────────────────────────────────
 
 def generate_image_from_prompt(prompt: str):
-    """Try to generate real image. Fall back to nice placeholder if fails."""
+    """
+    Try multiple Gemini image generation models in order.
+    Falls back to a styled placeholder only if ALL fail.
+    """
     if not gemini_client:
+        print("[Image Gen] No Gemini client — using placeholder")
         return create_placeholder_image(prompt)
 
-    models_to_try = [
-        "gemini-2.5-flash-image",           # Best for image generation
-        "gemini-2.5-flash-image-preview",
-        "gemini-2.5-flash",                 # fallback
+    # Updated model list for 2026 — try newest first
+    image_gen_models = [
+        "gemini-2.0-flash-preview-image-generation",
+        "gemini-2.0-flash-exp-image-generation",
+        "imagen-3.0-generate-002",
+        "imagen-3.0-generate-001",
+        "imagen-3.0-fast-generate-001",
+        "imagegeneration@006",
     ]
 
-    for model in models_to_try:
+    for model_id in image_gen_models:
         try:
-            print(f"[Image Gen] Trying model: {model}")
+            print(f"[Image Gen] Trying: {model_id}")
 
-            response = gemini_client.models.generate_content(
-                model=model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_modalities=["IMAGE", "TEXT"],
-                    temperature=0.9,
+            # Imagen models use a different API path
+            if model_id.startswith("imagen"):
+                response = gemini_client.models.generate_images(
+                    model=model_id,
+                    prompt=prompt,
+                    config=types.GenerateImagesConfig(
+                        number_of_images=1,
+                        aspect_ratio="1:1",
+                        safety_filter_level="block_only_high",
+                    )
                 )
-            )
-
-            # Look for image in the response
-            for part in response.candidates[0].content.parts:
-                if (hasattr(part, 'inline_data') and 
-                    part.inline_data and 
-                    part.inline_data.mime_type and 
-                    part.inline_data.mime_type.startswith("image/")):
-
-                    img_bytes = part.inline_data.data
-                    if isinstance(img_bytes, str):
-                        img_bytes = base64.b64decode(img_bytes)
-
-                    pil_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-                    print(f"[Image Gen] ✅ SUCCESS with {model}")
+                if response.generated_images:
+                    img_data = response.generated_images[0].image.image_bytes
+                    if isinstance(img_data, str):
+                        img_data = base64.b64decode(img_data)
+                    pil_img = Image.open(io.BytesIO(img_data)).convert("RGB")
+                    print(f"[Image Gen] ✅ SUCCESS with Imagen: {model_id}")
                     return pil_img
 
+            elif model_id.startswith("imagegeneration"):
+                # Legacy Imagen via predict
+                response = gemini_client.models.generate_images(
+                    model=model_id,
+                    prompt=prompt,
+                    config=types.GenerateImagesConfig(number_of_images=1)
+                )
+                if response.generated_images:
+                    img_data = response.generated_images[0].image.image_bytes
+                    if isinstance(img_data, str):
+                        img_data = base64.b64decode(img_data)
+                    pil_img = Image.open(io.BytesIO(img_data)).convert("RGB")
+                    print(f"[Image Gen] ✅ SUCCESS: {model_id}")
+                    return pil_img
+
+            else:
+                # Gemini multimodal models
+                response = gemini_client.models.generate_content(
+                    model=model_id,
+                    contents=f"Generate a high quality image: {prompt}",
+                    config=types.GenerateContentConfig(
+                        response_modalities=["IMAGE", "TEXT"],
+                        temperature=0.9,
+                    )
+                )
+                # Search all parts for image data
+                candidates = getattr(response, 'candidates', [])
+                for candidate in candidates:
+                    content = getattr(candidate, 'content', None)
+                    if not content:
+                        continue
+                    for part in (content.parts or []):
+                        inline = getattr(part, 'inline_data', None)
+                        if inline and getattr(inline, 'mime_type', '').startswith('image/'):
+                            raw = inline.data
+                            if isinstance(raw, str):
+                                raw = base64.b64decode(raw)
+                            pil_img = Image.open(io.BytesIO(raw)).convert("RGB")
+                            print(f"[Image Gen] ✅ SUCCESS with {model_id}")
+                            return pil_img
+
         except Exception as e:
-            print(f"[Image Gen] {model} failed: {str(e)[:120]}")
+            err_str = str(e)
+            print(f"[Image Gen] {model_id} failed: {err_str[:150]}")
+            # Don't try more models if quota is exhausted
+            if "quota" in err_str.lower() or "429" in err_str:
+                print("[Image Gen] Quota hit — stopping model attempts")
+                break
             continue
 
-    # If nothing worked
-    print("[Image Gen] ❌ All models failed - showing placeholder")
+    # If all models failed — create a stylized placeholder that looks intentional
+    print("[Image Gen] All models failed — using styled placeholder")
     return create_placeholder_image(prompt)
 
 
 def create_placeholder_image(prompt: str):
-    """Clean Lumina placeholder"""
+    """
+    Create a visually appealing placeholder with gradient background
+    that clearly communicates it's a placeholder, not a generated image.
+    """
     w, h = 512, 512
     arr = np.zeros((h, w, 3), dtype=np.uint8)
+
+    # Blue-to-teal gradient
     for y in range(h):
         ratio = y / h
         arr[y, :] = [
@@ -372,22 +419,44 @@ def create_placeholder_image(prompt: str):
             int(230 - 120 * ratio)
         ]
 
+    # Add some visual noise/texture
+    noise = np.random.normal(0, 8, arr.shape).astype(np.int16)
+    arr = np.clip(arr.astype(np.int16) + noise, 0, 255).astype(np.uint8)
+
     pil_img = Image.fromarray(arr)
     draw = ImageDraw.Draw(pil_img)
 
     try:
-        font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 21)
-        font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14)
+        font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
+        font_body  = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 13)
+        font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 11)
     except:
-        font_large = font_small = ImageFont.load_default()
+        font_title = font_body = font_small = ImageFont.load_default()
 
-    draw.text((w//2, h//2 - 80), "🎨 Generated Image", fill=(255, 255, 255), anchor="mm", font=font_large)
-    draw.text((w//2, h//2 - 35), f'"{prompt[:48]}{"..." if len(prompt) > 48 else ""}"', 
-              fill=(210, 240, 255), anchor="mm", font=font_small)
-    draw.text((w//2, h//2 + 20), "Lumina • AI Image Studio", 
-              fill=(180, 255, 200), anchor="mm", font=font_small)
-    draw.text((w//2, h//2 + 48), "Image generation in progress...", 
-              fill=(160, 200, 255), anchor="mm", font=font_small)
+    # Semi-transparent overlay box
+    overlay = Image.new('RGBA', (420, 200), (0, 0, 0, 140))
+    pil_img.paste(Image.fromarray(np.array(overlay)[:,:,:3]), (46, 156), Image.fromarray(np.array(overlay)[:,:,3], 'L'))
+
+    draw.text((w//2, 180), "⚠ Image Generation Unavailable", fill=(255, 220, 100), anchor="mm", font=font_title)
+    draw.text((w//2, 215), "Add GEMINI_API_KEY with Imagen access", fill=(200, 230, 255), anchor="mm", font=font_body)
+
+    # Wrap the prompt text
+    words = prompt.split()
+    lines, current = [], ""
+    for word in words:
+        test = (current + " " + word).strip()
+        if len(test) > 44:
+            if current: lines.append(current)
+            current = word
+        else:
+            current = test
+    if current: lines.append(current)
+
+    y_start = 260
+    for i, line in enumerate(lines[:3]):
+        draw.text((w//2, y_start + i*18), f'"{line}"', fill=(180, 210, 255), anchor="mm", font=font_small)
+
+    draw.text((w//2, 350), "🌟 Lumina AI Image Studio", fill=(100, 255, 200), anchor="mm", font=font_body)
 
     return pil_img
 
@@ -425,7 +494,6 @@ def free_reply(prompt, has_image, img=None):
     op=detect_op(p)
     if op: return op
 
-    # General conversational replies
     replies={
         r'hello|hi\b|hey\b':             "Hi there! 👋 I'm **Lumina**, your AI image assistant. I can process images, analyze medical scans, apply creative filters, generate images, and answer any questions. What can I help you with?",
         r'who are you|what are you':     "I'm **Lumina** — an advanced AI image processing assistant powered by Gemini and Claude! I can analyze images, apply filters, do medical imaging, generate art, and much more. Just upload an image or ask me anything!",
@@ -447,7 +515,6 @@ def free_reply(prompt, has_image, img=None):
     for pat,rep in replies.items():
         if re.search(pat,p): return rep
 
-    # Generic helpful response
     if p:
         return (f"I understand you're asking about: *\"{prompt[:80]}{'...' if len(prompt)>80 else ''}\"*\n\n"
                 "I'm Lumina, an AI image processing assistant. While I specialize in images, I can help with general questions too when connected to AI APIs.\n\n"
@@ -460,9 +527,7 @@ def free_reply(prompt, has_image, img=None):
     return "Upload an image and ask me to describe it, apply any filter, analyze medically, or even generate a new image from a text prompt!"
 
 def detect_op(p):
-    # ── FIX: Changed \bgenerat\b to \bgenerat\w* to match "generate", "generates", "generating" ──
     if re.search(r'\bgenerat\w*\b', p):
-        # Better prompt extraction
         prompt_match = re.sub(r'^(generate|create|make|draw|paint)\s+(a|an|the|image|picture|photo|of)?\s*', '', p, flags=re.I).strip()
         if not prompt_match or len(prompt_match) < 5:
             prompt_match = p
@@ -1018,10 +1083,7 @@ def process_image(img, intent, params):
         op = params.get('op', 'dilate')
         gray = np.array(ImageOps.grayscale(img))
         k = np.ones((5,5), np.uint8)
-        if op == 'dilate':
-            result = cv2.dilate(gray, k)
-        else:
-            result = cv2.erode(gray, k)
+        result = cv2.dilate(gray, k) if op == 'dilate' else cv2.erode(gray, k)
         return Image.fromarray(result).convert("RGB")
     if intent=='sobel':
         gray = np.array(ImageOps.grayscale(img), dtype=np.float32)
@@ -1113,8 +1175,7 @@ def process_image(img, intent, params):
         r = np.clip(gray * 1.05, 0, 255).astype(np.uint8)
         g = np.clip(gray * 0.95, 0, 255).astype(np.uint8)
         b = np.clip(gray * 0.85, 0, 255).astype(np.uint8)
-        colored = np.stack([r, g, b], axis=2)
-        return Image.fromarray(colored)
+        return Image.fromarray(np.stack([r, g, b], axis=2))
     if intent=='restore_old':
         cv_img = pil_to_cv2(img)
         denoised = cv2.fastNlMeansDenoisingColored(cv_img, None, 10, 10, 7, 21)
@@ -1224,7 +1285,6 @@ def process():
             except Exception as e:
                 print(f"Failed to decode last_image: {e}")
 
-        # Pass image to AI only if it's a new upload
         ai_image = image_pil if (file and file.filename) else None
 
         raw_reply, model_used = call_ai(history, prompt, ai_image)
