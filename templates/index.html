@@ -1220,52 +1220,58 @@ window.copyImageToClipboard = async function(src) {
 // ── SEND MESSAGE ──────────────────────────────────────────
 window.sendMessage = async function() {
   if (generating) return;
-  const input=document.getElementById('promptInput');
-  const text=input.value.trim();
-  const hasFiles=attachedFiles.length>0;
-  if (!text && !hasFiles) return;
+  
+  const input = document.getElementById('promptInput');
+  let text = input.value.trim();
+  
+  if (!text && attachedFiles.length === 0) return;
 
-  if (!currentUser) {
-    if (guestMessageCount >= FREE_TRIAL_LIMIT) { showTrialModal(); return; }
-  }
+  // IMPORTANT: Do NOT send previous image when user is asking to GENERATE
+  const isGenerationRequest = text.toLowerCase().includes('generate') || 
+                              text.toLowerCase().includes('create') || 
+                              text.toLowerCase().includes('make a') || 
+                              text.toLowerCase().includes('draw');
 
   setGenerating(true);
   startChatMode();
 
-  if (!currentChatTitle) {
-    currentChatTitle = text || 'Image uploaded';
-    currentChatKey = userKey('chat_' + Date.now());
-  }
+  addUserMsg(text, (!isGenerationRequest && attachedFiles.length > 0) ? [...attachedFiles] : []);
 
-  addUserMsg(text, hasFiles ? [...attachedFiles] : []);
+  const promptText = text;
+  const filesToSend = (!isGenerationRequest && attachedFiles.length > 0) ? [...attachedFiles] : [];
 
-  const promptText=text;
-  const filesToSend=[...attachedFiles];
-  // Reset textarea
-  input.value='';
+  // Reset input
+  input.value = '';
   input.style.height = 'auto';
-  attachedFiles=[]; renderPreviews();
+  attachedFiles = [];
+  renderPreviews();
+
   showTyping();
 
-  abortController = new AbortController();
-
   try {
-    const fd=new FormData();
+    const fd = new FormData();
     fd.append('prompt', promptText);
     fd.append('history', JSON.stringify(conversationHistory));
 
-    if (lastImageB64 && filesToSend.length === 0) {
-      fd.append('last_image', lastImageB64);
-    }
-
+    // Only send image if it's NOT a generation request
     if (filesToSend.length > 0) {
-      const blob = await (await fetch(filesToSend[0])).blob();
+      let imageToSend = filesToSend[0];
+      
+      // Compress image before sending (very important to avoid 413)
+      if (imageToSend.startsWith('data:image')) {
+        imageToSend = await compressImageForUpload(imageToSend);   // Use the compress function from earlier
+      }
+
+      const blob = await (await fetch(imageToSend)).blob();
       fd.append('image', blob, 'upload.jpg');
     }
 
     const res = await fetch('/process', {
-      method: 'POST', body: fd, signal: abortController.signal
+      method: 'POST',
+      body: fd
     });
+
+    // ... rest of your code remains same
 
     removeTyping();
     if (!res.ok) { addBotMsg('⚠️ Server error: ' + await res.text()); setGenerating(false); return; }
