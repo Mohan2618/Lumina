@@ -285,7 +285,7 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
                 print(f"[SUCCESS] Gemini replied")
                 return reply.strip(), "gemini"
         except Exception as e:
-            print(f"[Gemini FAILED] {type(e).__name__}: {str(e)[:200]}")
+            print(f"[Gemini FAILED] {type(e).__name__}: {str(e)[:500]}")  # <-- increased to 500
 
     if claude_client:
         try:
@@ -295,12 +295,10 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
                 print(f"[SUCCESS] Claude replied")
                 return reply.strip(), "claude"
         except Exception as e:
-            print(f"[Claude FAILED] {type(e).__name__}: {str(e)[:200]}")
+            print(f"[Claude FAILED] {type(e).__name__}: {str(e)[:500]}")  # <-- increased to 500
 
     print("[FALLBACK] Both APIs failed → Using local reply")
-    has_image = image_pil is not None
-    reply = free_reply(user_text, has_image, image_pil)
-    return reply, "local"
+    ...
 
 
 # ─────────────────────────────────────────────────────────────
