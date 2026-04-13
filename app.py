@@ -11,7 +11,9 @@ import anthropic
 import threading
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024   # 100 MB
+app.config['MAX_FORM_MEMORY_SIZE'] = 100 * 1024 * 1024
+app.config['MAX_FORM_PARTS'] = 1000
 app.secret_key = secrets.token_hex(32)
 
 # ─────────────────────────────────────────────────────────────
