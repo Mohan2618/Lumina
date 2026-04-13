@@ -39,7 +39,7 @@ print(f"[INIT] Gemini client: {'OK' if gemini_client else 'MISSING'}")
 print(f"[INIT] Claude client: {'DISABLED' if not ENABLE_CLAUDE else ('OK' if claude_client else 'FAILED')}")
 
 # Stable models
-GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_MODEL = "gemini-2.5-flash-lite"
 CLAUDE_MODEL = "claude-3-5-sonnet-20241022"
 GEMINI_TIMEOUT = 30
 
