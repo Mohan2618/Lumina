@@ -329,77 +329,58 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
 # ─────────────────────────────────────────────────────────────
 
 def generate_image_from_prompt(prompt: str):
-    """Attempt to generate real image. Fall back gracefully."""
-    if not gemini_client:
-        print("[Image Gen] No Gemini client available")
-        return create_placeholder_image(prompt)
+    """Free Flux.1 Schnell via Hugging Face (best free option in 2026)"""
+    print(f"[Flux Schnell] Generating image for: {prompt[:100]}...")
 
-    print(f"[Image Gen] Starting for prompt: {prompt[:70]}...")
-
-    models_to_try = [
-        "gemini-2.0-flash-preview-image-generation",
-        "gemini-2.0-flash-exp",
-    ]
-
-    for model in models_to_try:
-        try:
-            response = gemini_client.models.generate_content(
-                model=model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_modalities=["IMAGE", "TEXT"],
-                    temperature=0.85,
-                )
-            )
-
-            for part in response.candidates[0].content.parts:
-                if (hasattr(part, 'inline_data') and
-                    part.inline_data and
-                    getattr(part.inline_data, 'mime_type', '').startswith('image/')):
-
-                    img_bytes = part.inline_data.data
-                    if isinstance(img_bytes, str):
-                        img_bytes = base64.b64decode(img_bytes)
-
-                    pil_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-                    print(f"[Image Gen] SUCCESS using {model}")
-                    return pil_img
-
-        except Exception as e:
-            print(f"[Image Gen] {model} failed: {str(e)[:120]}")
-            continue
-
-    print("[Image Gen] All attempts failed - returning placeholder")
-    return create_placeholder_image(prompt)
-
-
-def create_placeholder_image(prompt: str):
-    """Clean, branded placeholder with Lumina name"""
-    w, h = 512, 512
-    arr = np.zeros((h, w, 3), dtype=np.uint8)
-
-    for y in range(h):
-        ratio = y / h
-        arr[y, :] = [
-            int(65 + 115 * ratio),
-            int(125 + 95 * ratio),
-            int(235 - 125 * ratio)
-        ]
-
-    pil_img = Image.fromarray(arr)
-    draw = ImageDraw.Draw(pil_img)
+    hf_token = os.environ.get("HF_TOKEN")
+    if not hf_token:
+        return create_flux_placeholder(prompt, "Add HF_TOKEN secret to enable free Flux generation")
 
     try:
-        font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 22)
-        font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14)
-    except:
-        font_large = font_small = ImageFont.load_default()
+        from huggingface_hub import InferenceClient
+        client = InferenceClient(token=hf_token)
 
-    draw.text((w//2, h//2 - 85), "Lumina", fill=(255, 255, 255), anchor="mm", font=font_large)
-    draw.text((w//2, h//2 - 40), f'"{prompt[:50]}{"..." if len(prompt) > 50 else ""}"',
-              fill=(210, 235, 255), anchor="mm", font=font_small)
-    draw.text((w//2, h//2 + 15), "Lumina AI Image Studio", fill=(180, 255, 200), anchor="mm", font=font_small)
-    draw.text((w//2, h//2 + 48), "Image generation unavailable", fill=(160, 200, 255), anchor="mm", font=font_small)
+        image = client.text_to_image(
+            prompt=prompt,
+            model="black-forest-labs/FLUX.1-schnell",
+            width=1024,
+            height=1024,
+            num_inference_steps=4,      # Schnell = fast
+            guidance_scale=3.5
+        )
+        print("[Flux Schnell] Success!")
+        return image
+
+    except Exception as e:
+        print(f"[Flux Schnell] Failed: {str(e)[:150]}")
+        return create_flux_placeholder(prompt, "Flux is busy right now. Try again in a minute.")
+
+
+def create_flux_placeholder(prompt: str, status="Image generation in progress..."):
+    """Nice branded placeholder"""
+    w, h = 1024, 1024
+    arr = np.zeros((h, w, 3), dtype=np.uint8)
+    
+    # Beautiful gradient
+    for y in range(h):
+        ratio = y / h
+        arr[y, :] = [int(20 + 100*ratio), int(80 + 140*ratio), int(220 - 100*ratio)]
+    
+    pil_img = Image.fromarray(arr)
+    draw = ImageDraw.Draw(pil_img)
+    
+    try:
+        font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 48)
+        font_med = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 28)
+        font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 20)
+    except:
+        font_large = font_med = font_small = ImageFont.load_default()
+
+    draw.text((w//2, h//2 - 140), "Lumina", fill=(255,255,255), anchor="mm", font=font_large)
+    draw.text((w//2, h//2 - 60), f'"{prompt[:70]}{"..." if len(prompt)>70 else ""}"', 
+              fill=(220, 240, 255), anchor="mm", font=font_med)
+    draw.text((w//2, h//2 + 40), "Flux.1 Schnell", fill=(180, 255, 200), anchor="mm", font=font_small)
+    draw.text((w//2, h//2 + 85), status, fill=(255, 220, 180), anchor="mm", font=font_small)
 
     return pil_img
 
