@@ -29,9 +29,9 @@ print(f"[INIT] Gemini client: {'OK' if gemini_client else 'MISSING'}")
 print(f"[INIT] Claude client: {'OK' if claude_client else 'MISSING'}")
 
 # Stable models
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-2.0-flash"
 CLAUDE_MODEL = "claude-3-5-sonnet-20241022"
-GEMINI_TIMEOUT = 15
+GEMINI_TIMEOUT = 30
 
 # ─────────────────────────────────────────────────────────────
 #  SYSTEM PROMPT
@@ -253,8 +253,10 @@ def call_gemini_fast(history: list, user_text: str, image_pil=None) -> str:
                 )
             )
             result[0] = response.text
+            print(f"[Gemini] Raw response received, length: {len(response.text) if response.text else 0}")
         except Exception as e:
             error[0] = e
+            print(f"[Gemini Thread Error] {type(e).__name__}: {str(e)}")
 
     t = threading.Thread(target=_call, daemon=True)
     t.start()
