@@ -513,7 +513,6 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     <div class="input-row">
   <button class="icon-btn" onclick="triggerUpload()" title="Attach image"><span class="material-icons">add_photo_alternate</span></button>
   
-  <!-- Improved textarea with better paste support -->
   <textarea class="prompt-input" id="promptInput" rows="1"
     placeholder="Ask Lumina anything about your image… or generate one!"
     oninput="autoResizeTextarea(this)"
@@ -868,8 +867,9 @@ const LS_USER='luminaUser_v2';
 const MAX_LOGIN_ATTEMPTS=5, LOCK_DURATION=30;
 
 // Handle paste (especially important for copied text/images)
+// Better paste handling
 window.handlePaste = function(e) {
-  // Allow normal paste for text
+  // Let the browser handle normal text paste
   setTimeout(() => {
     autoResizeTextarea(document.getElementById('promptInput'));
   }, 10);
@@ -937,36 +937,41 @@ window.showSavedAccountsDropdown = function() {
   dropdown.classList.add('show');
 };
 
+// Improved Saved Account Selection
 window.selectSavedAccount = function(username) {
-  document.getElementById('loginIdentifier').value = username;
+  const identifierInput = document.getElementById('loginIdentifier');
+  identifierInput.value = username;
   document.getElementById('savedAccountsDropdown').classList.remove('show');
   
-  // Auto-focus password field after selecting account
+  // Important: Focus password field and select it for easy typing
   setTimeout(() => {
-    document.getElementById('password').focus();
-  }, 100);
+    const pwField = document.getElementById('password');
+    pwField.focus();
+    pwField.select();   // Selects the field so user can start typing immediately
+  }, 50);
 };
 
+// Improved search while typing
 window.onLoginIdentifierInput = function() {
   const val = document.getElementById('loginIdentifier').value.trim();
   const dropdown = document.getElementById('savedAccountsDropdown');
   
-  if (!val) {
+  if (val.length < 1) {
     showSavedAccountsDropdown();
     return;
   }
-  
-  const accounts = getAllSavedAccounts().filter(u =>
+
+  const accounts = getAllSavedAccounts().filter(u => 
     u.username.toLowerCase().includes(val.toLowerCase()) ||
     (u.email && u.email.toLowerCase().includes(val.toLowerCase()))
   );
-  
-  if (!accounts.length) {
+
+  if (accounts.length === 0) {
     dropdown.classList.remove('show');
     return;
   }
-  
-  let html = '<div class="saved-accounts-header">Matching Accounts</div>';
+
+  let html = '<div class="saved-accounts-header">Saved Accounts</div>';
   accounts.forEach(u => {
     html += `
       <div class="saved-account-item" onclick="selectSavedAccount('${u.username}')">
@@ -977,7 +982,7 @@ window.onLoginIdentifierInput = function() {
         </div>
       </div>`;
   });
-  
+
   dropdown.innerHTML = html;
   dropdown.classList.add('show');
 };
