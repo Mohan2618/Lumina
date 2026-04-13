@@ -285,7 +285,7 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
                 print(f"[SUCCESS] Gemini replied")
                 return reply.strip(), "gemini"
         except Exception as e:
-            print(f"[Gemini FAILED] {type(e).__name__}: {str(e)[:500]}")  # <-- increased to 500
+            print(f"[Gemini FAILED] {type(e).__name__}: {str(e)[:500]}")
 
     if claude_client:
         try:
@@ -295,15 +295,21 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
                 print(f"[SUCCESS] Claude replied")
                 return reply.strip(), "claude"
         except Exception as e:
-            print(f"[Claude FAILED] {type(e).__name__}: {str(e)[:500]}")  # <-- increased to 500
+            print(f"[Claude FAILED] {type(e).__name__}: {str(e)[:500]}")
 
+    # ── BUG WAS HERE: was `...` (ellipsis) instead of actual fallback ──
     print("[FALLBACK] Both APIs failed → Using local reply")
-    ...
+    has_image = image_pil is not None
+    reply = free_reply(user_text, has_image, image_pil)
+    if not reply:
+        reply = "I'm here to help! Upload an image or ask me anything."
+    return reply, "local"
 
 
 # ─────────────────────────────────────────────────────────────
-# IMAGE GENERATION - SIMPLIFIED & FIXED
+# IMAGE GENERATION
 # ─────────────────────────────────────────────────────────────
+
 def generate_image_from_prompt(prompt: str):
     """Attempt to generate real image. Fall back gracefully."""
     if not gemini_client:
@@ -312,11 +318,9 @@ def generate_image_from_prompt(prompt: str):
 
     print(f"[Image Gen] Starting for prompt: {prompt[:70]}...")
 
-    # Try the most commonly working approaches in order
     models_to_try = [
-        "gemini-2.5-flash-image",           # Most reliable for image output
-        "gemini-2.5-flash",                 # Fallback
         "gemini-2.0-flash-preview-image-generation",
+        "gemini-2.0-flash-exp",
     ]
 
     for model in models_to_try:
@@ -330,10 +334,9 @@ def generate_image_from_prompt(prompt: str):
                 )
             )
 
-            # Extract image if present
             for part in response.candidates[0].content.parts:
-                if (hasattr(part, 'inline_data') and 
-                    part.inline_data and 
+                if (hasattr(part, 'inline_data') and
+                    part.inline_data and
                     getattr(part.inline_data, 'mime_type', '').startswith('image/')):
 
                     img_bytes = part.inline_data.data
@@ -348,7 +351,6 @@ def generate_image_from_prompt(prompt: str):
             print(f"[Image Gen] {model} failed: {str(e)[:120]}")
             continue
 
-    # If we reach here, generation failed
     print("[Image Gen] All attempts failed - returning placeholder")
     return create_placeholder_image(prompt)
 
@@ -358,7 +360,6 @@ def create_placeholder_image(prompt: str):
     w, h = 512, 512
     arr = np.zeros((h, w, 3), dtype=np.uint8)
 
-    # Nice gradient
     for y in range(h):
         ratio = y / h
         arr[y, :] = [
@@ -376,11 +377,11 @@ def create_placeholder_image(prompt: str):
     except:
         font_large = font_small = ImageFont.load_default()
 
-    draw.text((w//2, h//2 - 85), "🎨 Lumina", fill=(255, 255, 255), anchor="mm", font=font_large)
-    draw.text((w//2, h//2 - 40), f'"{prompt[:50]}{"..." if len(prompt) > 50 else ""}"', 
+    draw.text((w//2, h//2 - 85), "Lumina", fill=(255, 255, 255), anchor="mm", font=font_large)
+    draw.text((w//2, h//2 - 40), f'"{prompt[:50]}{"..." if len(prompt) > 50 else ""}"',
               fill=(210, 235, 255), anchor="mm", font=font_small)
     draw.text((w//2, h//2 + 15), "Lumina AI Image Studio", fill=(180, 255, 200), anchor="mm", font=font_small)
-    draw.text((w//2, h//2 + 48), "Image generation in progress...", fill=(160, 200, 255), anchor="mm", font=font_small)
+    draw.text((w//2, h//2 + 48), "Image generation unavailable", fill=(160, 200, 255), anchor="mm", font=font_small)
 
     return pil_img
 
@@ -408,7 +409,7 @@ def analyze_image_free(img):
     return dict(w=w,h=h,mr=mr,mg=mg,mb=mb,brightness=brightness,dom=dom,bright=bright,orient=orient,detail=detail,contrast=contrast)
 
 def free_reply(prompt, has_image, img=None):
-    p=prompt.lower().strip()
+    p=prompt.lower().strip() if prompt else ""
     if has_image and re.search(r'what|describe|tell|analyz|explain|identify|see|show|caption|about|who|where',p):
         s=analyze_image_free(img)
         return (f"**Image Analysis:**\n\n**Size:** {s['w']}×{s['h']}px ({s['orient']})\n"
@@ -435,22 +436,25 @@ def free_reply(prompt, has_image, img=None):
         r'bye|goodbye': "Goodbye! Come back anytime! 👋",
         r'how are you|how do you do': "I'm doing great, thanks for asking! 😊 Ready to help with your images or answer any questions. What would you like to do today?",
         r'good morning|good afternoon|good evening|good night': "Hello! 😊 Hope you're having a wonderful day! I'm here to help with images or any questions you have.",
+        r'what is ai|what is artificial intelligence': "AI (Artificial Intelligence) is technology that enables machines to simulate human intelligence — learning, reasoning, problem-solving, and understanding language or images. I'm an AI myself, powered by Google Gemini and Anthropic Claude! 🤖",
     }
     for pat,rep in replies.items():
         if re.search(pat,p): return rep
 
     if p:
         return (f"I understand you're asking about: *\"{prompt[:80]}{'...' if len(prompt)>80 else ''}\"*\n\n"
-                "I'm Lumina, an AI image processing assistant. While I specialize in images, I can help with general questions too when connected to AI APIs.\n\n"
-                "**I can help you with:**\n"
+                "I'm Lumina, your AI image processing assistant. Connect AI APIs to get full conversational answers!\n\n"
+                "**Right now I can help with:**\n"
                 "• 🖼️ Upload an image to analyze, filter, or process it\n"
                 "• 🤖 Generate images from text descriptions\n"
                 "• 🏥 Medical image analysis\n"
-                "• 💬 General questions (with AI APIs connected)\n\n"
-                "*Tip: Make sure to restart your Space after adding API keys in Settings → Secrets!*")
+                "• 💬 General questions (with Gemini/Claude APIs connected)\n\n"
+                "*Your API keys are set — if you see this message, check the Logs tab for error details.*")
     return "Upload an image and ask me to describe it, apply any filter, analyze medically, or even generate a new image from a text prompt!"
 
 def detect_op(p):
+    if not p:
+        return None
     if re.search(r'\bgenerat\w*\b', p):
         prompt_match = re.sub(r'^(generate|create|make|draw|paint)\s+(a|an|the|image|picture|photo|of)?\s*', '', p, flags=re.I).strip()
         if not prompt_match or len(prompt_match) < 5:
@@ -603,6 +607,8 @@ def detect_op(p):
 # ─────────────────────────────────────────────────────────────
 
 def extract_op(reply):
+    if not reply:
+        return "", None, {}
     match=re.search(r'<OP>(.*?)</OP>',reply,re.DOTALL)
     if not match: return reply,None,{}
     clean=reply[:match.start()].strip()
@@ -1211,7 +1217,13 @@ def process():
 
         ai_image = image_pil if (file and file.filename) else None
 
-        raw_reply, model_used = call_ai(history, prompt, ai_image)
+        # Safe unpack — call_ai always returns a tuple now
+        result = call_ai(history, prompt, ai_image)
+        if not isinstance(result, tuple) or len(result) != 2:
+            raw_reply, model_used = "Sorry, I encountered an error. Please try again.", "local"
+        else:
+            raw_reply, model_used = result
+
         print(f"[AI] Replied using: {model_used}")
 
         clean_reply, intent, params = extract_op(raw_reply)
