@@ -15,18 +15,28 @@ app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024
 app.secret_key = secrets.token_hex(32)
 
 # ─────────────────────────────────────────────────────────────
-# API SETUP
+# API SETUP — GEMINI FIRST, CLAUDE DISABLED BY DEFAULT
 # ─────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
 
+# Only use Gemini - Claude tends to have billing issues
 gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
-claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
+
+# Claude is disabled by default to avoid billing/quota errors
+# If you want to re-enable, set ENABLE_CLAUDE=true in environment
+ENABLE_CLAUDE = os.environ.get("ENABLE_CLAUDE", "false").lower() == "true"
+claude_client = None
+if ENABLE_CLAUDE and ANTHROPIC_API_KEY:
+    try:
+        claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    except:
+        claude_client = None
 
 print(f"[INIT] GEMINI key present: {bool(GEMINI_API_KEY)} | length: {len(GEMINI_API_KEY)}")
 print(f"[INIT] ANTHROPIC key present: {bool(ANTHROPIC_API_KEY)} | length: {len(ANTHROPIC_API_KEY)}")
 print(f"[INIT] Gemini client: {'OK' if gemini_client else 'MISSING'}")
-print(f"[INIT] Claude client: {'OK' if claude_client else 'MISSING'}")
+print(f"[INIT] Claude client: {'DISABLED' if not ENABLE_CLAUDE else ('OK' if claude_client else 'FAILED')}")
 
 # Stable models
 GEMINI_MODEL = "gemini-2.0-flash"
@@ -274,18 +284,18 @@ def call_gemini_fast(history: list, user_text: str, image_pil=None) -> str:
 
 
 # ─────────────────────────────────────────────────────────────
-#  SMART AI CALL — Gemini first, Claude fallback, local final fallback
+#  SMART AI CALL — Gemini optimized, local fallback
 # ─────────────────────────────────────────────────────────────
 
 def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
     """
-    Try Gemini → Claude → Local
-    If quota/billing/rate limit hit, skip to local immediately
+    Primary: Try Gemini (Google AI - more reliable, free tier available)
+    Fallback: Local intelligent reply (always works)
     """
     if not user_text:
         user_text = "Hello!"
 
-    # ──── TRY GEMINI FIRST (preferred) ────
+    # ──── TRY GEMINI FIRST (PRIMARY) ────
     if gemini_client:
         try:
             print(f"[Gemini] Attempting for: {user_text[:80]}...")
@@ -297,37 +307,18 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
             err_str = str(e)
             print(f"[Gemini FAILED] {type(e).__name__}: {err_str[:500]}")
             
-            # If quota/rate/overload, don't try Claude - go to local
-            if is_rate_limit(err_str) or is_overloaded(err_str):
-                print("[Gemini] Quota/rate limited - skipping Claude, using local")
-                has_image = image_pil is not None
-                reply = free_reply(user_text, has_image, image_pil)
-                if not reply:
-                    reply = "🔄 Gemini is temporarily rate-limited. I can still process your image locally or answer questions!"
-                return reply, "local"
+            # Log the specific error for debugging
+            if is_rate_limit(err_str):
+                print("[Gemini] ⚠️ QUOTA/RATE LIMITED - Get fresh API key from https://aistudio.google.com/app/apikey")
+            elif is_overloaded(err_str):
+                print("[Gemini] ⚠️ OVERLOADED - Try again in a moment")
 
-    # ──── TRY CLAUDE IF GEMINI UNAVAILABLE ────
-    if claude_client:
-        try:
-            print(f"[Claude] Attempting...")
-            reply = call_claude(history, user_text, image_pil)
-            if reply and reply.strip():
-                print(f"[SUCCESS] Claude replied ({len(reply)} chars)")
-                return reply.strip(), "claude"
-        except Exception as e:
-            err_str = str(e)
-            print(f"[Claude FAILED] {type(e).__name__}: {err_str[:500]}")
-            
-            # If billing issue, skip to local
-            if is_billing_issue(err_str):
-                print("[Claude] Billing/credit issue - using local reply")
-
-    # ──── FALLBACK TO LOCAL ────
-    print("[FALLBACK] Cloud APIs unavailable → Using local intelligence")
+    # ──── FALLBACK TO LOCAL (ALWAYS WORKS) ────
+    print("[FALLBACK] Using local intelligence (no API needed)")
     has_image = image_pil is not None
     reply = free_reply(user_text, has_image, image_pil)
     if not reply:
-        reply = "✨ I'm here to help! Upload an image and I can process it locally, or ask me anything!"
+        reply = "✨ I'm here to help! Upload an image to process it locally, or ask me anything!"
     return reply, "local"
 
 
@@ -1201,41 +1192,36 @@ def api_validate_username():
 
 @app.route("/api/status", methods=["GET"])
 def api_status():
-    return jsonify({
+    status = {
         "gemini": bool(gemini_client),
-        "claude": bool(claude_client),
+        "claude": bool(claude_client) if ENABLE_CLAUDE else False,
         "local": True,
         "gemini_key_len": len(GEMINI_API_KEY),
-        "claude_key_len": len(ANTHROPIC_API_KEY)
-    })
+        "mode": "gemini-primary"
+    }
+    if not gemini_client:
+        status["warning"] = "⚠️ No GEMINI_API_KEY set. Get one free: https://aistudio.google.com/app/apikey"
+    return jsonify(status)
 
 @app.route("/api/test-ai", methods=["GET"])
 def test_ai():
     results = {}
+    
     if gemini_client:
         try:
             response = gemini_client.models.generate_content(
                 model=GEMINI_MODEL,
                 contents="Say hello in one word"
             )
-            results["gemini"] = f"OK: {response.text[:50]}"
+            results["gemini"] = f"✅ OK: {response.text[:50]}"
         except Exception as e:
-            results["gemini"] = f"FAILED: {type(e).__name__}: {str(e)[:200]}"
+            err_str = str(e)
+            if "429" in err_str or "quota" in err_str.lower():
+                results["gemini"] = "❌ QUOTA EXHAUSTED - Get new key: https://aistudio.google.com/app/apikey"
+            else:
+                results["gemini"] = f"❌ FAILED: {type(e).__name__}: {str(e)[:150]}"
     else:
-        results["gemini"] = "No client"
-
-    if claude_client:
-        try:
-            response = claude_client.messages.create(
-                model=CLAUDE_MODEL,
-                max_tokens=50,
-                messages=[{"role": "user", "content": "Say hello in one word"}]
-            )
-            results["claude"] = f"OK: {response.content[0].text[:50]}"
-        except Exception as e:
-            results["claude"] = f"FAILED: {type(e).__name__}: {str(e)[:200]}"
-    else:
-        results["claude"] = "No client"
+        results["gemini"] = "⚠️ No API key configured"
 
     return jsonify(results)
 
