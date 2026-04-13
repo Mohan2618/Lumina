@@ -511,17 +511,20 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   <div class="prompt-container" id="promptContainer">
     <div id="attachmentPreview"></div>
     <div class="input-row">
-      <button class="icon-btn" onclick="triggerUpload()" title="Attach image"><span class="material-icons">add_photo_alternate</span></button>
-      <!-- FIX: textarea instead of input for multi-line support -->
-      <textarea class="prompt-input" id="promptInput" rows="1"
-        placeholder="Ask Lumina anything about your image… or generate one!"
-        oninput="autoResizeTextarea(this)"
-        onkeydown="handlePromptKeydown(event)"></textarea>
-      <button class="icon-btn" onclick="micAction()" title="Voice input"><span class="material-icons">mic</span></button>
-      <button class="send-btn" id="sendBtn" onclick="handleSendOrStop()" title="Send">
-        <span class="material-icons" id="actionIcon">arrow_upward</span>
-      </button>
-    </div>
+  <button class="icon-btn" onclick="triggerUpload()" title="Attach image"><span class="material-icons">add_photo_alternate</span></button>
+  
+  <!-- Improved textarea with better paste support -->
+  <textarea class="prompt-input" id="promptInput" rows="1"
+    placeholder="Ask Lumina anything about your image… or generate one!"
+    oninput="autoResizeTextarea(this)"
+    onkeydown="handlePromptKeydown(event)"
+    onpaste="handlePaste(event)"></textarea>
+  
+  <button class="icon-btn" onclick="micAction()" title="Voice input"><span class="material-icons">mic</span></button>
+  <button class="send-btn" id="sendBtn" onclick="handleSendOrStop()" title="Send">
+    <span class="material-icons" id="actionIcon">arrow_upward</span>
+  </button>
+</div>
   </div>
 </div>
 
@@ -864,6 +867,14 @@ const ALLOWED=['image/jpeg','image/png','image/webp','image/gif','image/bmp'];
 const LS_USER='luminaUser_v2';
 const MAX_LOGIN_ATTEMPTS=5, LOCK_DURATION=30;
 
+// Handle paste (especially important for copied text/images)
+window.handlePaste = function(e) {
+  // Allow normal paste for text
+  setTimeout(() => {
+    autoResizeTextarea(document.getElementById('promptInput'));
+  }, 10);
+};
+
 function userKey(suffix) {
   const uid = currentUser ? currentUser.username : 'guest';
   return `lumina_${uid}_${suffix}`;
@@ -929,24 +940,36 @@ window.showSavedAccountsDropdown = function() {
 window.selectSavedAccount = function(username) {
   document.getElementById('loginIdentifier').value = username;
   document.getElementById('savedAccountsDropdown').classList.remove('show');
-  document.getElementById('password').focus();
+  
+  // Auto-focus password field after selecting account
+  setTimeout(() => {
+    document.getElementById('password').focus();
+  }, 100);
 };
 
 window.onLoginIdentifierInput = function() {
-  const val = document.getElementById('loginIdentifier').value.toLowerCase();
+  const val = document.getElementById('loginIdentifier').value.trim();
   const dropdown = document.getElementById('savedAccountsDropdown');
-  if (!val) { showSavedAccountsDropdown(); return; }
-
+  
+  if (!val) {
+    showSavedAccountsDropdown();
+    return;
+  }
+  
   const accounts = getAllSavedAccounts().filter(u =>
-    u.username.toLowerCase().includes(val) ||
-    (u.email && u.email.toLowerCase().includes(val))
+    u.username.toLowerCase().includes(val.toLowerCase()) ||
+    (u.email && u.email.toLowerCase().includes(val.toLowerCase()))
   );
-  if (!accounts.length) { dropdown.classList.remove('show'); return; }
-
+  
+  if (!accounts.length) {
+    dropdown.classList.remove('show');
+    return;
+  }
+  
   let html = '<div class="saved-accounts-header">Matching Accounts</div>';
   accounts.forEach(u => {
     html += `
-      <div class="saved-account-item" onclick="selectSavedAccount(${JSON.stringify(u.username)})">
+      <div class="saved-account-item" onclick="selectSavedAccount('${u.username}')">
         <div class="saved-account-avatar">${u.firstName.charAt(0).toUpperCase()}</div>
         <div class="saved-account-info">
           <div class="saved-account-name">${escapeHtml(u.firstName + ' ' + u.lastName)}</div>
@@ -954,6 +977,7 @@ window.onLoginIdentifierInput = function() {
         </div>
       </div>`;
   });
+  
   dropdown.innerHTML = html;
   dropdown.classList.add('show');
 };
