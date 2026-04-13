@@ -967,6 +967,34 @@ document.addEventListener('click', function(e) {
   }
 });
 
+  async function compressImageForUpload(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+      const MAX_SIZE = 1024;
+      
+      if (width > MAX_SIZE) {
+        height = (MAX_SIZE / width) * height;
+        width = MAX_SIZE;
+      } else if (height > MAX_SIZE) {
+        width = (MAX_SIZE / height) * width;
+        height = MAX_SIZE;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.src = dataUrl;
+  });
+}
+
 // ── API STATUS CHECK ──────────────────────────────────────
 async function checkApiStatus() {
   document.getElementById('profileMenu').style.display='none';
