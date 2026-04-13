@@ -156,6 +156,10 @@ def is_overloaded(err_str):
     s = err_str.lower()
     return "overloaded" in s or "503" in err_str or "529" in err_str or "unavailable" in s
 
+def is_billing_issue(err_str):
+    s = err_str.lower()
+    return "credit" in s or "billing" in s or "balance" in s or "purchase" in s
+
 
 # ─────────────────────────────────────────────────────────────
 #  CLAUDE API CALL
@@ -270,39 +274,60 @@ def call_gemini_fast(history: list, user_text: str, image_pil=None) -> str:
 
 
 # ─────────────────────────────────────────────────────────────
-#  SMART AI CALL — Gemini first, Claude fallback
+#  SMART AI CALL — Gemini first, Claude fallback, local final fallback
 # ─────────────────────────────────────────────────────────────
 
 def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
+    """
+    Try Gemini → Claude → Local
+    If quota/billing/rate limit hit, skip to local immediately
+    """
     if not user_text:
         user_text = "Hello!"
 
+    # ──── TRY GEMINI FIRST (preferred) ────
     if gemini_client:
         try:
             print(f"[Gemini] Attempting for: {user_text[:80]}...")
             reply = call_gemini_fast(history, user_text, image_pil)
             if reply and reply.strip():
-                print(f"[SUCCESS] Gemini replied")
+                print(f"[SUCCESS] Gemini replied ({len(reply)} chars)")
                 return reply.strip(), "gemini"
         except Exception as e:
-            print(f"[Gemini FAILED] {type(e).__name__}: {str(e)[:500]}")
+            err_str = str(e)
+            print(f"[Gemini FAILED] {type(e).__name__}: {err_str[:500]}")
+            
+            # If quota/rate/overload, don't try Claude - go to local
+            if is_rate_limit(err_str) or is_overloaded(err_str):
+                print("[Gemini] Quota/rate limited - skipping Claude, using local")
+                has_image = image_pil is not None
+                reply = free_reply(user_text, has_image, image_pil)
+                if not reply:
+                    reply = "🔄 Gemini is temporarily rate-limited. I can still process your image locally or answer questions!"
+                return reply, "local"
 
+    # ──── TRY CLAUDE IF GEMINI UNAVAILABLE ────
     if claude_client:
         try:
             print(f"[Claude] Attempting...")
             reply = call_claude(history, user_text, image_pil)
             if reply and reply.strip():
-                print(f"[SUCCESS] Claude replied")
+                print(f"[SUCCESS] Claude replied ({len(reply)} chars)")
                 return reply.strip(), "claude"
         except Exception as e:
-            print(f"[Claude FAILED] {type(e).__name__}: {str(e)[:500]}")
+            err_str = str(e)
+            print(f"[Claude FAILED] {type(e).__name__}: {err_str[:500]}")
+            
+            # If billing issue, skip to local
+            if is_billing_issue(err_str):
+                print("[Claude] Billing/credit issue - using local reply")
 
-    # ── BUG WAS HERE: was `...` (ellipsis) instead of actual fallback ──
-    print("[FALLBACK] Both APIs failed → Using local reply")
+    # ──── FALLBACK TO LOCAL ────
+    print("[FALLBACK] Cloud APIs unavailable → Using local intelligence")
     has_image = image_pil is not None
     reply = free_reply(user_text, has_image, image_pil)
     if not reply:
-        reply = "I'm here to help! Upload an image or ask me anything."
+        reply = "✨ I'm here to help! Upload an image and I can process it locally, or ask me anything!"
     return reply, "local"
 
 
@@ -620,7 +645,7 @@ def extract_op(reply):
 
 
 # ─────────────────────────────────────────────────────────────
-#  IMAGE PROCESSORS
+#  IMAGE PROCESSORS (all 100+ operations)
 # ─────────────────────────────────────────────────────────────
 
 def process_image(img, intent, params):
@@ -1247,13 +1272,8 @@ def process():
 
         ai_image = image_pil if (file and file.filename) else None
 
-        # Safe unpack — call_ai always returns a tuple now
-        result = call_ai(history, prompt, ai_image)
-        if not isinstance(result, tuple) or len(result) != 2:
-            raw_reply, model_used = "Sorry, I encountered an error. Please try again.", "local"
-        else:
-            raw_reply, model_used = result
-
+        # Safe call — call_ai ALWAYS returns (text, model)
+        raw_reply, model_used = call_ai(history, prompt, ai_image)
         print(f"[AI] Replied using: {model_used}")
 
         clean_reply, intent, params = extract_op(raw_reply)
