@@ -1184,6 +1184,36 @@ def api_status():
         "claude_key_len": len(ANTHROPIC_API_KEY)
     })
 
+@app.route("/api/test-ai", methods=["GET"])
+def test_ai():
+    results = {}
+    if gemini_client:
+        try:
+            response = gemini_client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents="Say hello in one word"
+            )
+            results["gemini"] = f"OK: {response.text[:50]}"
+        except Exception as e:
+            results["gemini"] = f"FAILED: {type(e).__name__}: {str(e)[:200]}"
+    else:
+        results["gemini"] = "No client"
+
+    if claude_client:
+        try:
+            response = claude_client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=50,
+                messages=[{"role": "user", "content": "Say hello in one word"}]
+            )
+            results["claude"] = f"OK: {response.content[0].text[:50]}"
+        except Exception as e:
+            results["claude"] = f"FAILED: {type(e).__name__}: {str(e)[:200]}"
+    else:
+        results["claude"] = "No client"
+
+    return jsonify(results)
+
 
 # ─────────────────────────────────────────────────────────────
 #  MAIN PROCESS ROUTE
