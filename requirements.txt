@@ -1,7 +1,7 @@
-flask
-Pillow
-numpy
-opencv-python-headless
+flask==3.0.3
+gunicorn==23.0.0
+Pillow==11.1.0
+numpy==2.2.2
+opencv-python-headless==4.11.0.86
 google-genai>=1.0.0
-gunicorn>=21.0.0
-anthropic>=0.25.0
+anthropic>=0.45.0
