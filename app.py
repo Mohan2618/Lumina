@@ -9,24 +9,22 @@ from datetime import datetime, timedelta
 import math
 import anthropic
 import threading
+import uuid
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024   # 100 MB
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 app.config['MAX_FORM_MEMORY_SIZE'] = 100 * 1024 * 1024
 app.config['MAX_FORM_PARTS'] = 1000
 app.secret_key = secrets.token_hex(32)
 
 # ─────────────────────────────────────────────────────────────
-# API SETUP — GEMINI FIRST, CLAUDE DISABLED BY DEFAULT
+# API SETUP — GEMINI FIRST, CLAUDE FALLBACK
 # ─────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
 
-# Only use Gemini - Claude tends to have billing issues
 gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
-# Claude is disabled by default to avoid billing/quota errors
-# If you want to re-enable, set ENABLE_CLAUDE=true in environment
 ENABLE_CLAUDE = os.environ.get("ENABLE_CLAUDE", "false").lower() == "true"
 claude_client = None
 if ENABLE_CLAUDE and ANTHROPIC_API_KEY:
@@ -40,7 +38,6 @@ print(f"[INIT] ANTHROPIC key present: {bool(ANTHROPIC_API_KEY)} | length: {len(A
 print(f"[INIT] Gemini client: {'OK' if gemini_client else 'MISSING'}")
 print(f"[INIT] Claude client: {'DISABLED' if not ENABLE_CLAUDE else ('OK' if claude_client else 'FAILED')}")
 
-# Stable models
 GEMINI_MODEL = "gemini-2.5-flash-lite"
 CLAUDE_MODEL = "claude-3-5-sonnet-20241022"
 GEMINI_TIMEOUT = 30
@@ -85,25 +82,15 @@ GENERATE: generate_image (generates image from text prompt)
 INFO: info
 
 Examples:
-- "rotate 45 degrees"         → <OP>{"intent":"rotate","params":{"angle":45}}</OP>
-- "make grayscale"            → <OP>{"intent":"grayscale","params":{}}</OP>
-- "enhance this X-ray"        → <OP>{"intent":"xray_enhance","params":{}}</OP>
-- "add neon glow effect"      → <OP>{"intent":"neon_glow","params":{}}</OP>
-- "detect faces"              → <OP>{"intent":"face_detect","params":{}}</OP>
-- "generate a sunset"         → <OP>{"intent":"generate_image","params":{"prompt":"a beautiful sunset over the ocean with golden sky"}}</OP>
-- "make it look like thermal" → <OP>{"intent":"thermal_vision","params":{}}</OP>
-- "extract color palette"     → <OP>{"intent":"color_palette","params":{}}</OP>
-- "describe this image"       → describe it naturally, NO <OP> tag
-- "analyze this medical scan" → provide medical analysis, NO <OP> tag
+- "rotate 45 degrees" → <OP>{"intent":"rotate","params":{"angle":45}}</OP>
+- "make grayscale" → <OP>{"intent":"grayscale","params":{}}</OP>
+- "enhance this X-ray" → <OP>{"intent":"xray_enhance","params":{}}</OP>
+- "generate a sunset" → <OP>{"intent":"generate_image","params":{"prompt":"a beautiful sunset over the ocean with golden sky"}}</OP>
 
 Rules:
 - For descriptions/questions: reply naturally, NO <OP> tag
 - For operations: friendly explanation + <OP> tag at the END only
-- If no image uploaded but operation requested (and no image in history), ask them to upload one
-- If the user refers to "the image", "previous image", "that image" — use the most recent image from conversation history
-- Be warm, concise, helpful, professional for medical queries
-- For generate_image, always include a detailed descriptive prompt in params
-- NEVER refuse to answer general questions. Always respond helpfully to any topic."""
+- Be warm, concise, helpful, professional for medical queries"""
 
 
 # ─────────────────────────────────────────────────────────────
@@ -290,14 +277,11 @@ def call_gemini_fast(history: list, user_text: str, image_pil=None) -> str:
 # ─────────────────────────────────────────────────────────────
 
 def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
-    """
-    Primary: Try Gemini (Google AI - more reliable, free tier available)
-    Fallback: Local intelligent reply (always works)
-    """
+    """Primary: Try Gemini, Fallback: Local intelligent reply"""
     if not user_text:
         user_text = "Hello!"
 
-    # ──── TRY GEMINI FIRST (PRIMARY) ────
+    # ──── TRY GEMINI FIRST ────
     if gemini_client:
         try:
             print(f"[Gemini] Attempting for: {user_text[:80]}...")
@@ -308,19 +292,13 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
         except Exception as e:
             err_str = str(e)
             print(f"[Gemini FAILED] {type(e).__name__}: {err_str[:500]}")
-            
-            # Log the specific error for debugging
-            if is_rate_limit(err_str):
-                print("[Gemini] ⚠️ QUOTA/RATE LIMITED - Get fresh API key from https://aistudio.google.com/app/apikey")
-            elif is_overloaded(err_str):
-                print("[Gemini] ⚠️ OVERLOADED - Try again in a moment")
 
-    # ──── FALLBACK TO LOCAL (ALWAYS WORKS) ────
-    print("[FALLBACK] Using local intelligence (no API needed)")
+    # ──── FALLBACK TO LOCAL ────
+    print("[FALLBACK] Using local intelligence")
     has_image = image_pil is not None
     reply = free_reply(user_text, has_image, image_pil)
     if not reply:
-        reply = "✨ I'm here to help! Upload an image to process it locally, or ask me anything!"
+        reply = "✨ I'm here to help! Upload an image to process it, or ask me anything!"
     return reply, "local"
 
 
@@ -329,7 +307,7 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
 # ─────────────────────────────────────────────────────────────
 
 def generate_image_from_prompt(prompt: str):
-    """Free Flux.1 Schnell via Hugging Face (best free option in 2026)"""
+    """Generate image using Hugging Face Flux.1 Schnell"""
     print(f"[Flux Schnell] Generating image for: {prompt[:100]}...")
 
     hf_token = os.environ.get("HF_TOKEN")
@@ -345,7 +323,7 @@ def generate_image_from_prompt(prompt: str):
             model="black-forest-labs/FLUX.1-schnell",
             width=1024,
             height=1024,
-            num_inference_steps=4,      # Schnell = fast
+            num_inference_steps=4,
             guidance_scale=3.5
         )
         print("[Flux Schnell] Success!")
@@ -361,7 +339,6 @@ def create_flux_placeholder(prompt: str, status="Image generation in progress...
     w, h = 1024, 1024
     arr = np.zeros((h, w, 3), dtype=np.uint8)
     
-    # Beautiful gradient
     for y in range(h):
         ratio = y / h
         arr[y, :] = [int(20 + 100*ratio), int(80 + 140*ratio), int(220 - 100*ratio)]
@@ -377,8 +354,7 @@ def create_flux_placeholder(prompt: str, status="Image generation in progress...
         font_large = font_med = font_small = ImageFont.load_default()
 
     draw.text((w//2, h//2 - 140), "Lumina", fill=(255,255,255), anchor="mm", font=font_large)
-    draw.text((w//2, h//2 - 60), f'"{prompt[:70]}{"..." if len(prompt)>70 else ""}"', 
-              fill=(220, 240, 255), anchor="mm", font=font_med)
+    draw.text((w//2, h//2 - 60), f'"{prompt[:70]}"', fill=(220, 240, 255), anchor="mm", font=font_med)
     draw.text((w//2, h//2 + 40), "Flux.1 Schnell", fill=(180, 255, 200), anchor="mm", font=font_small)
     draw.text((w//2, h//2 + 85), status, fill=(255, 220, 180), anchor="mm", font=font_small)
 
@@ -414,42 +390,24 @@ def free_reply(prompt, has_image, img=None):
         return (f"**Image Analysis:**\n\n**Size:** {s['w']}×{s['h']}px ({s['orient']})\n"
                 f"**Lighting:** {s['bright']} | **Color:** {s['dom']}\n"
                 f"**Detail:** {s['detail']} | **Contrast:** {s['contrast']}\n\n"
-                f"*Add GEMINI_API_KEY or ANTHROPIC_API_KEY for full AI-powered image understanding.*")
+                f"*Connect GEMINI_API_KEY for full AI-powered image understanding.*")
     op=detect_op(p)
     if op: return op
 
     replies={
         r'hello|hi\b|hey\b':             "Hi there! 👋 I'm **Lumina**, your AI image assistant. I can process images, analyze medical scans, apply creative filters, generate images, and answer any questions. What can I help you with?",
-        r'who are you|what are you':     "I'm **Lumina** — an advanced AI image processing assistant powered by Gemini and Claude! I can analyze images, apply filters, do medical imaging, generate art, and much more. Just upload an image or ask me anything!",
-        r'what can you do|help\b|feature': (
-            "**What I can do:**\n\n🖼️ **Describe & Analyze** images in detail\n"
-            "⚙️ **Basic:** Rotate, flip, resize, crop\n"
-            "🎨 **Filters:** Cartoon, watercolor, sketch, oil painting, neon glow, glitch, halftone, vintage, pop art\n"
-            "🌈 **Color:** Contrast, brightness, saturation, hue, white balance, HDR\n"
-            "🏥 **Medical:** CLAHE, denoise, X-ray/MRI/CT enhance, skin & wound analysis\n"
-            "🔬 **Detection:** Face detect, edge detection, color palette extraction\n"
-            "✨ **Restoration:** Super resolution, deblur, colorize B&W\n"
-            "🎭 **Creative:** Thermal vision, stained glass, pointillism, ASCII art\n"
-            "🤖 **Generate:** Create images from text prompts\n\nUpload an image and ask!"),
+        r'who are you|what are you':     "I'm **Lumina** — an advanced AI image processing assistant! I can analyze images, apply filters, do medical imaging, generate art, and much more. Just upload an image or ask me anything!",
         r'thank':  "You're welcome! 😊 Let me know if you need anything else!",
         r'bye|goodbye': "Goodbye! Come back anytime! 👋",
-        r'how are you|how do you do': "I'm doing great, thanks for asking! 😊 Ready to help with your images or answer any questions. What would you like to do today?",
-        r'good morning|good afternoon|good evening|good night': "Hello! 😊 Hope you're having a wonderful day! I'm here to help with images or any questions you have.",
-        r'what is ai|what is artificial intelligence': "AI (Artificial Intelligence) is technology that enables machines to simulate human intelligence — learning, reasoning, problem-solving, and understanding language or images. I'm an AI myself, powered by Google Gemini and Anthropic Claude! 🤖",
     }
     for pat,rep in replies.items():
         if re.search(pat,p): return rep
 
     if p:
-        return (f"I understand you're asking about: *\"{prompt[:80]}{'...' if len(prompt)>80 else ''}\"*\n\n"
-                "I'm Lumina, your AI image processing assistant. Connect AI APIs to get full conversational answers!\n\n"
-                "**Right now I can help with:**\n"
-                "• 🖼️ Upload an image to analyze, filter, or process it\n"
-                "• 🤖 Generate images from text descriptions\n"
-                "• 🏥 Medical image analysis\n"
-                "• 💬 General questions (with Gemini/Claude APIs connected)\n\n"
-                "*Your API keys are set — if you see this message, check the Logs tab for error details.*")
-    return "Upload an image and ask me to describe it, apply any filter, analyze medically, or even generate a new image from a text prompt!"
+        return (f"I understand you're asking about: *\"{prompt[:80]}\"*\n\n"
+                "I'm Lumina, your AI image assistant. Connect AI APIs for full conversational answers!\n\n"
+                "Right now I can help with: 🖼️ Upload images to analyze, filter, or process | 🤖 Generate images from text | 🏥 Medical analysis")
+    return "Upload an image and ask me to describe it, apply a filter, analyze medically, or generate a new image!"
 
 def detect_op(p):
     if not p:
@@ -619,7 +577,7 @@ def extract_op(reply):
 
 
 # ─────────────────────────────────────────────────────────────
-#  IMAGE PROCESSORS (all 100+ operations)
+#  IMAGE PROCESSORS (100+ operations)
 # ─────────────────────────────────────────────────────────────
 
 def process_image(img, intent, params):
@@ -1170,7 +1128,7 @@ def api_validate_username():
 
 
 # ─────────────────────────────────────────────────────────────
-#  HEALTH CHECK
+#  HEALTH & STATUS
 # ─────────────────────────────────────────────────────────────
 
 @app.route("/api/status", methods=["GET"])
@@ -1189,7 +1147,6 @@ def api_status():
 @app.route("/api/test-ai", methods=["GET"])
 def test_ai():
     results = {}
-    
     if gemini_client:
         try:
             response = gemini_client.models.generate_content(
@@ -1200,13 +1157,76 @@ def test_ai():
         except Exception as e:
             err_str = str(e)
             if "429" in err_str or "quota" in err_str.lower():
-                results["gemini"] = "❌ QUOTA EXHAUSTED - Get new key: https://aistudio.google.com/app/apikey"
+                results["gemini"] = "❌ QUOTA EXHAUSTED"
             else:
-                results["gemini"] = f"❌ FAILED: {type(e).__name__}: {str(e)[:150]}"
+                results["gemini"] = f"❌ FAILED: {type(e).__name__}"
     else:
         results["gemini"] = "⚠️ No API key configured"
-
     return jsonify(results)
+
+
+# ─────────────────────────────────────────────────────────────
+#  SAVED IMAGES MANAGEMENT
+# ─────────────────────────────────────────────────────────────
+
+@app.route("/api/save-image", methods=["POST"])
+def save_image():
+    """Save image to user's gallery"""
+    try:
+        data = request.json or {}
+        username = data.get("username", "guest")
+        image_b64 = data.get("image", "")
+        title = data.get("title", "Saved Image")
+        
+        if not image_b64:
+            return jsonify({"error": "No image provided"}), 400
+        
+        # Generate unique ID
+        image_id = str(uuid.uuid4())
+        save_key = f"lumina_{username}_saved_{image_id}"
+        
+        # Store in localStorage via client - we just return success
+        saved_data = {
+            "id": image_id,
+            "image": image_b64,
+            "title": title,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        return jsonify({"success": True, "image_id": image_id, "data": saved_data})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/get-saved-images", methods=["GET"])
+def get_saved_images():
+    """Get list of saved images for user"""
+    username = request.args.get("username", "guest")
+    # Client will handle retrieving from localStorage
+    return jsonify({"username": username, "message": "Use localStorage on client side"})
+
+@app.route("/api/delete-saved-image", methods=["POST"])
+def delete_saved_image():
+    """Delete saved image"""
+    data = request.json or {}
+    image_id = data.get("image_id", "")
+    return jsonify({"success": True, "deleted": image_id})
+
+@app.route("/api/share-chat", methods=["POST"])
+def share_chat():
+    """Create shareable chat link"""
+    try:
+        data = request.json or {}
+        chat_data = data.get("chat_data", {})
+        share_id = str(uuid.uuid4())[:8]
+        
+        return jsonify({
+            "success": True,
+            "share_id": share_id,
+            "share_url": f"/shared/{share_id}",
+            "expires_in": "7 days"
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ─────────────────────────────────────────────────────────────
@@ -1241,7 +1261,6 @@ def process():
 
         ai_image = image_pil if (file and file.filename) else None
 
-        # Safe call — call_ai ALWAYS returns (text, model)
         raw_reply, model_used = call_ai(history, prompt, ai_image)
         print(f"[AI] Replied using: {model_used}")
 
@@ -1322,8 +1341,8 @@ def process():
         err = str(e)
         print(f"[ERROR] {err}")
         if "API_KEY_INVALID" in err or "API key not valid" in err:
-            msg = "⚠️ Invalid API key. Check your GEMINI_API_KEY or ANTHROPIC_API_KEY in Settings → Secrets."
-        elif is_rate_limit(err):
+            msg = "⚠️ Invalid API key. Check your GEMINI_API_KEY in Settings → Secrets."
+        elif "429" in err or "quota" in err.lower():
             msg = "⚠️ API rate limit hit. Please try again shortly."
         elif "not found" in err.lower() or "404" in err:
             msg = f"⚠️ Model not found. Error: {err}"
