@@ -542,7 +542,17 @@ def process_image(img, intent, params):
         return ImageEnhance.Contrast(edges).enhance(3.0).convert("RGB")
     if intent=='emboss': return img.filter(ImageFilter.EMBOSS).convert("RGB")
     if intent=='contrast': return ImageEnhance.Contrast(img).enhance(float(params.get('factor',1.6)))
-    if intent=='brightness': return ImageEnhance.Brightness(img).enhance(float(params.get('factor',1.4)))
+    if intent == "brightness":
+    factor = params.get("factor", 1.0)
+
+    arr = np.array(img).astype(np.float32)
+
+    # gamma correction instead of linear scaling
+    gamma = 1.5 if factor < 1 else 0.7
+    arr = 255 * (arr / 255) ** gamma
+
+    arr = np.clip(arr, 0, 255).astype(np.uint8)
+    return Image.fromarray(arr)
     if intent=='saturation': return ImageEnhance.Color(img).enhance(float(params.get('factor',1.5)))
     if intent=='hue':
         cv_img=pil_to_cv2(img)
@@ -579,15 +589,12 @@ def process_image(img, intent, params):
         enhanced=ImageEnhance.Contrast(enhanced).enhance(1.4)
         enhanced=ImageEnhance.Color(enhanced).enhance(1.5)
         return ImageEnhance.Sharpness(enhanced).enhance(1.3)
-    if intent=='sketch':
-        gray=ImageOps.grayscale(img)
-        inv=ImageOps.invert(gray)
-        blurred=inv.filter(ImageFilter.GaussianBlur(radius=21))
-        inv_blur=ImageOps.invert(blurred)
-        arr_g=np.array(gray,dtype=np.float32)
-        arr_b=np.array(inv_blur,dtype=np.float32)
-        result=np.clip(arr_g*255.0/(arr_b+1.0),0,255).astype(np.uint8)
-        return Image.fromarray(result).convert("RGB")
+    if intent == "sketch":
+        gray = cv2.cvtColor(pil_to_cv2(img), cv2.COLOR_BGR2GRAY)
+        inv = 255 - gray
+        blur = cv2.GaussianBlur(inv, (21,21), 0)
+        sketch = cv2.divide(gray, 255 - blur, scale=256)
+        return cv2_to_pil(cv2.cvtColor(sketch, cv2.COLOR_GRAY2BGR))
     if intent=='cartoon':
         cv_img=pil_to_cv2(img)
         color=cv_img.copy()
@@ -601,13 +608,14 @@ def process_image(img, intent, params):
         cv_img=pil_to_cv2(img)
         result=cv2.stylization(cv_img,sigma_s=60,sigma_r=0.5)
         return ImageEnhance.Color(cv2_to_pil(result)).enhance(1.2)
-    if intent=='oil_painting':
-        cv_img=pil_to_cv2(img)
-        try: result=cv2.xphoto.oilPainting(cv_img,7,1)
-        except:
-            result=cv_img.copy()
-            for _ in range(5): result=cv2.bilateralFilter(result,9,100,100)
-        return cv2_to_pil(result)
+    if intent == "oil_painting":
+        arr = pil_to_cv2(img)
+    
+        # edge preserving + stylization combo
+        smooth = cv2.edgePreservingFilter(arr, flags=1, sigma_s=60, sigma_r=0.4)
+        stylized = cv2.stylization(smooth, sigma_s=60, sigma_r=0.45)
+    
+        return cv2_to_pil(stylized)
     if intent=='neon_glow':
         cv_img=pil_to_cv2(img)
         gray=cv2.cvtColor(cv_img,cv2.COLOR_BGR2GRAY)
