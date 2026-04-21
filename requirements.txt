@@ -2,8 +2,8 @@ Flask==3.0.0
 Werkzeug==3.0.0
 Pillow==10.0.0
 numpy==1.24.3
-opencv-python==4.8.0.74
-opencv-contrib-python==4.8.0.74
+opencv-python-headless==4.8.0.74
+opencv-contrib-python-headless==4.8.0.74
 google-generativeai==0.3.0
 anthropic==0.7.0
 huggingface-hub==0.17.0
