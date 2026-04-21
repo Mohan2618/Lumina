@@ -19,6 +19,7 @@ body {
   font-family: 'Segoe UI', Arial, sans-serif;
   overflow: hidden; position: relative;
 }
+
 /* ── TOPBAR ── */
 .topbar {
   position: fixed; top: 0; left: 0; right: 0; height: 62px;
@@ -71,31 +72,6 @@ body {
   justify-content: center; cursor: pointer; border: 2px solid rgba(255,255,255,0.5);
 }
 
-/* ── API STATUS BADGE ── */
-.api-status-badge {
-  display: flex; align-items: center; gap: 6px;
-  background: rgba(0,0,0,0.3); backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.2); border-radius: 20px;
-  padding: 5px 12px; font-size: 12px; color: white;
-  position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
-  z-index: 750; transition: opacity 0.5s;
-}
-.api-status-badge .dot { width: 7px; height: 7px; border-radius: 50%; }
-.dot-green { background: #6bcb77; box-shadow: 0 0 6px #6bcb77; }
-.dot-red   { background: #ff6b6b; box-shadow: 0 0 6px #ff6b6b; }
-.dot-yellow{ background: #ffd93d; box-shadow: 0 0 6px #ffd93d; }
-
-/* ── HOME ── */
-.watermark {
-  position: absolute; top: 42%; left: 50%; transform: translate(-50%,-50%);
-  font-size: clamp(60px,12vw,110px); font-weight: 800; letter-spacing: 6px;
-  color: rgba(255,255,255,0.09); pointer-events: none; user-select: none;
-}
-.home-subtitle {
-  position: absolute; top: 56%; left: 50%; transform: translateX(-50%);
-  color: rgba(255,255,255,0.5); font-size: 15px; text-align: center;
-  pointer-events: none; white-space: nowrap;
-}
 /* ── CHAT ── */
 #chatWrapper {
   position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
@@ -122,14 +98,11 @@ body {
 .bot-msg code { background: rgba(255,255,255,0.15); padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; }
 .bot-msg strong { color: #41e1ae; }
 
-/* model badge */
 .model-badge {
   font-size: 10px; padding: 2px 8px; border-radius: 10px;
   margin-top: 4px; display: inline-block; opacity: 0.7;
 }
 .badge-gemini { background: rgba(66,133,244,0.3); color: #aac8ff; }
-.badge-claude { background: rgba(200,100,50,0.3); color: #ffcbaa; }
-.badge-local  { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); }
 
 /* ── MESSAGE ATTACHMENTS ── */
 .msg-attachments {
@@ -158,13 +131,6 @@ body {
 .msg-action-btn:hover { background: rgba(0,0,0,0.6); }
 .msg-action-btn .material-icons { font-size: 14px; }
 
-.chat-image-large { max-width: 100%; max-height: 380px; border-radius: 14px; margin-top: 8px; display: block; cursor: zoom-in; object-fit: contain; }
-.medical-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  background: rgba(255,107,107,0.2); border: 1px solid rgba(255,107,107,0.5);
-  color: #ff9999; padding: 3px 10px; border-radius: 20px; font-size: 12px; margin-bottom: 6px;
-}
-
 /* ── PROMPT ── */
 .prompt-wrap {
   position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
@@ -190,7 +156,6 @@ body {
 }
 .input-row { display: flex; align-items: flex-end; gap: 10px; }
 
-/* ── FIX 1: TEXTAREA INSTEAD OF INPUT ── */
 .prompt-input {
   flex: 1;
   background: transparent;
@@ -243,12 +208,50 @@ body {
 }
 .bottom-tools button:hover { background: rgba(255,255,255,0.15); }
 .bottom-tools .material-icons { font-size: 22px; }
+
+/* ── WATERMARK ── */
+.watermark {
+  position: absolute; top: 42%; left: 50%; transform: translate(-50%,-50%);
+  font-size: clamp(60px,12vw,110px); font-weight: 800; letter-spacing: 6px;
+  color: rgba(255,255,255,0.09); pointer-events: none; user-select: none;
+}
+.home-subtitle {
+  position: absolute; top: 56%; left: 50%; transform: translateX(-50%);
+  color: rgba(255,255,255,0.5); font-size: 15px; text-align: center;
+  pointer-events: none; white-space: nowrap;
+}
+
+/* ── SAVED GALLERY PANEL ── */
+.gallery-panel {
+  display: none; position: fixed; right: 0; top: 0; width: 320px; height: 100%;
+  background: rgba(10,10,30,0.85); backdrop-filter: blur(16px);
+  padding: 20px 16px; overflow-y: auto; color: white; z-index: 900;
+  border-left: 1px solid rgba(255,255,255,0.12);
+}
+.gallery-panel h3 { font-size: 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.gallery-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.gallery-item {
+  position: relative; cursor: pointer; border-radius: 12px; overflow: hidden;
+  border: 2px solid rgba(255,255,255,0.1); transition: all 0.2s;
+}
+.gallery-item:hover { border-color: rgba(65,225,174,0.5); transform: scale(1.02); }
+.gallery-item img { width: 100%; height: 120px; object-fit: cover; display: block; }
+.gallery-item-remove {
+  position: absolute; top: 4px; right: 4px; width: 24px; height: 24px;
+  background: rgba(255,0,0,0.7); color: white; border: none;
+  border-radius: 50%; cursor: pointer; font-size: 16px; display: flex;
+  align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;
+}
+.gallery-item:hover .gallery-item-remove { opacity: 1; }
+.gallery-empty { padding: 20px; text-align: center; color: rgba(255,255,255,0.5); font-size: 13px; }
+
 /* ── TYPING ── */
 .typing { display: flex; gap: 5px; align-items: center; padding: 4px 0; }
 .typing span { width: 8px; height: 8px; background: rgba(255,255,255,0.7); border-radius: 50%; animation: bounce 1.3s infinite ease-in-out; }
 .typing span:nth-child(2) { animation-delay: 0.2s; }
 .typing span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes bounce { 0%,80%,100%{transform:scale(0.5);opacity:0.5} 40%{transform:scale(1);opacity:1} }
+
 /* ── HISTORY PANEL ── */
 .history-panel {
   display: none; position: fixed; right: 0; top: 0; width: 300px; height: 100%;
@@ -267,6 +270,7 @@ body {
 .history-item .date { font-size: 11px; opacity: 0.5; white-space: nowrap; margin-top: 2px; }
 .history-item .del-btn { background: transparent; border: none; color: rgba(255,255,255,0.4); cursor: pointer; font-size: 16px; }
 .history-item .del-btn:hover { color: #ff6b6b; }
+
 /* ── PROFILE MENU ── */
 .profile-menu {
   display: none; position: fixed; top: 68px; right: 18px; width: 240px;
@@ -281,129 +285,31 @@ body {
 .profile-menu .menu-item:hover { background: rgba(255,255,255,0.1); }
 .profile-menu .menu-item .material-icons { font-size: 20px; opacity: 0.8; }
 
-/* ── AUTH MODAL ── */
-.modal-overlay {
-  display: none; position: fixed; inset: 0; backdrop-filter: blur(12px);
-  background: rgba(0,0,0,0.3); justify-content: center; align-items: center; z-index: 2000;
+/* ── LIGHTBOX ── */
+.lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); justify-content: center; align-items: center; z-index: 3000; cursor: zoom-out; }
+.lightbox-inner { position: relative; max-width: 92%; max-height: 92%; }
+.lightbox img { max-width: 100%; max-height: 90vh; border-radius: 12px; object-fit: contain; display: block; }
+.lightbox-actions {
+  position: absolute; top: -44px; right: 0; display: flex; gap: 8px;
 }
-.modal-box {
-  width: 420px; max-height: 90vh; overflow-y: auto; padding: 30px 28px;
-  background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 22px; backdrop-filter: blur(20px); display: flex; flex-direction: column; gap: 12px;
+.lightbox-btn {
+  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+  color: white; padding: 6px 14px; border-radius: 20px; cursor: pointer;
+  font-size: 13px; display: flex; align-items: center; gap: 5px; backdrop-filter: blur(8px);
+  transition: background 0.15s;
 }
-.modal-box h3 { color: white; text-align: center; font-size: 20px; }
-.modal-input {
-  padding: 11px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.3);
-  background: rgba(255,255,255,0.12); color: white; font-size: 14px; outline: none; width: 100%;
-  transition: border-color 0.2s;
-}
-.modal-input::placeholder { color: rgba(255,255,255,0.5); }
-.modal-input:focus { border-color: rgba(255,255,255,0.7); }
-.modal-input.input-error { border-color: var(--err) !important; }
-.modal-input.input-ok { border-color: var(--ok) !important; }
-.input-field-wrap { display: flex; flex-direction: column; gap: 4px; position: relative; }
-.field-hint { font-size: 11px; color: rgba(255,255,255,0.55); padding-left: 4px; }
-.field-error { font-size: 11px; color: var(--err); padding-left: 4px; display: none; }
-.pw-strength-wrap { display: flex; flex-direction: column; gap: 4px; }
-.pw-bars { display: flex; gap: 4px; }
-.pw-bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.2); transition: background 0.3s; }
-.pw-label { font-size: 11px; color: rgba(255,255,255,0.6); }
-.pw-reqs { display: flex; flex-direction: column; gap: 2px; }
-.pw-req { font-size: 11px; display: flex; align-items: center; gap: 4px; }
-.pw-req.met { color: var(--ok); }
-.pw-req.unmet { color: rgba(255,255,255,0.45); }
-.pw-wrap { position: relative; }
-.pw-wrap .modal-input { padding-right: 42px; }
-.pw-eye {
-  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-  cursor: pointer; color: rgba(255,255,255,0.6); font-size: 20px; user-select: none;
-}
-.otp-grid { display: flex; gap: 8px; justify-content: center; }
-.otp-digit {
-  width: 44px; height: 52px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,0.3);
-  background: rgba(255,255,255,0.12); color: white; font-size: 22px; font-weight: 700;
-  text-align: center; outline: none;
-}
-.otp-digit:focus { border-color: var(--accent); }
-.modal-btn-primary {
-  padding: 11px; border-radius: 10px; border: none; background: white;
-  color: #6a7bd1; font-size: 15px; font-weight: 700; cursor: pointer; width: 100%;
-  transition: opacity 0.2s;
-}
-.modal-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.modal-btn-text { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 13px; cursor: pointer; text-decoration: underline; width: 100%; text-align: center; }
-.modal-divider { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.4); font-size: 12px; }
-.modal-divider::before,.modal-divider::after { content:''; flex:1; height:1px; background:rgba(255,255,255,0.2); }
-.modal-terms { font-size: 11px; color: rgba(255,255,255,0.5); text-align: center; line-height: 1.6; }
-.modal-terms a { color: rgba(255,255,255,0.8); }
-.modal-alert {
-  padding: 10px 14px; border-radius: 10px; font-size: 13px;
-  display: none; align-items: center; gap: 8px;
-}
-.modal-alert.error { background: rgba(255,107,107,0.2); border: 1px solid rgba(255,107,107,0.5); color: #ffaaaa; }
-.modal-alert.success { background: rgba(107,203,119,0.2); border: 1px solid rgba(107,203,119,0.5); color: #aaffbb; }
-.rate-limit-timer { text-align: center; font-size: 12px; color: var(--warn); display: none; }
+.lightbox-btn:hover { background: rgba(255,255,255,0.3); }
+.lightbox-btn .material-icons { font-size: 16px; }
 
-/* ── FIX 2: SAVED ACCOUNTS DROPDOWN ── */
-.saved-accounts-dropdown {
-  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 100;
-  background: rgba(20,20,50,0.95); border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 10px; backdrop-filter: blur(20px); overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4); display: none;
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+  background: rgba(10,10,30,0.9); color: white; padding: 10px 20px;
+  border-radius: 20px; font-size: 13px; z-index: 4000;
+  opacity: 0; transition: opacity 0.3s; pointer-events: none;
+  backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15);
 }
-.saved-accounts-dropdown.show { display: block; }
-.saved-account-item {
-  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
-  cursor: pointer; transition: background 0.15s; color: white;
-}
-.saved-account-item:hover { background: rgba(255,255,255,0.12); }
-.saved-account-avatar {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: linear-gradient(135deg, #41e1ae, #6a7bd1);
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 14px; color: white; flex-shrink: 0;
-}
-.saved-account-info { flex: 1; min-width: 0; }
-.saved-account-name { font-size: 13px; font-weight: 600; }
-.saved-account-email { font-size: 11px; opacity: 0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.saved-accounts-header {
-  padding: 8px 14px 4px; font-size: 10px; text-transform: uppercase;
-  letter-spacing: 1px; color: rgba(255,255,255,0.4); border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
-/* ── FREE TRIAL PROMPT MODAL ── */
-.trial-modal-overlay {
-  display: none; position: fixed; inset: 0; backdrop-filter: blur(16px);
-  background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2500;
-}
-.trial-modal-box {
-  width: 440px; padding: 36px 32px; text-align: center;
-  background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 24px; backdrop-filter: blur(24px); color: white;
-  display: flex; flex-direction: column; gap: 16px; align-items: center;
-}
-.trial-modal-box .trial-icon { font-size: 48px; line-height: 1; }
-.trial-modal-box h2 { font-size: 22px; font-weight: 700; }
-.trial-modal-box p { font-size: 14px; color: rgba(255,255,255,0.7); line-height: 1.6; }
-.trial-btns { display: flex; gap: 12px; width: 100%; }
-.trial-btns .btn-trial-primary {
-  flex: 1; padding: 12px; border-radius: 12px; border: none; background: white;
-  color: #6a7bd1; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform 0.15s;
-}
-.trial-btns .btn-trial-primary:hover { transform: scale(1.03); }
-.trial-btns .btn-trial-secondary {
-  flex: 1; padding: 12px; border-radius: 12px; border: 1.5px solid rgba(255,255,255,0.5);
-  background: transparent; color: white; font-size: 15px; font-weight: 600; cursor: pointer;
-}
-.trial-counter {
-  position: fixed; top: 70px; right: 18px; background: rgba(255,255,255,0.15);
-  backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.25);
-  border-radius: 20px; padding: 5px 14px; color: white; font-size: 12px;
-  z-index: 750; display: none; gap: 6px; align-items: center;
-}
-.trial-counter.show { display: flex; }
-.trial-dot { width: 6px; height: 6px; border-radius: 50%; background: #41e1ae; }
-.trial-dot.used { background: rgba(255,255,255,0.3); }
+.toast.show { opacity: 1; }
 
 /* ── OPS PANEL ── */
 .medical-panel {
@@ -421,37 +327,33 @@ body {
   transition: background 0.15s; border: 1px solid transparent;
 }
 .op-chip:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.3); }
-.op-chip.medical { border-color: rgba(255,107,107,0.4); color: #ffaaaa; }
-.op-chip.creative { border-color: rgba(65,225,174,0.4); color: #afffdc; }
-.op-chip.detection { border-color: rgba(106,123,209,0.6); color: #b3baff; }
-/* ── LIGHTBOX ── */
-.lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); justify-content: center; align-items: center; z-index: 3000; cursor: zoom-out; }
-.lightbox-inner { position: relative; max-width: 92%; max-height: 92%; }
-.lightbox img { max-width: 100%; max-height: 90vh; border-radius: 12px; object-fit: contain; display: block; }
-.lightbox-actions {
-  position: absolute; top: -44px; right: 0; display: flex; gap: 8px;
-}
-.lightbox-btn {
-  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
-  color: white; padding: 6px 14px; border-radius: 20px; cursor: pointer;
-  font-size: 13px; display: flex; align-items: center; gap: 5px; backdrop-filter: blur(8px);
-  transition: background 0.15s;
-}
-.lightbox-btn:hover { background: rgba(255,255,255,0.3); }
-.lightbox-btn .material-icons { font-size: 16px; }
 
 body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
-/* ── TOAST ── */
-.toast {
-  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
-  background: rgba(10,10,30,0.9); color: white; padding: 10px 20px;
-  border-radius: 20px; font-size: 13px; z-index: 4000;
-  opacity: 0; transition: opacity 0.3s; pointer-events: none;
-  backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15);
+
+/* ── MODAL/AUTH BASICS ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; backdrop-filter: blur(12px);
+  background: rgba(0,0,0,0.3); justify-content: center; align-items: center; z-index: 2000;
 }
-.toast.show { opacity: 1; }
-/* ── FORGOT/CHANGE PW MODALS ── */
-.modal-box.small { max-width: 380px; }
+.modal-box {
+  width: 420px; max-height: 90vh; overflow-y: auto; padding: 30px 28px;
+  background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 22px; backdrop-filter: blur(20px); display: flex; flex-direction: column; gap: 12px;
+}
+.modal-box h3 { color: white; text-align: center; font-size: 20px; }
+
+.saved-accounts-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 100;
+  background: rgba(20,20,50,0.95); border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 10px; backdrop-filter: blur(20px); overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4); display: none;
+}
+.saved-accounts-dropdown.show { display: block; }
+.saved-account-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  cursor: pointer; transition: background 0.15s; color: white;
+}
+.saved-account-item:hover { background: rgba(255,255,255,0.12); }
 </style>
 </head>
 <body>
@@ -473,32 +375,6 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   <div class="profile-avatar" id="profileAvatar" onclick="toggleProfileMenu(event)">A</div>
 </header>
 
-<!-- ── API STATUS BADGE ── -->
-<div class="api-status-badge" id="apiStatusBadge" style="display:none;">
-  <span class="dot" id="apiDot"></span>
-  <span id="apiStatusText">Checking AI…</span>
-</div>
-
-<!-- ── FREE TRIAL COUNTER ── -->
-<div class="trial-counter" id="trialCounter">
-  <span class="trial-dot" id="td1"></span>
-  <span class="trial-dot" id="td2"></span>
-  <span class="trial-dot" id="td3"></span>
-  <span style="font-size:11px;opacity:0.8;" id="trialLabel">3 free messages left</span>
-</div>
-
-<!-- ── PROFILE MENU ── -->
-<div class="profile-menu" id="profileMenu">
-  <div class="menu-header"><strong id="profileName">User</strong><br><span style="font-size:12px;opacity:0.6;" id="planLabel">Free Plan</span></div>
-  <div class="menu-item" onclick="openHelp()"><span class="material-icons">help_outline</span> Help</div>
-  <div class="menu-item" onclick="openOpsPanel()"><span class="material-icons">auto_awesome</span> Operations</div>
-  <div class="menu-item" onclick="newChat()"><span class="material-icons">add_circle_outline</span> New Chat</div>
-  <div class="menu-item" onclick="showChangePassword()"><span class="material-icons">lock</span> Change Password</div>
-  <div class="menu-item" onclick="shareChat()"><span class="material-icons">share</span> Share Chat</div>
-  <div class="menu-item" onclick="checkApiStatus()"><span class="material-icons">wifi</span> Check API Status</div>
-  <div class="menu-item" onclick="logout()"><span class="material-icons">logout</span> Log Out</div>
-</div>
-
 <!-- ── HOME ── -->
 <div class="watermark" id="watermark">Lumina</div>
 <div class="home-subtitle" id="homeSubtitle">Upload an image and ask me anything ✨</div>
@@ -511,19 +387,16 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
   <div class="prompt-container" id="promptContainer">
     <div id="attachmentPreview"></div>
     <div class="input-row">
-  <button class="icon-btn" onclick="triggerUpload()" title="Attach image"><span class="material-icons">add_photo_alternate</span></button>
-  
-  <textarea class="prompt-input" id="promptInput" rows="1"
-    placeholder="Ask Lumina anything about your image… or generate one!"
-    oninput="autoResizeTextarea(this)"
-    onkeydown="handlePromptKeydown(event)"
-    onpaste="handlePaste(event)"></textarea>
-  
-  <button class="icon-btn" onclick="micAction()" title="Voice input"><span class="material-icons">mic</span></button>
-  <button class="send-btn" id="sendBtn" onclick="handleSendOrStop()" title="Send">
-    <span class="material-icons" id="actionIcon">arrow_upward</span>
-  </button>
-</div>
+      <button class="icon-btn" onclick="triggerUpload()" title="Attach image"><span class="material-icons">add_photo_alternate</span></button>
+      <textarea class="prompt-input" id="promptInput" rows="1"
+        placeholder="Ask Lumina anything about your image… or generate one!"
+        oninput="autoResizeTextarea(this)"
+        onkeydown="handlePromptKeydown(event)"></textarea>
+      <button class="icon-btn" onclick="micAction()" title="Voice input"><span class="material-icons">mic</span></button>
+      <button class="send-btn" id="sendBtn" onclick="handleSendOrStop()" title="Send">
+        <span class="material-icons" id="actionIcon">arrow_upward</span>
+      </button>
+    </div>
   </div>
 </div>
 
@@ -531,8 +404,17 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 <div class="bottom-tools">
   <button onclick="newChat()" title="New Chat"><span class="material-icons">edit_note</span></button>
   <button onclick="openHistory()" title="Chat History"><span class="material-icons">history</span></button>
-  <button onclick="triggerUpload()" title="Upload Image"><span class="material-icons">image</span></button>
+  <button onclick="openGallery()" title="Saved Images"><span class="material-icons">image</span></button>
   <button onclick="openOpsPanel()" title="Operations"><span class="material-icons">auto_awesome</span></button>
+</div>
+
+<!-- ── GALLERY PANEL ── -->
+<div class="gallery-panel" id="galleryPanel">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <h3><span class="material-icons" style="color:#41e1ae;">collections</span> Saved Images</h3>
+    <span class="material-icons" style="cursor:pointer;" onclick="closeGallery()">close</span>
+  </div>
+  <div id="galleryList"></div>
 </div>
 
 <!-- ── HISTORY PANEL ── -->
@@ -547,272 +429,40 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 <!-- ── OPS PANEL ── -->
 <div class="medical-panel" id="opsPanel">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-    <h3><span class="material-icons" style="color:#41e1ae;font-size:18px;">auto_awesome</span> Quick Operations</h3>
+    <h3><span class="material-icons" style="color:#41e1ae;">auto_awesome</span> Operations</h3>
     <span class="material-icons" style="cursor:pointer;" onclick="closeOpsPanel()">close</span>
   </div>
   <div class="op-category">
+    <div class="op-category-title">🎨 Creative</div>
+    <span class="op-chip" onclick="quickOp('cartoon')">Cartoon</span>
+    <span class="op-chip" onclick="quickOp('watercolor')">Watercolor</span>
+    <span class="op-chip" onclick="quickOp('sketch')">Sketch</span>
+    <span class="op-chip" onclick="quickOp('neon glow')">Neon Glow</span>
+    <span class="op-chip" onclick="quickOp('glitch')">Glitch</span>
+    <span class="op-chip" onclick="quickOp('thermal vision')">Thermal</span>
+    <span class="op-chip" onclick="quickOp('pop art')">Pop Art</span>
+  </div>
+  <div class="op-category">
     <div class="op-category-title">🏥 Medical</div>
-    <span class="op-chip medical" onclick="quickOp('enhance this xray')">X-Ray Enhance</span>
-    <span class="op-chip medical" onclick="quickOp('enhance MRI scan')">MRI Enhance</span>
-    <span class="op-chip medical" onclick="quickOp('enhance ct scan')">CT Enhance</span>
-    <span class="op-chip medical" onclick="quickOp('fundus enhance')">Fundus/Retina</span>
-    <span class="op-chip medical" onclick="quickOp('analyze skin')">Skin Analysis</span>
-    <span class="op-chip medical" onclick="quickOp('analyze wound')">Wound Analysis</span>
-    <span class="op-chip medical" onclick="quickOp('clahe enhance')">CLAHE</span>
-    <span class="op-chip medical" onclick="quickOp('denoise image')">Denoise</span>
-    <span class="op-chip medical" onclick="quickOp('segment image')">Segmentation</span>
-  </div>
-  <div class="op-category">
-    <div class="op-category-title">🎨 Creative Filters</div>
-    <span class="op-chip creative" onclick="quickOp('apply cartoon effect')">Cartoon</span>
-    <span class="op-chip creative" onclick="quickOp('apply watercolor effect')">Watercolor</span>
-    <span class="op-chip creative" onclick="quickOp('apply pencil sketch')">Sketch</span>
-    <span class="op-chip creative" onclick="quickOp('apply oil painting')">Oil Painting</span>
-    <span class="op-chip creative" onclick="quickOp('apply neon glow')">Neon Glow</span>
-    <span class="op-chip creative" onclick="quickOp('apply glitch effect')">Glitch Art</span>
-    <span class="op-chip creative" onclick="quickOp('apply halftone effect')">Halftone</span>
-    <span class="op-chip creative" onclick="quickOp('apply pop art effect')">Pop Art</span>
-    <span class="op-chip creative" onclick="quickOp('apply stained glass effect')">Stained Glass</span>
-    <span class="op-chip creative" onclick="quickOp('apply pointillism effect')">Pointillism</span>
-    <span class="op-chip creative" onclick="quickOp('apply thermal vision')">Thermal Vision</span>
-    <span class="op-chip creative" onclick="quickOp('apply vintage filter')">Lomo/Vintage</span>
-    <span class="op-chip creative" onclick="quickOp('apply duotone effect')">Duotone</span>
-    <span class="op-chip creative" onclick="quickOp('double exposure effect')">Double Exposure</span>
-    <span class="op-chip creative" onclick="quickOp('tilt shift miniature')">Tilt-Shift</span>
-    <span class="op-chip creative" onclick="quickOp('apply bokeh blur background')">Bokeh</span>
-    <span class="op-chip creative" onclick="quickOp('apply HDR effect')">HDR</span>
-    <span class="op-chip creative" onclick="quickOp('fisheye lens effect')">Fisheye</span>
-    <span class="op-chip creative" onclick="quickOp('ascii art')">ASCII Art</span>
-    <span class="op-chip creative" onclick="quickOp('apply mosaic effect')">Mosaic</span>
-    <span class="op-chip creative" onclick="quickOp('cross process effect')">Cross Process</span>
-  </div>
-  <div class="op-category">
-    <div class="op-category-title">🔬 Detection & Analysis</div>
-    <span class="op-chip detection" onclick="quickOp('detect faces')">Face Detect</span>
-    <span class="op-chip detection" onclick="quickOp('extract color palette')">Color Palette</span>
-    <span class="op-chip detection" onclick="quickOp('canny edge detection')">Canny Edges</span>
-    <span class="op-chip detection" onclick="quickOp('sobel gradient')">Sobel</span>
-    <span class="op-chip detection" onclick="quickOp('check image quality')">Quality Check</span>
-    <span class="op-chip detection" onclick="quickOp('analyze colors')">Color Analysis</span>
-    <span class="op-chip detection" onclick="quickOp('histogram equalization')">Histogram Eq</span>
-  </div>
-  <div class="op-category">
-    <div class="op-category-title">✨ Restoration</div>
-    <span class="op-chip" onclick="quickOp('super resolution upscale')">Super Resolution</span>
-    <span class="op-chip" onclick="quickOp('deblur image')">Deblur</span>
-    <span class="op-chip" onclick="quickOp('colorize black and white')">Colorize B&W</span>
-    <span class="op-chip" onclick="quickOp('restore old photo')">Restore Old Photo</span>
+    <span class="op-chip" onclick="quickOp('xray enhance')">X-Ray</span>
+    <span class="op-chip" onclick="quickOp('mri enhance')">MRI</span>
+    <span class="op-chip" onclick="quickOp('skin analyze')">Skin</span>
   </div>
   <div class="op-category">
     <div class="op-category-title">⚙️ Basic</div>
-    <span class="op-chip" onclick="quickOp('rotate 90 degrees')">Rotate 90°</span>
-    <span class="op-chip" onclick="quickOp('flip horizontally')">Flip H</span>
-    <span class="op-chip" onclick="quickOp('flip vertically')">Flip V</span>
-    <span class="op-chip" onclick="quickOp('make grayscale')">Grayscale</span>
-    <span class="op-chip" onclick="quickOp('invert colors')">Invert</span>
-    <span class="op-chip" onclick="quickOp('apply sepia')">Sepia</span>
-    <span class="op-chip" onclick="quickOp('sharpen image')">Sharpen</span>
-    <span class="op-chip" onclick="quickOp('blur image')">Blur</span>
-    <span class="op-chip" onclick="quickOp('increase contrast')">Contrast+</span>
-    <span class="op-chip" onclick="quickOp('increase brightness')">Brightness+</span>
-    <span class="op-chip" onclick="quickOp('increase saturation')">Saturation+</span>
-    <span class="op-chip" onclick="quickOp('adjust hue')">Hue Shift</span>
-    <span class="op-chip" onclick="quickOp('add vignette')">Vignette</span>
-    <span class="op-chip" onclick="quickOp('add film grain')">Film Grain</span>
-    <span class="op-chip" onclick="quickOp('warm white balance')">Warm Tone</span>
-    <span class="op-chip" onclick="quickOp('cool white balance')">Cool Tone</span>
-    <span class="op-chip" onclick="quickOp('image info')">Image Info</span>
-  </div>
-  <div class="op-category">
-    <div class="op-category-title">🤖 Generate</div>
-    <span class="op-chip creative" onclick="promptGenerate()">Generate from Text</span>
+    <span class="op-chip" onclick="quickOp('grayscale')">Grayscale</span>
+    <span class="op-chip" onclick="quickOp('rotate 90')">Rotate</span>
+    <span class="op-chip" onclick="quickOp('blur')">Blur</span>
+    <span class="op-chip" onclick="quickOp('sharpen')">Sharpen</span>
   </div>
 </div>
 
-<!-- ── AUTH MODAL ── -->
-<div class="modal-overlay" id="authModal">
-  <div class="modal-box" id="authBox">
-    <h3 id="authTitle">Sign In</h3>
-    <div class="modal-alert" id="authAlert"></div>
-    <div class="rate-limit-timer" id="rateLimitMsg">⏳ Too many attempts. Please wait <span id="rateLimitCountdown">30</span>s</div>
-    <div id="signupSection" style="display:none;flex-direction:column;gap:10px;">
-      <div style="display:flex;gap:10px;">
-        <div class="input-field-wrap" style="flex:1">
-          <input class="modal-input" id="firstName" placeholder="First Name" oninput="clearFieldError(this)">
-          <span class="field-error" id="firstNameErr">Required</span>
-        </div>
-        <div class="input-field-wrap" style="flex:1">
-          <input class="modal-input" id="lastName" placeholder="Last Name" oninput="clearFieldError(this)">
-          <span class="field-error" id="lastNameErr">Required</span>
-        </div>
-      </div>
-      <div class="input-field-wrap">
-        <input class="modal-input" id="email" placeholder="Email address" oninput="validateEmailField()">
-        <span class="field-error" id="emailErr">Invalid email</span>
-      </div>
-      <div class="input-field-wrap">
-        <input class="modal-input" id="username" placeholder="Username (3-20 chars, letters/numbers/_)" oninput="validateUsernameField()">
-        <span class="field-hint">3–20 characters, letters, numbers, underscore only</span>
-        <span class="field-error" id="usernameErr">Invalid username</span>
-      </div>
-      <div class="input-field-wrap">
-        <input class="modal-input" id="dob" type="date" placeholder="Date of Birth">
-        <span class="field-hint">Must be 13 or older</span>
-        <span class="field-error" id="dobErr">Must be 13+</span>
-      </div>
-    </div>
-
-    <!-- FIX 2: Login identifier with saved accounts dropdown -->
-    <div class="input-field-wrap" id="loginIdentifierWrap" style="position:relative;">
-      <input class="modal-input" id="loginIdentifier" placeholder="Email or Username"
-        oninput="onLoginIdentifierInput()"
-        onfocus="showSavedAccountsDropdown()"
-        autocomplete="off">
-      <span class="field-error" id="identifierErr">Required</span>
-      <div class="saved-accounts-dropdown" id="savedAccountsDropdown"></div>
-    </div>
-
-    <div class="input-field-wrap">
-      <div class="pw-wrap">
-        <input class="modal-input" id="password" type="password" placeholder="Password" oninput="onPasswordInput()">
-        <span class="pw-eye material-icons" onclick="togglePwEye('password','eyeIcon1')" id="eyeIcon1">visibility</span>
-      </div>
-      <div id="pwStrengthWrap" style="display:none;" class="pw-strength-wrap">
-        <div class="pw-bars">
-          <div class="pw-bar" id="bar1"></div><div class="pw-bar" id="bar2"></div>
-          <div class="pw-bar" id="bar3"></div><div class="pw-bar" id="bar4"></div><div class="pw-bar" id="bar5"></div>
-        </div>
-        <div class="pw-label" id="pwLabel">Enter a password</div>
-        <div class="pw-reqs">
-          <div class="pw-req unmet" id="req-len">✗ At least 8 characters</div>
-          <div class="pw-req unmet" id="req-upper">✗ One uppercase letter</div>
-          <div class="pw-req unmet" id="req-lower">✗ One lowercase letter</div>
-          <div class="pw-req unmet" id="req-num">✗ One number</div>
-          <div class="pw-req unmet" id="req-special">✗ One special character (!@#$%...)</div>
-        </div>
-      </div>
-      <span class="field-error" id="passwordErr">Required</span>
-    </div>
-    <div class="input-field-wrap" id="confirmPwWrap" style="display:none;">
-      <div class="pw-wrap">
-        <input class="modal-input" id="confirmPassword" type="password" placeholder="Confirm Password" oninput="validateConfirmPw()">
-        <span class="pw-eye material-icons" onclick="togglePwEye('confirmPassword','eyeIcon2')" id="eyeIcon2">visibility</span>
-      </div>
-      <span class="field-error" id="confirmPwErr">Passwords don't match</span>
-    </div>
-    <div id="termsWrap" style="display:none;">
-      <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
-        <input type="checkbox" id="agreeTerms" style="margin-top:2px;flex-shrink:0;">
-        <span class="modal-terms">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>. I am 13 years of age or older.</span>
-      </label>
-    </div>
-    <button class="modal-btn-primary" id="authSubmitBtn" onclick="submitAuth()">Submit</button>
-    <button class="modal-btn-text" id="forgotBtn" onclick="showForgotPassword()">Forgot Password?</button>
-    <div class="modal-divider" id="switchDivider">or</div>
-    <button class="modal-btn-text" id="switchBtn" onclick="switchAuthMode()">Don't have an account? Sign Up</button>
-    <button class="modal-btn-text" onclick="closeAuth()">Cancel</button>
-  </div>
-</div>
-
-<!-- ── FREE TRIAL LIMIT MODAL ── -->
-<div class="trial-modal-overlay" id="trialModal">
-  <div class="trial-modal-box">
-    <div class="trial-icon">🔒</div>
-    <h2>You've used your free messages</h2>
-    <p>Create a free account to get unlimited access to Lumina's AI image processing, medical analysis, creative filters, and much more.</p>
-    <div class="trial-btns">
-      <button class="btn-trial-primary" onclick="closeTrialModal(); showSignUp();">Sign Up Free</button>
-      <button class="btn-trial-secondary" onclick="closeTrialModal(); showSignIn();">Sign In</button>
-    </div>
-    <button class="modal-btn-text" onclick="closeTrialModal()" style="font-size:12px;opacity:0.5;">Maybe later</button>
-  </div>
-</div>
-
-<!-- ── FORGOT PASSWORD MODAL ── -->
-<div class="modal-overlay" id="forgotModal">
-  <div class="modal-box small">
-    <h3>Reset Password</h3>
-    <div class="modal-alert" id="forgotAlert"></div>
-    <div id="forgotStep1">
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <div class="input-field-wrap">
-          <input class="modal-input" id="forgotEmail" placeholder="Enter your email or username">
-        </div>
-        <button class="modal-btn-primary" onclick="sendOTP()">Send OTP</button>
-      </div>
-    </div>
-    <div id="forgotStep2" style="display:none;flex-direction:column;gap:12px;">
-      <p style="color:rgba(255,255,255,0.7);font-size:13px;text-align:center;">Enter the 6-digit code sent to your email</p>
-      <div class="otp-grid" id="otpGrid">
-        <input class="otp-digit" maxlength="1" oninput="otpInput(this,0)" onkeydown="otpBack(this,event,0)">
-        <input class="otp-digit" maxlength="1" oninput="otpInput(this,1)" onkeydown="otpBack(this,event,1)">
-        <input class="otp-digit" maxlength="1" oninput="otpInput(this,2)" onkeydown="otpBack(this,event,2)">
-        <input class="otp-digit" maxlength="1" oninput="otpInput(this,3)" onkeydown="otpBack(this,event,3)">
-        <input class="otp-digit" maxlength="1" oninput="otpInput(this,4)" onkeydown="otpBack(this,event,4)">
-        <input class="otp-digit" maxlength="1" oninput="otpInput(this,5)" onkeydown="otpBack(this,event,5)">
-      </div>
-      <div id="otpTimer" style="text-align:center;font-size:12px;color:rgba(255,255,255,0.5);">Resend in <span id="otpCountdown">60</span>s</div>
-      <button class="modal-btn-primary" onclick="verifyOTP()">Verify OTP</button>
-    </div>
-    <div id="forgotStep3" style="display:none;flex-direction:column;gap:12px;">
-      <div class="input-field-wrap">
-        <div class="pw-wrap">
-          <input class="modal-input" id="newPassword" type="password" placeholder="New Password" oninput="onNewPasswordInput()">
-          <span class="pw-eye material-icons" onclick="togglePwEye('newPassword','eyeIcon3')" id="eyeIcon3">visibility</span>
-        </div>
-        <div class="pw-strength-wrap" id="newPwStrengthWrap">
-          <div class="pw-bars">
-            <div class="pw-bar" id="nbar1"></div><div class="pw-bar" id="nbar2"></div>
-            <div class="pw-bar" id="nbar3"></div><div class="pw-bar" id="nbar4"></div><div class="pw-bar" id="nbar5"></div>
-          </div>
-          <div class="pw-label" id="newPwLabel"></div>
-        </div>
-      </div>
-      <div class="input-field-wrap">
-        <div class="pw-wrap">
-          <input class="modal-input" id="confirmNewPassword" type="password" placeholder="Confirm New Password">
-          <span class="pw-eye material-icons" onclick="togglePwEye('confirmNewPassword','eyeIcon4')" id="eyeIcon4">visibility</span>
-        </div>
-      </div>
-      <button class="modal-btn-primary" onclick="resetPassword()">Reset Password</button>
-    </div>
-    <button class="modal-btn-text" onclick="closeForgot()">Cancel</button>
-  </div>
-</div>
-
-<!-- ── CHANGE PASSWORD MODAL ── -->
-<div class="modal-overlay" id="changePwModal">
-  <div class="modal-box small">
-    <h3>Change Password</h3>
-    <div class="modal-alert" id="changePwAlert"></div>
-    <div class="input-field-wrap">
-      <div class="pw-wrap">
-        <input class="modal-input" id="currentPassword" type="password" placeholder="Current Password">
-        <span class="pw-eye material-icons" onclick="togglePwEye('currentPassword','eyeIcon5')" id="eyeIcon5">visibility</span>
-      </div>
-    </div>
-    <div class="input-field-wrap">
-      <div class="pw-wrap">
-        <input class="modal-input" id="newPwChange" type="password" placeholder="New Password" oninput="onChangePwInput()">
-        <span class="pw-eye material-icons" onclick="togglePwEye('newPwChange','eyeIcon6')" id="eyeIcon6">visibility</span>
-      </div>
-      <div class="pw-strength-wrap" id="changePwStrength">
-        <div class="pw-bars">
-          <div class="pw-bar" id="cbar1"></div><div class="pw-bar" id="cbar2"></div>
-          <div class="pw-bar" id="cbar3"></div><div class="pw-bar" id="cbar4"></div><div class="pw-bar" id="cbar5"></div>
-        </div>
-        <div class="pw-label" id="changePwLabel"></div>
-      </div>
-    </div>
-    <div class="input-field-wrap">
-      <div class="pw-wrap">
-        <input class="modal-input" id="confirmNewPwChange" type="password" placeholder="Confirm New Password">
-        <span class="pw-eye material-icons" onclick="togglePwEye('confirmNewPwChange','eyeIcon7')" id="eyeIcon7">visibility</span>
-      </div>
-    </div>
-    <button class="modal-btn-primary" onclick="submitChangePassword()">Update Password</button>
-    <button class="modal-btn-text" onclick="document.getElementById('changePwModal').style.display='none'">Cancel</button>
-  </div>
+<!-- ── PROFILE MENU ── -->
+<div class="profile-menu" id="profileMenu">
+  <div class="menu-header"><strong id="profileName">User</strong></div>
+  <div class="menu-item" onclick="newChat()"><span class="material-icons">add_circle_outline</span> New Chat</div>
+  <div class="menu-item" onclick="shareCurrentChat()"><span class="material-icons">share</span> Share Chat</div>
+  <div class="menu-item" onclick="logout()"><span class="material-icons">logout</span> Log Out</div>
 </div>
 
 <!-- ── LIGHTBOX ── -->
@@ -830,257 +480,40 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 <!-- ── TOAST ── -->
 <div class="toast" id="toast"></div>
 
-<input type="file" id="fileInput" accept="image/*" multiple style="display:none"
-  onchange="handleFileInputChange(event)">
+<input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="handleFileInputChange(event)">
 
 <script>
 (function () {
 'use strict';
 
-// ── STORAGE PURGE ──────────────────────────────────────────
-(function purgeOldImageChats() {
-  try {
-    Object.keys(localStorage).forEach(key => {
-      if (key === 'berryChats') localStorage.removeItem(key);
-      if (key === 'lumina_chat_index_legacy') localStorage.removeItem(key);
-    });
-  } catch(e) {}
-})();
-
 // ── STATE ─────────────────────────────────────────────────
-let chatStarted=false, generating=false, abortController=null;
+let chatStarted=false, generating=false;
 let attachedFiles=[], conversationHistory=[];
 let currentChatTitle=null, currentChatKey=null;
-let authMode='signin';
-let loginAttempts=0, lockUntil=0;
-let otpCode='', otpExpiry=0, otpTimerInt=null;
 let currentUser=null;
 let lastImageB64=null;
-
-// ── FREE TRIAL TRACKING ────────────────────────────────────
-const FREE_TRIAL_LIMIT = 3;
-let guestMessageCount = 0;
+let savedImages=[];
 
 const MAX_SIZE=10*1024*1024;
 const ALLOWED=['image/jpeg','image/png','image/webp','image/gif','image/bmp'];
 const LS_USER='luminaUser_v2';
-const MAX_LOGIN_ATTEMPTS=5, LOCK_DURATION=30;
-
-// Handle paste (especially important for copied text/images)
-// Better paste handling
-window.handlePaste = function(e) {
-  // Let the browser handle normal text paste
-  setTimeout(() => {
-    autoResizeTextarea(document.getElementById('promptInput'));
-  }, 10);
-};
 
 function userKey(suffix) {
   const uid = currentUser ? currentUser.username : 'guest';
   return `lumina_${uid}_${suffix}`;
 }
-function getChatIndex() {
-  try { return JSON.parse(localStorage.getItem(userKey('index')) || '[]'); } catch { return []; }
-}
-function updateChatIndex(a) {
-  localStorage.setItem(userKey('index'), JSON.stringify(a));
-}
 
-// ── FIX 1: TEXTAREA AUTO-RESIZE ───────────────────────────
+// ── TEXTAREA AUTO-RESIZE ───────────────────────────────────
 window.autoResizeTextarea = function(el) {
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 160) + 'px';
 };
 
 window.handlePromptKeydown = function(event) {
-  // Enter without Shift = send; Shift+Enter = new line
   if (event.key === 'Enter' && !event.shiftKey) {
     event.preventDefault();
     sendMessage();
   }
-};
-
-// ── FIX 2: SAVED ACCOUNTS DROPDOWN ────────────────────────
-function getAllSavedAccounts() {
-  const accounts = [];
-  try {
-    Object.keys(localStorage).forEach(k => {
-      if (k.startsWith(LS_USER + '_')) {
-        const u = JSON.parse(localStorage.getItem(k) || 'null');
-        if (u && u.username && u.firstName) {
-          accounts.push(u);
-        }
-      }
-    });
-  } catch(e) {}
-  return accounts;
-}
-
-window.showSavedAccountsDropdown = function() {
-  if (authMode !== 'signin') return;
-  const accounts = getAllSavedAccounts();
-  const dropdown = document.getElementById('savedAccountsDropdown');
-  if (!accounts.length) { dropdown.classList.remove('show'); return; }
-
-  let html = '<div class="saved-accounts-header">Saved Accounts</div>';
-  accounts.forEach(u => {
-    html += `
-      <div class="saved-account-item" onclick="selectSavedAccount(${JSON.stringify(u.username)})">
-        <div class="saved-account-avatar">${u.firstName.charAt(0).toUpperCase()}</div>
-        <div class="saved-account-info">
-          <div class="saved-account-name">${escapeHtml(u.firstName + ' ' + u.lastName)}</div>
-          <div class="saved-account-email">${escapeHtml(u.email || u.username)}</div>
-        </div>
-      </div>`;
-  });
-  dropdown.innerHTML = html;
-  dropdown.classList.add('show');
-};
-
-// Improved Saved Account Selection
-window.selectSavedAccount = function(username) {
-  const identifierInput = document.getElementById('loginIdentifier');
-  identifierInput.value = username;
-  document.getElementById('savedAccountsDropdown').classList.remove('show');
-  
-  // Important: Focus password field and select it for easy typing
-  setTimeout(() => {
-    const pwField = document.getElementById('password');
-    pwField.focus();
-    pwField.select();   // Selects the field so user can start typing immediately
-  }, 50);
-};
-
-// Improved search while typing
-window.onLoginIdentifierInput = function() {
-  const val = document.getElementById('loginIdentifier').value.trim();
-  const dropdown = document.getElementById('savedAccountsDropdown');
-  
-  if (val.length < 1) {
-    showSavedAccountsDropdown();
-    return;
-  }
-
-  const accounts = getAllSavedAccounts().filter(u => 
-    u.username.toLowerCase().includes(val.toLowerCase()) ||
-    (u.email && u.email.toLowerCase().includes(val.toLowerCase()))
-  );
-
-  if (accounts.length === 0) {
-    dropdown.classList.remove('show');
-    return;
-  }
-
-  let html = '<div class="saved-accounts-header">Saved Accounts</div>';
-  accounts.forEach(u => {
-    html += `
-      <div class="saved-account-item" onclick="selectSavedAccount('${u.username}')">
-        <div class="saved-account-avatar">${u.firstName.charAt(0).toUpperCase()}</div>
-        <div class="saved-account-info">
-          <div class="saved-account-name">${escapeHtml(u.firstName + ' ' + u.lastName)}</div>
-          <div class="saved-account-email">${escapeHtml(u.email || u.username)}</div>
-        </div>
-      </div>`;
-  });
-
-  dropdown.innerHTML = html;
-  dropdown.classList.add('show');
-};
-
-// Close dropdown when clicking outside
-document.addEventListener('click', function(e) {
-  const dropdown = document.getElementById('savedAccountsDropdown');
-  const wrap = document.getElementById('loginIdentifierWrap');
-  if (dropdown && wrap && !wrap.contains(e.target)) {
-    dropdown.classList.remove('show');
-  }
-});
-
-  async function compressImageForUpload(dataUrl) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      let width = img.width;
-      let height = img.height;
-      const MAX_SIZE = 1024;
-      
-      if (width > MAX_SIZE) {
-        height = (MAX_SIZE / width) * height;
-        width = MAX_SIZE;
-      } else if (height > MAX_SIZE) {
-        width = (MAX_SIZE / height) * width;
-        height = MAX_SIZE;
-      }
-
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-      
-      resolve(canvas.toDataURL('image/jpeg', 0.85));
-    };
-    img.src = dataUrl;
-  });
-}
-
-// ── API STATUS CHECK ──────────────────────────────────────
-async function checkApiStatus() {
-  document.getElementById('profileMenu').style.display='none';
-  const badge = document.getElementById('apiStatusBadge');
-  const dot   = document.getElementById('apiDot');
-  const txt   = document.getElementById('apiStatusText');
-  badge.style.display = 'flex';
-  dot.className = 'dot dot-yellow';
-  txt.textContent = 'Checking AI APIs…';
-  try {
-    const r = await fetch('/api/status');
-    const d = await r.json();
-    if (d.gemini || d.claude) {
-      dot.className = 'dot dot-green';
-      const parts = [];
-      if (d.gemini) parts.push('Lumina ✓');
-      if (d.claude) parts.push('Luminus ✓');
-      txt.textContent = parts.join(' · ') + ' — AI Ready';
-    } else {
-      dot.className = 'dot dot-red';
-      txt.textContent = '⚠ No AI API detected — check Secrets & restart Space';
-    }
-  } catch(e) {
-    dot.className = 'dot dot-red';
-    txt.textContent = 'Could not reach server';
-  }
-  setTimeout(() => { badge.style.display = 'none'; }, 5000);
-}
-window.checkApiStatus = checkApiStatus;
-
-// ── TRIAL COUNTER UI ──────────────────────────────────────
-function updateTrialCounter() {
-  if (currentUser) {
-    document.getElementById('trialCounter').classList.remove('show');
-    return;
-  }
-  const remaining = FREE_TRIAL_LIMIT - guestMessageCount;
-  const counter = document.getElementById('trialCounter');
-  if (remaining <= 0) {
-    counter.classList.remove('show');
-    return;
-  }
-  counter.classList.add('show');
-  const dots = ['td1','td2','td3'];
-  dots.forEach((id, i) => {
-    const dot = document.getElementById(id);
-    dot.className = 'trial-dot' + (i >= remaining ? ' used' : '');
-  });
-  document.getElementById('trialLabel').textContent =
-    remaining === 1 ? '1 free message left' : `${remaining} free messages left`;
-}
-
-function showTrialModal() {
-  document.getElementById('trialModal').style.display = 'flex';
-}
-window.closeTrialModal = function() {
-  document.getElementById('trialModal').style.display = 'none';
 };
 
 // ── TOAST ─────────────────────────────────────────────────
@@ -1090,7 +523,7 @@ function toast(msg, dur=2500) {
   setTimeout(()=>t.classList.remove('show'), dur);
 }
 
-// ── SEND/STOP BUTTON ─────────────────────────────────────
+// ── SEND/STOP ─────────────────────────────────────────────
 window.handleSendOrStop = function() {
   if (generating) { stopGeneration(); } else { sendMessage(); }
 };
@@ -1107,10 +540,9 @@ function setGenerating(val) {
 }
 
 function stopGeneration() {
-  if (abortController) abortController.abort();
   setGenerating(false);
   removeTyping();
-  addBotMsg('⛔ Generation stopped.', false, null, 'local');
+  addBotMsg('⛔ Generation stopped.', false, null);
 }
 
 // ── CHAT HELPERS ──────────────────────────────────────────
@@ -1155,26 +587,18 @@ function addUserMsg(text, images) {
   return wrapper;
 }
 
-function addBotMsg(content, isHTML=false, imgSrc=null, modelUsed='') {
+function addBotMsg(content, isHTML=false, imgSrc=null) {
   const wrapper = createMsgWrapper('bot');
   const div = document.createElement('div');
   div.classList.add('chat-msg', 'bot-msg');
   if (isHTML) div.innerHTML = content; else div.innerText = content;
   wrapper.appendChild(div);
 
-  if (modelUsed) {
-    const badge = document.createElement('span');
-    badge.className = 'model-badge badge-gemini';
-    badge.textContent = '🌟 Lumina';
-    wrapper.appendChild(badge);
-  }
-
   if (imgSrc) {
     const attachBox = document.createElement('div');
     attachBox.className = 'msg-attachments bot-side';
     const img = document.createElement('img');
     img.src = imgSrc; img.className = 'msg-attach-img';
-    img.style.maxWidth = '320px'; img.style.height = 'auto';
     img.onclick = () => openLightbox(imgSrc);
     attachBox.appendChild(img);
     wrapper.appendChild(attachBox);
@@ -1186,7 +610,7 @@ function addBotMsg(content, isHTML=false, imgSrc=null, modelUsed='') {
   let actHtml = `<button class="msg-action-btn" onclick="copyText(${JSON.stringify(plainText)})"><span class="material-icons">content_copy</span> Copy</button>`;
   if (imgSrc) {
     actHtml += `<button class="msg-action-btn" onclick="downloadImage(${JSON.stringify(imgSrc)})"><span class="material-icons">download</span> Download</button>`;
-    actHtml += `<button class="msg-action-btn" onclick="copyImageToClipboard(${JSON.stringify(imgSrc)})"><span class="material-icons">image</span> Copy Image</button>`;
+    actHtml += `<button class="msg-action-btn" onclick="saveImageToGallery(${JSON.stringify(imgSrc)})"><span class="material-icons">favorite</span> Save</button>`;
   }
   actions.innerHTML = actHtml;
   wrapper.appendChild(actions);
@@ -1199,6 +623,7 @@ function scrollChat() {
   const w=document.getElementById('chatWrapper');
   setTimeout(()=>{w.scrollTop=w.scrollHeight;},60);
 }
+
 function showTyping() {
   const wrapper = createMsgWrapper('bot');
   wrapper.id = 'typingWrapper';
@@ -1208,10 +633,11 @@ function showTyping() {
   wrapper.appendChild(div);
   document.getElementById('chatArea').appendChild(wrapper); scrollChat();
 }
+
 function removeTyping() {
   const t=document.getElementById('typingWrapper'); if(t) t.remove();
-  const t2=document.getElementById('typing'); if(t2) t2.remove();
 }
+
 function formatReply(text) {
   return text
     .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
@@ -1220,9 +646,9 @@ function formatReply(text) {
     .replace(/\n/g,'<br>');
 }
 
-// ── COPY / DOWNLOAD HELPERS ───────────────────────────────
+// ── COPY / DOWNLOAD ──────────────────────────────────────
 window.copyText = function(text) {
-  navigator.clipboard.writeText(text).then(()=>toast('Copied to clipboard!')).catch(()=>{
+  navigator.clipboard.writeText(text).then(()=>toast('Copied!')).catch(()=>{
     const ta=document.createElement('textarea'); ta.value=text;
     document.body.appendChild(ta); ta.select(); document.execCommand('copy');
     document.body.removeChild(ta); toast('Copied!');
@@ -1235,14 +661,31 @@ window.downloadImage = function(src, name='lumina-image.png') {
   toast('Image downloaded!');
 };
 
+window.saveImageToGallery = async function(src) {
+  const id = 'img_' + Date.now();
+  const saveData = {
+    id: id,
+    image: src,
+    title: 'Generated Image',
+    timestamp: new Date().toISOString()
+  };
+  
+  savedImages.push(saveData);
+  const key = userKey('gallery');
+  localStorage.setItem(key, JSON.stringify(savedImages));
+  
+  toast('Image saved to gallery!');
+  renderGallery();
+};
+
 window.copyImageToClipboard = async function(src) {
   try {
     const res = await fetch(src);
     const blob = await res.blob();
     await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
-    toast('Image copied to clipboard!');
+    toast('Image copied!');
   } catch(e) {
-    toast('Copy not supported in this browser. Use Download instead.');
+    toast('Copy not supported. Use Download instead.');
   }
 };
 
@@ -1255,21 +698,14 @@ window.sendMessage = async function() {
   
   if (!text && attachedFiles.length === 0) return;
 
-  // IMPORTANT: Do NOT send previous image when user is asking to GENERATE
-  const isGenerationRequest = text.toLowerCase().includes('generate') || 
-                              text.toLowerCase().includes('create') || 
-                              text.toLowerCase().includes('make a') || 
-                              text.toLowerCase().includes('draw');
-
   setGenerating(true);
   startChatMode();
 
-  addUserMsg(text, (!isGenerationRequest && attachedFiles.length > 0) ? [...attachedFiles] : []);
+  addUserMsg(text, attachedFiles.length > 0 ? [...attachedFiles] : []);
 
   const promptText = text;
-  const filesToSend = (!isGenerationRequest && attachedFiles.length > 0) ? [...attachedFiles] : [];
+  const filesToSend = attachedFiles.length > 0 ? [...attachedFiles] : [];
 
-  // Reset input
   input.value = '';
   input.style.height = 'auto';
   attachedFiles = [];
@@ -1282,16 +718,8 @@ window.sendMessage = async function() {
     fd.append('prompt', promptText);
     fd.append('history', JSON.stringify(conversationHistory));
 
-    // Only send image if it's NOT a generation request
     if (filesToSend.length > 0) {
-      let imageToSend = filesToSend[0];
-      
-      // Compress image before sending (very important to avoid 413)
-      if (imageToSend.startsWith('data:image')) {
-        imageToSend = await compressImageForUpload(imageToSend);   // Use the compress function from earlier
-      }
-
-      const blob = await (await fetch(imageToSend)).blob();
+      const blob = await (await fetch(filesToSend[0])).blob();
       fd.append('image', blob, 'upload.jpg');
     }
 
@@ -1300,35 +728,28 @@ window.sendMessage = async function() {
       body: fd
     });
 
-    // ... rest of your code remains same
-
     removeTyping();
-    if (!res.ok) { addBotMsg('⚠️ Server error: ' + await res.text()); setGenerating(false); return; }
+    if (!res.ok) { addBotMsg('⚠️ Server error'); setGenerating(false); return; }
 
     const data = await res.json();
     if (data.history) conversationHistory = data.history;
     if (data.last_image) lastImageB64 = data.last_image;
-    else if (filesToSend.length > 0) lastImageB64 = filesToSend[0];
 
     const resultImg = data.image || null;
-    const modelUsed = data.model || '';
 
-    if (data.message) addBotMsg(formatReply(data.message), true, resultImg, modelUsed);
-    else if (resultImg) addBotMsg('Here is your processed image:', false, resultImg, modelUsed);
-
-    if (!currentUser) { guestMessageCount++; updateTrialCounter(); }
+    if (data.message) addBotMsg(formatReply(data.message), true, resultImg);
+    else if (resultImg) addBotMsg('Here is your processed image:', false, resultImg);
 
     saveChatHistory();
   } catch(err) {
     removeTyping();
-    if (err.name !== 'AbortError') addBotMsg('⚠️ Connection error: ' + err.message);
+    addBotMsg('⚠️ Error: ' + err.message);
   } finally {
     setGenerating(false);
-    abortController = null;
   }
 };
 
-// ── QUICK OP ─────────────────────────────────────────────
+// ── QUICK OP ──────────────────────────────────────────────
 window.quickOp = function(cmd) {
   const input = document.getElementById('promptInput');
   input.value = cmd;
@@ -1336,18 +757,8 @@ window.quickOp = function(cmd) {
   closeOpsPanel();
   sendMessage();
 };
-window.promptGenerate = function() {
-  closeOpsPanel();
-  const p=prompt('Enter a text prompt to generate an image:');
-  if (p && p.trim()) {
-    const input = document.getElementById('promptInput');
-    input.value = 'generate image of ' + p.trim();
-    autoResizeTextarea(input);
-    sendMessage();
-  }
-};
 
-// ── NEW CHAT ─────────────────────────────────────────────
+// ── NEW CHAT ──────────────────────────────────────────────
 window.newChat = function() {
   document.getElementById('chatArea').innerHTML='';
   document.getElementById('chatWrapper').style.display='none';
@@ -1364,7 +775,7 @@ window.newChat = function() {
 };
 
 // ── SHARE CHAT ────────────────────────────────────────────
-window.shareChat = function() {
+window.shareCurrentChat = function() {
   document.getElementById('profileMenu').style.display='none';
   const msgs = document.querySelectorAll('.chat-msg');
   if (!msgs.length) { toast('No chat to share yet.'); return; }
@@ -1375,46 +786,25 @@ window.shareChat = function() {
     if (bubble) text += (isUser ? 'You: ' : 'Lumina: ') + (bubble.innerText || bubble.textContent).trim() + '\n\n';
   });
   copyText(text);
-  toast('Chat copied to clipboard! Share it anywhere.');
+  toast('Chat copied to clipboard!');
 };
 
 // ── HISTORY ───────────────────────────────────────────────
 function saveChatHistory() {
   if (!currentChatKey || !currentChatTitle) return;
   const rawHTML = document.getElementById('chatArea').innerHTML;
-  const cleanHTML = rawHTML
-    .replace(/<img[^>]+src="data:[^"]*"[^>]*>/gi, '<span style="color:rgba(255,255,255,0.45);font-size:12px;">[image]</span>')
-    .replace(/src="data:[^"]*"/gi, 'src=""');
-
   const chatData = {
     title: currentChatTitle,
-    html: cleanHTML,
-    history: conversationHistory.map(h => ({
-      ...h,
-      parts: h.parts.map(p => typeof p === 'object' && p.mime_type ? '[image]' : p)
-    })),
+    html: rawHTML,
+    history: conversationHistory,
     ts: Date.now()
   };
 
-  const serialized = JSON.stringify(chatData);
-  if (serialized.length > 300000) { toast('Chat too large to save fully.'); return; }
-
   try {
-    localStorage.setItem(currentChatKey, serialized);
+    localStorage.setItem(currentChatKey, JSON.stringify(chatData));
   } catch(e) {
-    try {
-      const idx = getChatIndex();
-      if (idx.length > 5) {
-        const toRemove = idx.slice(0, idx.length - 5);
-        toRemove.forEach(c => localStorage.removeItem(c.key));
-      }
-      localStorage.setItem(currentChatKey, serialized);
-    } catch(e2) { console.error('Could not save chat:', e2); }
+    console.error('Could not save chat:', e);
   }
-
-  const idx = getChatIndex().filter(c=>c.key!==currentChatKey).slice(-29);
-  idx.push({key:currentChatKey, title:currentChatTitle, ts:Date.now()});
-  updateChatIndex(idx);
 }
 
 window.openHistory=function(){ document.getElementById('historyPanel').style.display='block'; renderHistoryList(); };
@@ -1422,21 +812,18 @@ window.closeHistory=function(){ document.getElementById('historyPanel').style.di
 
 function renderHistoryList() {
   const list=document.getElementById('historyList'); list.innerHTML='';
-  const idx=getChatIndex().slice().sort((a,b)=>b.ts-a.ts);
+  const idx=Object.keys(localStorage).filter(k=>k.startsWith(userKey('chat_')));
   if (!idx.length) { list.innerHTML='<p style="opacity:.55;font-size:13px;">No saved chats yet.</p>'; return; }
-  idx.forEach(entry=>{
+  idx.forEach(key=>{
+    const data = JSON.parse(localStorage.getItem(key) || '{}');
+    if (!data.title) return;
     const item=document.createElement('div');
-    item.className='history-item' + (entry.key === currentChatKey ? ' active-chat' : '');
-    const date=new Date(entry.ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});
-    item.innerHTML=`
-      <div style="flex:1;min-width:0;">
-        <div class="title">${escapeHtml(truncate(entry.title,42))}</div>
-        <div class="date">${date}</div>
-      </div>
-      <button class="del-btn" onclick="deleteChat(event,'${entry.key}')">×</button>`;
+    item.className='history-item' + (key === currentChatKey ? ' active-chat' : '');
+    const date=new Date(data.ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    item.innerHTML=`<div style="flex:1;min-width:0;"><div class="title">${data.title.substring(0,42)}</div><div class="date">${date}</div></div><button class="del-btn" onclick="deleteChat(event,'${key}')">×</button>`;
     item.addEventListener('click', e=>{
       if (e.target.classList.contains('del-btn')) return;
-      loadChat(entry.key);
+      loadChat(key);
     });
     list.appendChild(item);
   });
@@ -1445,16 +832,7 @@ function renderHistoryList() {
 window.deleteChat=function(e,key){
   e.stopPropagation();
   localStorage.removeItem(key);
-  updateChatIndex(getChatIndex().filter(c=>c.key!==key));
-  if (key === currentChatKey) {
-    document.getElementById('chatArea').innerHTML='';
-    document.getElementById('chatWrapper').style.display='none';
-    document.getElementById('watermark').style.display='block';
-    document.getElementById('homeSubtitle').style.display='block';
-    chatStarted=false; conversationHistory=[];
-    currentChatTitle=null; currentChatKey=null; lastImageB64=null;
-    toast('Chat deleted.');
-  }
+  if (key === currentChatKey) newChat();
   renderHistoryList();
 };
 
@@ -1466,12 +844,58 @@ function loadChat(key) {
     conversationHistory=data.history||[];
     currentChatTitle=data.title||null;
     currentChatKey=key; lastImageB64=null;
-    document.querySelectorAll('.msg-attach-img, .chat-image-large').forEach(img=>{
+    document.querySelectorAll('.msg-attach-img').forEach(img=>{
       if (img.src && !img.src.endsWith('""')) img.onclick=()=>openLightbox(img.src);
     });
     startChatMode(); closeHistory(); scrollChat();
   } catch(e) { console.error(e); }
 }
+
+// ── GALLERY ───────────────────────────────────────────────
+window.openGallery=function(){ 
+  document.getElementById('galleryPanel').style.display='block'; 
+  loadSavedImages();
+  renderGallery(); 
+};
+window.closeGallery=function(){ 
+  document.getElementById('galleryPanel').style.display='none'; 
+};
+
+function loadSavedImages() {
+  try {
+    const key = userKey('gallery');
+    const data = localStorage.getItem(key);
+    savedImages = data ? JSON.parse(data) : [];
+  } catch(e) {
+    savedImages = [];
+  }
+}
+
+function renderGallery() {
+  loadSavedImages();
+  const list=document.getElementById('galleryList');
+  if (!savedImages.length) { 
+    list.innerHTML='<div class="gallery-empty">📸 No saved images yet.<br>Click the heart icon to save!</div>';
+    return; 
+  }
+  list.innerHTML='<div class="gallery-grid">' +
+    savedImages.map((img, i) => `
+      <div class="gallery-item" onclick="openLightbox('${img.image}')">
+        <img src="${img.image}" alt="Saved">
+        <button class="gallery-item-remove" onclick="deleteGalleryImage(event, ${i})">×</button>
+      </div>
+    `).join('') +
+    '</div>';
+}
+
+window.deleteGalleryImage=function(e, idx) {
+  e.stopPropagation();
+  savedImages.splice(idx, 1);
+  const key = userKey('gallery');
+  localStorage.setItem(key, JSON.stringify(savedImages));
+  renderGallery();
+  toast('Image removed from gallery');
+};
 
 // ── FILE UPLOAD ───────────────────────────────────────────
 window.triggerUpload=function(){ document.getElementById('fileInput').click(); };
@@ -1479,8 +903,8 @@ window.handleFileInputChange=function(e){ handleFiles(Array.from(e.target.files)
 
 function handleFiles(files) {
   files.forEach(file=>{
-    if (!ALLOWED.includes(file.type)) { toast('Only images allowed (JPG, PNG, WEBP, GIF, BMP).'); return; }
-    if (file.size>MAX_SIZE) { toast('File exceeds 10MB limit.'); return; }
+    if (!ALLOWED.includes(file.type)) { toast('Only images allowed.'); return; }
+    if (file.size>MAX_SIZE) { toast('File exceeds 10MB.'); return; }
     const reader=new FileReader();
     reader.onload=ev=>{ attachedFiles.push(ev.target.result); renderPreviews(); };
     reader.readAsDataURL(file);
@@ -1507,7 +931,7 @@ document.addEventListener('drop',e=>{ e.preventDefault(); document.body.classLis
 // ── VOICE ─────────────────────────────────────────────────
 window.micAction=function(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if (!SR) { toast('Voice input requires Chrome or Edge.'); return; }
+  if (!SR) { toast('Voice requires Chrome or Edge.'); return; }
   const rec=new SR(); rec.lang='en-US';
   rec.onresult=e=>{
     const input = document.getElementById('promptInput');
@@ -1517,7 +941,7 @@ window.micAction=function(){
   rec.start();
 };
 
-// ── LIGHTBOX ─────────────────────────────────────────────
+// ── LIGHTBOX ──────────────────────────────────────────────
 function openLightbox(src) {
   document.getElementById('lightboxImg').src=src;
   document.getElementById('lightbox').style.display='flex';
@@ -1539,418 +963,83 @@ window.openOpsPanel=function(){
 };
 window.closeOpsPanel=function(){ document.getElementById('opsPanel').style.display='none'; };
 
-// ── PASSWORD STRENGTH ─────────────────────────────────────
-function checkPasswordStrength(pw) {
-  const checks={
-    len: pw.length>=8, upper: /[A-Z]/.test(pw),
-    lower: /[a-z]/.test(pw), num: /\d/.test(pw),
-    special: /[!@#$%^&*(),.?":{}|<>]/.test(pw)
-  };
-  const score=Object.values(checks).filter(Boolean).length;
-  return {checks, score};
-}
-function renderStrength(pw, barPrefix, labelId) {
-  const {checks,score}=checkPasswordStrength(pw);
-  const colors=['#ff4444','#ff8844','#ffcc44','#88cc44','#44cc77'];
-  const labels=['Very Weak','Weak','Fair','Strong','Very Strong'];
-  for (let i=1;i<=5;i++){
-    const bar=document.getElementById(barPrefix+i);
-    if (!bar) continue;
-    bar.style.background=i<=score?colors[score-1]:'rgba(255,255,255,0.2)';
-  }
-  const lbl=document.getElementById(labelId);
-  if (lbl) lbl.textContent=pw?labels[score-1]||'Very Weak':'';
-  return checks;
-}
-function updateReqs(checks) {
-  const map={len:'req-len',upper:'req-upper',lower:'req-lower',num:'req-num',special:'req-special'};
-  Object.entries(map).forEach(([k,id])=>{
-    const el=document.getElementById(id); if (!el) return;
-    el.className='pw-req '+(checks[k]?'met':'unmet');
-    el.textContent=(checks[k]?'✓':'✗')+el.textContent.slice(1);
-  });
-}
-window.onPasswordInput=function(){
-  const pw=document.getElementById('password').value;
-  if (authMode==='signup') { const checks=renderStrength(pw,'bar','pwLabel'); updateReqs(checks); }
-};
-window.onNewPasswordInput=function(){ renderStrength(document.getElementById('newPassword').value,'nbar','newPwLabel'); };
-window.onChangePwInput=function(){ renderStrength(document.getElementById('newPwChange').value,'cbar','changePwLabel'); };
-window.togglePwEye=function(inputId, iconId){
-  const inp=document.getElementById(inputId); const ico=document.getElementById(iconId);
-  if (!inp||!ico) return;
-  if (inp.type==='password'){ inp.type='text'; ico.textContent='visibility_off'; }
-  else { inp.type='password'; ico.textContent='visibility'; }
-};
-
-// ── AUTH MODE ─────────────────────────────────────────────
+// ── AUTH BASICS ───────────────────────────────────────────
 window.showSignIn=function(){
-  authMode='signin'; resetAuthModal();
-  document.getElementById('authTitle').innerText='Sign In';
-  document.getElementById('signupSection').style.display='none';
-  document.getElementById('loginIdentifierWrap').style.display='flex';
-  document.getElementById('confirmPwWrap').style.display='none';
-  document.getElementById('termsWrap').style.display='none';
-  document.getElementById('pwStrengthWrap').style.display='none';
-  document.getElementById('forgotBtn').style.display='block';
-  document.getElementById('switchBtn').textContent="Don't have an account? Sign Up";
-  document.getElementById('authSubmitBtn').textContent='Sign In';
-  document.getElementById('authModal').style.display='flex';
-  // Auto-show saved accounts
-  setTimeout(showSavedAccountsDropdown, 100);
-};
-window.showSignUp=function(){
-  authMode='signup'; resetAuthModal();
-  document.getElementById('authTitle').innerText='Create Account';
-  document.getElementById('signupSection').style.display='flex';
-  document.getElementById('loginIdentifierWrap').style.display='none';
-  document.getElementById('confirmPwWrap').style.display='flex';
-  document.getElementById('termsWrap').style.display='flex';
-  document.getElementById('pwStrengthWrap').style.display='block';
-  document.getElementById('forgotBtn').style.display='none';
-  document.getElementById('switchBtn').textContent='Already have an account? Sign In';
-  document.getElementById('authSubmitBtn').textContent='Create Account';
-  document.getElementById('authModal').style.display='flex';
-};
-window.switchAuthMode=function(){ authMode==='signin'?showSignUp():showSignIn(); };
-window.closeAuth=function(){ document.getElementById('authModal').style.display='none'; };
-
-function resetAuthModal() {
-  document.getElementById('authAlert').style.display='none';
-  document.getElementById('authAlert').className='modal-alert';
-  document.querySelectorAll('#authModal .field-error').forEach(e=>e.style.display='none');
-  document.querySelectorAll('#authModal .modal-input').forEach(e=>{ e.classList.remove('input-error','input-ok'); e.value=''; });
-  document.getElementById('savedAccountsDropdown').classList.remove('show');
-}
-function showAuthAlert(msg, type='error') {
-  const el=document.getElementById('authAlert');
-  el.textContent=msg; el.className='modal-alert '+type; el.style.display='flex';
-}
-function showFieldError(errId, show=true) {
-  const el=document.getElementById(errId);
-  if (el) el.style.display=show?'block':'none';
-}
-window.clearFieldError=function(input){ input.classList.remove('input-error'); };
-window.validateEmailField=function(){
-  const val=document.getElementById('email').value;
-  const ok=/^[^@]+@[^@]+\.[a-z]{2,}$/i.test(val);
-  document.getElementById('email').classList.toggle('input-error',val.length>3&&!ok);
-  document.getElementById('email').classList.toggle('input-ok',ok);
-  return ok;
-};
-window.validateUsernameField=function(){
-  const val=document.getElementById('username').value;
-  const ok=/^[a-zA-Z0-9_]{3,20}$/.test(val);
-  document.getElementById('username').classList.toggle('input-error',val.length>2&&!ok);
-  document.getElementById('username').classList.toggle('input-ok',ok);
-  return ok;
-};
-window.validateConfirmPw=function(){
-  const p1=document.getElementById('password').value;
-  const p2=document.getElementById('confirmPassword').value;
-  const ok=p1===p2&&p2.length>0;
-  document.getElementById('confirmPassword').classList.toggle('input-error',p2.length>0&&!ok);
-  document.getElementById('confirmPassword').classList.toggle('input-ok',ok);
-  return ok;
-};
-
-// ── RATE LIMITING ─────────────────────────────────────────
-function isRateLimited() {
-  if (lockUntil && Date.now()<lockUntil) {
-    const remaining=Math.ceil((lockUntil-Date.now())/1000);
-    document.getElementById('rateLimitCountdown').textContent=remaining;
-    document.getElementById('rateLimitMsg').style.display='block';
-    document.getElementById('authSubmitBtn').disabled=true;
-    return true;
-  }
-  document.getElementById('rateLimitMsg').style.display='none';
-  document.getElementById('authSubmitBtn').disabled=false;
-  return false;
-}
-function recordFailedAttempt() {
-  loginAttempts++;
-  if (loginAttempts>=MAX_LOGIN_ATTEMPTS) {
-    lockUntil=Date.now()+LOCK_DURATION*1000; loginAttempts=0;
-    const countdown=setInterval(()=>{ if (!isRateLimited()) clearInterval(countdown); },1000);
-  }
-}
-
-// ── SUBMIT AUTH ───────────────────────────────────────────
-window.submitAuth = async function() {
-  if (isRateLimited()) return;
-  const pw=document.getElementById('password').value;
-  if (authMode==='signup') {
-    const fn=document.getElementById('firstName').value.trim();
-    const ln=document.getElementById('lastName').value.trim();
-    const em=document.getElementById('email').value.trim();
-    const un=document.getElementById('username').value.trim();
-    const dob=document.getElementById('dob').value;
-    const agree=document.getElementById('agreeTerms').checked;
-    let ok=true;
-    if (!fn){ document.getElementById('firstName').classList.add('input-error'); showFieldError('firstNameErr'); ok=false; }
-    if (!ln){ document.getElementById('lastName').classList.add('input-error'); showFieldError('lastNameErr'); ok=false; }
-    if (!/^[^@]+@[^@]+\.[a-z]{2,}$/i.test(em)){ document.getElementById('email').classList.add('input-error'); showFieldError('emailErr'); ok=false; }
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(un)){ document.getElementById('username').classList.add('input-error'); showFieldError('usernameErr'); ok=false; }
-    if (!dob){ document.getElementById('dob').classList.add('input-error'); showFieldError('dobErr'); ok=false; }
-    else {
-      const age=(Date.now()-new Date(dob).getTime())/(365.25*24*3600*1000);
-      if (age<13){ document.getElementById('dob').classList.add('input-error'); showFieldError('dobErr'); ok=false; }
-    }
-    if (!agree){ showAuthAlert('You must agree to the Terms of Service.'); ok=false; }
-    if (!ok) return;
-    const {score}=checkPasswordStrength(pw);
-    if (score<3){ showAuthAlert('Password is too weak. Please meet all requirements.'); return; }
-    if (pw!==document.getElementById('confirmPassword').value){ showAuthAlert('Passwords do not match.'); return; }
-    try {
-      const r=await fetch('/api/auth/hash-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
-      const d=await r.json();
-      if (!r.ok){ showAuthAlert(d.error+(d.details?'\n'+d.details.join(', '):''),'error'); return; }
-      const existing=JSON.parse(localStorage.getItem(LS_USER+'_'+un)||'null');
-      if (existing){ showAuthAlert('An account with this username already exists.'); return; }
-      const userData={firstName:fn,lastName:ln,email:em,username:un,
-        salt:d.salt,hash:d.hash,createdAt:Date.now(),plan:'Free'};
-      localStorage.setItem(LS_USER+'_'+un, JSON.stringify(userData));
-      showAuthAlert('Account created! Signing you in…','success');
-      setTimeout(()=>{ closeAuth(); loginUserAndReset(userData); },1000);
-    } catch(e){ showAuthAlert('Server error. Please try again.'); }
-    return;
-  }
-  // SIGNIN
-  const id=document.getElementById('loginIdentifier').value.trim();
-  if (!id||!pw){ showAuthAlert('Please fill in all fields.'); return; }
-
-  let stored = null;
-  const byUsername = JSON.parse(localStorage.getItem(LS_USER+'_'+id)||'null');
-  if (byUsername) stored = byUsername;
-  else {
+  const username = prompt('Enter username or email:');
+  if (!username) return;
+  const password = prompt('Enter password:');
+  if (!password) return;
+  
+  let user = JSON.parse(localStorage.getItem(LS_USER+'_'+username) || 'null');
+  if (!user) {
     Object.keys(localStorage).forEach(k => {
       if (k.startsWith(LS_USER+'_')) {
-        const u = JSON.parse(localStorage.getItem(k)||'null');
-        if (u && u.email === id) stored = u;
+        const u = JSON.parse(localStorage.getItem(k) || 'null');
+        if (u && u.email === username) user = u;
       }
     });
   }
-
-  if (!stored){ showAuthAlert('No account found. Please sign up first.'); return; }
-  try {
-    const r=await fetch('/api/auth/verify-password',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({password:pw,salt:stored.salt,hash:stored.hash})});
-    const d=await r.json();
-    if (d.valid){
-      loginAttempts=0; lockUntil=0;
-      closeAuth(); loginUserAndReset(stored);
-    } else {
-      recordFailedAttempt();
-      const remaining=MAX_LOGIN_ATTEMPTS-loginAttempts;
-      showAuthAlert(`Invalid credentials. ${remaining>0?remaining+' attempts remaining.':'Account locked for '+LOCK_DURATION+'s.'}`);
-    }
-  } catch(e){ showAuthAlert('Server error. Please try again.'); }
+  
+  if (!user || user.password !== password) {
+    toast('Invalid credentials');
+    return;
+  }
+  
+  currentUser = user;
+  updateProfileUI(user);
+  newChat();
+  toast('Signed in!');
 };
 
-function loginUserAndReset(user) {
+window.showSignUp=function(){
+  const firstName = prompt('First name:');
+  if (!firstName) return;
+  const lastName = prompt('Last name:');
+  if (!lastName) return;
+  const email = prompt('Email:');
+  if (!email) return;
+  const username = prompt('Username:');
+  if (!username) return;
+  const password = prompt('Password:');
+  if (!password) return;
+  
+  const user = {
+    firstName, lastName, email, username, password,
+    createdAt: Date.now()
+  };
+  localStorage.setItem(LS_USER+'_'+username, JSON.stringify(user));
   currentUser = user;
-  guestMessageCount = 0;
-  newChat();
   updateProfileUI(user);
-  updateTrialCounter();
-  toast('Welcome, '+user.firstName+'! 👋');
-}
+  newChat();
+  toast('Account created!');
+};
 
 function updateProfileUI(user) {
   document.getElementById('authButtons').style.display='none';
   const av=document.getElementById('profileAvatar');
   av.style.display='flex'; av.innerText=user.firstName.charAt(0).toUpperCase();
   document.getElementById('profileName').innerText=user.firstName+' '+user.lastName;
-  document.getElementById('planLabel').innerText=(user.plan||'Free')+' Plan';
 }
 
-// ── FORGOT PASSWORD ────────────────────────────────────────
-window.showForgotPassword=function(){
-  closeAuth();
-  document.getElementById('forgotStep1').style.display='block';
-  document.getElementById('forgotStep2').style.display='none';
-  document.getElementById('forgotStep3').style.display='none';
-  document.getElementById('forgotAlert').style.display='none';
-  document.getElementById('forgotModal').style.display='flex';
-};
-window.closeForgot=function(){ document.getElementById('forgotModal').style.display='none'; };
-window.sendOTP=function(){
-  const id=document.getElementById('forgotEmail').value.trim();
-  if (!id){ showForgotAlert('Please enter your email or username.'); return; }
-  let stored = JSON.parse(localStorage.getItem(LS_USER+'_'+id)||'null');
-  if (!stored) {
-    Object.keys(localStorage).forEach(k => {
-      if (k.startsWith(LS_USER+'_')) {
-        const u = JSON.parse(localStorage.getItem(k)||'null');
-        if (u && u.email === id) stored = u;
-      }
-    });
-  }
-  if (!stored){ showForgotAlert('No account found with that email or username.'); return; }
-  otpCode=String(Math.floor(100000+Math.random()*900000));
-  otpExpiry=Date.now()+5*60*1000;
-  showForgotAlert(`OTP sent! (Demo: your code is ${otpCode})`,'success');
-  setTimeout(()=>{
-    document.getElementById('forgotStep1').style.display='none';
-    document.getElementById('forgotStep2').style.display='flex';
-    document.getElementById('forgotAlert').style.display='none';
-    startOtpTimer();
-  },1500);
-};
-function startOtpTimer(){
-  let secs=60;
-  document.getElementById('otpCountdown').textContent=secs;
-  if (otpTimerInt) clearInterval(otpTimerInt);
-  otpTimerInt=setInterval(()=>{
-    secs--;
-    document.getElementById('otpCountdown').textContent=secs;
-    if (secs<=0){ clearInterval(otpTimerInt); document.getElementById('otpTimer').textContent='OTP expired. Please try again.'; }
-  },1000);
-}
-window.otpInput=function(el,idx){
-  const digits=document.querySelectorAll('.otp-digit');
-  if (el.value&&idx<5) digits[idx+1].focus();
-};
-window.otpBack=function(el,e,idx){
-  const digits=document.querySelectorAll('.otp-digit');
-  if (e.key==='Backspace'&&!el.value&&idx>0) digits[idx-1].focus();
-};
-window.verifyOTP=function(){
-  const digits=Array.from(document.querySelectorAll('.otp-digit')).map(d=>d.value).join('');
-  if (digits.length<6){ showForgotAlert('Please enter all 6 digits.'); return; }
-  if (Date.now()>otpExpiry){ showForgotAlert('OTP has expired. Please start over.'); return; }
-  if (digits!==otpCode){ showForgotAlert('Incorrect OTP. Please try again.'); return; }
-  document.getElementById('forgotStep2').style.display='none';
-  document.getElementById('forgotStep3').style.display='flex';
-  document.getElementById('forgotAlert').style.display='none';
-};
-window.resetPassword = async function(){
-  const newPw=document.getElementById('newPassword').value;
-  const confirmPw=document.getElementById('confirmNewPassword').value;
-  if (!newPw||!confirmPw){ showForgotAlert('Please fill in both fields.'); return; }
-  if (newPw!==confirmPw){ showForgotAlert('Passwords do not match.'); return; }
-  const {score}=checkPasswordStrength(newPw);
-  if (score<3){ showForgotAlert('Password is too weak.'); return; }
-  try {
-    const r=await fetch('/api/auth/hash-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:newPw})});
-    const d=await r.json();
-    if (!r.ok){ showForgotAlert(d.error); return; }
-    const id=document.getElementById('forgotEmail').value.trim();
-    let stored=JSON.parse(localStorage.getItem(LS_USER+'_'+id)||'null');
-    if (!stored) {
-      Object.keys(localStorage).forEach(k=>{
-        if (k.startsWith(LS_USER+'_')) {
-          const u=JSON.parse(localStorage.getItem(k)||'null');
-          if (u&&u.email===id) stored=u;
-        }
-      });
-    }
-    if (stored){
-      stored.salt=d.salt; stored.hash=d.hash;
-      localStorage.setItem(LS_USER+'_'+stored.username, JSON.stringify(stored));
-    }
-    showForgotAlert('Password reset successfully!','success');
-    setTimeout(()=>{ closeForgot(); showSignIn(); },1500);
-  } catch(e){ showForgotAlert('Server error.'); }
-};
-function showForgotAlert(msg,type='error'){
-  const el=document.getElementById('forgotAlert');
-  el.textContent=msg; el.className='modal-alert '+type; el.style.display='flex';
-}
-
-// ── CHANGE PASSWORD ────────────────────────────────────────
-window.showChangePassword=function(){
-  document.getElementById('profileMenu').style.display='none';
-  document.getElementById('changePwModal').style.display='flex';
-  document.getElementById('changePwAlert').style.display='none';
-};
-window.submitChangePassword = async function(){
-  const curPw=document.getElementById('currentPassword').value;
-  const newPw=document.getElementById('newPwChange').value;
-  const conPw=document.getElementById('confirmNewPwChange').value;
-  if (!curPw||!newPw||!conPw){ showChangePwAlert('All fields required.'); return; }
-  if (newPw!==conPw){ showChangePwAlert('New passwords do not match.'); return; }
-  const {score}=checkPasswordStrength(newPw);
-  if (score<3){ showChangePwAlert('New password is too weak.'); return; }
-  if (!currentUser){ showChangePwAlert('Not logged in.'); return; }
-  try {
-    const r=await fetch('/api/auth/verify-password',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({password:curPw,salt:currentUser.salt,hash:currentUser.hash})});
-    const d=await r.json();
-    if (!d.valid){ showChangePwAlert('Current password is incorrect.'); return; }
-    const r2=await fetch('/api/auth/hash-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:newPw})});
-    const d2=await r2.json();
-    if (!r2.ok){ showChangePwAlert(d2.error); return; }
-    currentUser.salt=d2.salt; currentUser.hash=d2.hash;
-    localStorage.setItem(LS_USER+'_'+currentUser.username, JSON.stringify(currentUser));
-    showChangePwAlert('Password changed successfully!','success');
-    setTimeout(()=>{ document.getElementById('changePwModal').style.display='none'; },1500);
-  } catch(e){ showChangePwAlert('Server error.'); }
-};
-function showChangePwAlert(msg,type='error'){
-  const el=document.getElementById('changePwAlert');
-  el.textContent=msg; el.className='modal-alert '+type; el.style.display='flex';
-}
-
-// ── LOGOUT ────────────────────────────────────────────────
 window.logout=function(){
-  currentUser=null; lastImageB64=null; guestMessageCount=0;
+  currentUser=null; lastImageB64=null;
   document.getElementById('authButtons').style.display='flex';
   document.getElementById('profileAvatar').style.display='none';
   document.getElementById('profileMenu').style.display='none';
-  newChat(); updateTrialCounter();
-  toast('Signed out successfully.');
+  newChat();
+  toast('Signed out');
 };
 
-// ── PROFILE MENU ──────────────────────────────────────────
 window.toggleProfileMenu=function(e){
   e.stopPropagation();
   const m=document.getElementById('profileMenu');
   m.style.display=m.style.display==='block'?'none':'block';
 };
+
 document.addEventListener('click',()=>{ document.getElementById('profileMenu').style.display='none'; });
 
-// ── HELP ─────────────────────────────────────────────────
-window.openHelp=function(){
-  document.getElementById('profileMenu').style.display='none';
-  startChatMode();
-  addBotMsg(
-    '<strong>🌟 Lumina — Full Capabilities</strong><br><br>' +
-    '🏥 <strong>Medical:</strong> X-Ray, MRI, CT, Fundus, Skin Analysis, Wound, CLAHE, Denoise, Segmentation<br>' +
-    '🎨 <strong>Creative:</strong> Cartoon, Watercolor, Sketch, Oil Painting, Neon Glow, Glitch, Halftone, Pop Art, Stained Glass, Pointillism, ASCII Art, Thermal, Duotone, Mosaic, Lomo, Cross Process<br>' +
-    '🔍 <strong>Detection:</strong> Face Detect, Color Palette, Canny, Sobel, Edges, Quality Check, Color Analysis<br>' +
-    '✨ <strong>Restore:</strong> Super Resolution, Deblur, Colorize B&W, Restore Old Photo<br>' +
-    '🎭 <strong>Effects:</strong> Tilt-Shift, Bokeh, Fisheye, Double Exposure, HDR, Vignette, Film Grain<br>' +
-    '🎛️ <strong>Color:</strong> Contrast, Brightness, Saturation, Hue, White Balance, Shadows/Highlights<br>' +
-    '⚙️ <strong>Basic:</strong> Rotate, Flip, Resize, Crop, Grayscale, Sepia, Invert, Blur, Sharpen<br>' +
-    '🤖 <strong>Generate:</strong> Create images from text prompts<br>' +
-    '💬 <strong>Chat:</strong> Describe images, ask questions, get medical analysis, answer any question<br><br>' +
-    'Click <strong>⚡ Operations</strong> button for quick access!',
-    true, null, 'local'
-  );
-};
-
-// ── UTILS ─────────────────────────────────────────────────
-function truncate(s,n){ return s.length>n?s.slice(0,n)+'…':s; }
-function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
 // ── INIT ─────────────────────────────────────────────────
-updateTrialCounter();
-setTimeout(async () => {
-  try {
-    const r = await fetch('/api/status');
-    const d = await r.json();
-    if (!d.gemini && !d.claude) {
-      const badge = document.getElementById('apiStatusBadge');
-      const dot   = document.getElementById('apiDot');
-      const txt   = document.getElementById('apiStatusText');
-      badge.style.display = 'flex';
-      dot.className = 'dot dot-red';
-      txt.textContent = '⚠ No AI API — add keys in HuggingFace Secrets & restart Space';
-      setTimeout(() => { badge.style.display = 'none'; }, 8000);
-    }
-  } catch(e) {}
-}, 1500);
+console.log('✨ Lumina ready! Upload an image or ask me anything.');
 
 })();
 </script>
