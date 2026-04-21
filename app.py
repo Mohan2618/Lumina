@@ -41,7 +41,7 @@ CLAUDE_MODEL = "claude-3-5-sonnet-20241022"
 GEMINI_TIMEOUT = 30
 
 # ─────────────────────────────────────────────────────────────
-#  SYSTEM PROMPT — Fixed identity: created by the team
+#  SYSTEM PROMPT
 # ─────────────────────────────────────────────────────────────
 SYSTEM_PROMPT = """You are Lumina, an advanced AI image processing assistant created by a team of four developers:
 1. Mohan Lingabathina
@@ -52,6 +52,13 @@ SYSTEM_PROMPT = """You are Lumina, an advanced AI image processing assistant cre
 You were built as a project on HuggingFace Spaces. You are NOT created by Google, Anthropic, OpenAI, or any other company. You are Lumina, created by this team.
 
 When asked "who created you", "who made you", "who built you" or similar — ALWAYS answer that you were created by Mohan Lingabathina, Hevendra Bage, Sowrya, and Karthikeya.
+
+IMPORTANT CONTEXT AWARENESS:
+- You have access to the full conversation history including previously uploaded images
+- When a user says "the above image", "previous image", "that image", "rotate the image", etc. — they mean the image that was uploaded earlier in this conversation
+- You MUST use the last uploaded image from context — do NOT ask the user to re-upload
+- The image context is automatically maintained across messages
+- If an image operation was just applied, "the image" refers to the most recent processed result
 
 You can:
 1. Describe and analyze images in rich detail (objects, colors, mood, quality, text, composition)
@@ -91,10 +98,12 @@ Examples:
 - "rotate 45 degrees" → <OP>{"intent":"rotate","params":{"angle":45}}</OP>
 - "make grayscale" → <OP>{"intent":"grayscale","params":{}}</OP>
 - "generate a sunset" → <OP>{"intent":"generate_image","params":{"prompt":"a beautiful sunset over the ocean with golden sky"}}</OP>
+- "rotate the above image 90 degrees" → <OP>{"intent":"rotate","params":{"angle":90}}</OP>
 
 Rules:
 - For descriptions/questions: reply naturally, NO <OP> tag
 - For operations: friendly explanation + <OP> tag at the END only
+- When user refers to "the above image" or "previous image" — ALWAYS produce the <OP> tag, the image context is available
 - Be warm, concise, helpful"""
 
 
@@ -156,6 +165,21 @@ def is_rate_limit(err_str):
     s = err_str.lower()
     return "429" in err_str or "quota" in s or "rate" in s or "resource_exhausted" in s
 
+def decode_last_image(last_image_data: str):
+    """Decode last_image data string to PIL image."""
+    if not last_image_data:
+        return None
+    try:
+        if last_image_data.startswith("data:image"):
+            header, b64data = last_image_data.split(",", 1)
+        else:
+            b64data = last_image_data
+        img_bytes = base64.b64decode(b64data)
+        return Image.open(io.BytesIO(img_bytes)).convert("RGB")
+    except Exception as e:
+        print(f"[decode_last_image] Failed: {e}")
+        return None
+
 
 # ─────────────────────────────────────────────────────────────
 #  CLAUDE API CALL
@@ -205,12 +229,19 @@ def call_gemini_fast(history: list, user_text: str, image_pil=None) -> str:
         parts_raw = turn.get("parts", [])
         built = []
         for p in parts_raw:
-            if isinstance(p, str):
+            if isinstance(p, str) and p != '[image]':
                 built.append(types.Part.from_text(text=p))
             elif isinstance(p, dict) and p.get("mime_type"):
                 raw = p.get("data", "")
-                if isinstance(raw, str): raw = base64.b64decode(raw)
+                if isinstance(raw, str):
+                    try:
+                        raw = base64.b64decode(raw)
+                    except Exception:
+                        continue
                 built.append(types.Part(inline_data=types.Blob(mime_type=p["mime_type"], data=raw)))
+            elif isinstance(p, str) and p == '[image]':
+                # Placeholder — skip silently
+                pass
         if built:
             contents.append(types.Content(role=role, parts=built))
     new_parts = []
@@ -324,7 +355,7 @@ def analyze_image_free(img):
 
 def free_reply(prompt, has_image, img=None):
     p=prompt.lower().strip() if prompt else ""
-    # Identity questions — always answer with team names
+    # Identity questions
     if re.search(r'who (created|made|built|developed|designed) you|who are your (creator|developer|maker)|your creator|your developer', p):
         return ("I'm **Lumina**, created by a talented team of four developers:\n\n"
                 "1. **Mohan Lingabathina**\n2. **Hevendra Bage**\n3. **Sowrya**\n4. **Karthikeya**\n\n"
@@ -932,7 +963,6 @@ def api_validate_username():
 #  SHARE CHAT ROUTE
 # ─────────────────────────────────────────────────────────────
 
-# In-memory store for shared chats (for demo; use a DB for production)
 shared_chats = {}
 
 @app.route("/api/share-chat", methods=["POST"])
@@ -1019,18 +1049,36 @@ def process():
         try: history=json.loads(history_raw)
         except: history=[]
 
+        # ── FIX: Resolve which image to use ──────────────────────
+        # Priority: new uploaded file > last_image from previous turn
         image_pil = None
-        if file and file.filename:
-            image_pil = file_to_pil(file)
-        elif last_image_data and last_image_data.startswith("data:image"):
-            try:
-                header,b64data=last_image_data.split(",",1)
-                image_pil=Image.open(io.BytesIO(base64.b64decode(b64data))).convert("RGB")
-            except Exception as e:
-                print(f"Failed to decode last_image: {e}")
+        new_file_uploaded = False
 
-        ai_image = image_pil if (file and file.filename) else None
-        raw_reply, model_used = call_ai(history, prompt, ai_image)
+        if file and file.filename:
+            try:
+                image_pil = file_to_pil(file)
+                new_file_uploaded = True
+                print(f"[process] New image uploaded: {file.filename}")
+            except Exception as e:
+                print(f"[process] Failed to load uploaded file: {e}")
+
+        # FIX: Always decode last_image so operations work on previous context
+        last_image_pil = None
+        if last_image_data:
+            last_image_pil = decode_last_image(last_image_data)
+            if last_image_pil:
+                print(f"[process] Last image decoded: {last_image_pil.size}")
+
+        # If no new file, use last image as the working image
+        if image_pil is None and last_image_pil is not None:
+            image_pil = last_image_pil
+            print(f"[process] Using last image from context: {image_pil.size}")
+
+        # For AI analysis: only send actual image to AI if it's a new upload
+        # (don't send base64 of processed image back repeatedly — wastes tokens)
+        ai_image = image_pil if new_file_uploaded else (last_image_pil if last_image_pil else None)
+
+        raw_reply, model_used = call_ai(history, prompt, ai_image if new_file_uploaded else None)
         clean_reply, intent, params = extract_op(raw_reply)
         result_b64 = None
 
@@ -1058,24 +1106,55 @@ def process():
                 if not clean_reply:
                     clean_reply=f"✨ Here's your generated image for: *\"{gen_prompt[:60]}{'...' if len(gen_prompt)>60 else ''}\"*"
         elif intent and image_pil:
-            result_img=process_image(image_pil,intent,params or {})
-            if result_img: result_b64=pil_to_base64(result_img)
+            # FIX: Always attempt operation if we have any image (new OR from context)
+            result_img=process_image(image_pil, intent, params or {})
+            if result_img:
+                result_b64=pil_to_base64(result_img)
+                if not clean_reply:
+                    clean_reply=f"✅ Applied **{intent}** to your image!"
         elif intent and not image_pil and intent != 'generate_image':
             clean_reply+="\n\n📎 Please upload an image first to apply this operation!"
 
+        # Build conversation history — store text parts only (strip large image data)
         new_user_parts=[]
-        if file and file.filename and image_pil:
-            new_user_parts.append({"mime_type":"image/jpeg","data":base64.b64encode(pil_to_bytes(image_pil,quality=60)).decode()})
+        if new_file_uploaded and image_pil:
+            # Store a small thumbnail representation in history (compressed)
+            try:
+                thumb = image_pil.copy()
+                thumb.thumbnail((256, 256))
+                new_user_parts.append({"mime_type":"image/jpeg","data":base64.b64encode(pil_to_bytes(thumb,quality=40)).decode()})
+            except:
+                pass
         new_user_parts.append(prompt or "Analyze this image.")
-        updated_history=list(history)+[{"role":"user","parts":new_user_parts},{"role":"model","parts":[clean_reply]}]
+
+        updated_history=list(history)+[
+            {"role":"user","parts":new_user_parts},
+            {"role":"model","parts":[clean_reply]}
+        ]
+        # Keep last 16 turns
         if len(updated_history)>16: updated_history=updated_history[-16:]
 
-        new_last_image=None
-        if image_pil and file and file.filename: new_last_image=pil_to_base64(image_pil)
-        elif result_b64: new_last_image=result_b64
+        # FIX: Maintain last_image properly
+        # If an operation was applied, use result as new last_image
+        # Otherwise keep previous last_image unchanged
+        new_last_image = None
+        if result_b64:
+            # Operation applied — use result as new context image
+            new_last_image = result_b64
+        elif new_file_uploaded and image_pil:
+            # New upload — store it as context
+            new_last_image = pil_to_base64(image_pil)
+        else:
+            # No change — keep the existing last_image (return it so client maintains context)
+            new_last_image = last_image_data if last_image_data else None
 
-        return jsonify({"message":clean_reply,"image":result_b64,"history":updated_history,
-                        "last_image":new_last_image,"model":model_used})
+        return jsonify({
+            "message": clean_reply,
+            "image": result_b64,
+            "history": updated_history,
+            "last_image": new_last_image,
+            "model": model_used
+        })
 
     except Exception as e:
         err=str(e); print(f"[ERROR] {err}")
