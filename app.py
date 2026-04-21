@@ -543,16 +543,16 @@ def process_image(img, intent, params):
     if intent=='emboss': return img.filter(ImageFilter.EMBOSS).convert("RGB")
     if intent=='contrast': return ImageEnhance.Contrast(img).enhance(float(params.get('factor',1.6)))
     if intent == "brightness":
-    factor = params.get("factor", 1.0)
-
-    arr = np.array(img).astype(np.float32)
-
-    # gamma correction instead of linear scaling
-    gamma = 1.5 if factor < 1 else 0.7
-    arr = 255 * (arr / 255) ** gamma
-
-    arr = np.clip(arr, 0, 255).astype(np.uint8)
-    return Image.fromarray(arr)
+        factor = params.get("factor", 1.0)
+    
+        arr = np.array(img).astype(np.float32)
+    
+        # gamma correction instead of linear scaling
+        gamma = 1.5 if factor < 1 else 0.7
+        arr = 255 * (arr / 255) ** gamma
+    
+        arr = np.clip(arr, 0, 255).astype(np.uint8)
+        return Image.fromarray(arr)
     if intent=='saturation': return ImageEnhance.Color(img).enhance(float(params.get('factor',1.5)))
     if intent=='hue':
         cv_img=pil_to_cv2(img)
