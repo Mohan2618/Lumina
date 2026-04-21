@@ -10,8 +10,7 @@
 :root {
   --grad-a: #6a7bd1; --grad-b: #41e1ae;
   --glass: rgba(255,255,255,0.18); --glass-dark: rgba(0,0,0,0.38);
-  --accent: #41e1ae;
-  --err: #ff6b6b; --warn: #ffd93d; --ok: #6bcb77;
+  --accent: #41e1ae; --err: #ff6b6b; --warn: #ffd93d; --ok: #6bcb77;
 }
 body {
   min-height: 100vh;
@@ -19,341 +18,180 @@ body {
   font-family: 'Segoe UI', Arial, sans-serif;
   overflow: hidden; position: relative;
 }
-
 /* ── TOPBAR ── */
 .topbar {
   position: fixed; top: 0; left: 0; right: 0; height: 62px;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 20px; backdrop-filter: blur(12px); z-index: 800;
+  background: rgba(0,0,0,0.15);
 }
 .logo-wrap { display: flex; align-items: center; gap: 10px; }
 .logo-container { position: relative; width: 36px; height: 36px; flex-shrink: 0; }
-.outer-circle {
-  width: 100%; height: 100%; border-radius: 50%;
-  background: linear-gradient(135deg, #4cc9f0, #7b2cbf);
-  display: flex; justify-content: center; align-items: center;
-  box-shadow: 0 0 12px rgba(100,100,255,0.4); opacity: 0.93;
-}
-.inner-circle {
-  width: 74%; height: 74%; border-radius: 50%;
-  background: radial-gradient(circle, #ffffff 60%, #cfd8dc);
-  display: flex; justify-content: center; align-items: center;
-}
-.eye { width: 44%; height: 44%; border-radius: 50%; background: #020a2a; position: relative; }
-.eye::after {
-  content: ""; position: absolute; top: 18%; left: 18%;
-  width: 22%; height: 22%; border-radius: 50%; background: rgba(255,255,255,0.45);
-}
-.base {
-  position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
-  width: 58%; height: 10%; border-radius: 16px;
-  background: linear-gradient(135deg, #4cc9f0, #7b2cbf); z-index: 2;
-}
-.line { position: absolute; left: 50%; transform: translateX(-50%); height: 5px; border-radius: 16px; background: linear-gradient(135deg, #4cc9f0, #7b2cbf); opacity: 0.8; }
-.line1 { width: 46%; bottom: -14px; }
-.line2 { width: 32%; bottom: -22px; }
-.line3 { width: 18%; bottom: -30px; }
+.outer-circle { width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#4cc9f0,#7b2cbf);display:flex;justify-content:center;align-items:center;box-shadow:0 0 12px rgba(100,100,255,0.4); }
+.inner-circle { width:74%;height:74%;border-radius:50%;background:radial-gradient(circle,#fff 60%,#cfd8dc);display:flex;justify-content:center;align-items:center; }
+.eye { width:44%;height:44%;border-radius:50%;background:#020a2a;position:relative; }
+.eye::after { content:"";position:absolute;top:18%;left:18%;width:22%;height:22%;border-radius:50%;background:rgba(255,255,255,0.45); }
+.base { position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);width:58%;height:10%;border-radius:16px;background:linear-gradient(135deg,#4cc9f0,#7b2cbf);z-index:2; }
+.line { position:absolute;left:50%;transform:translateX(-50%);height:5px;border-radius:16px;background:linear-gradient(135deg,#4cc9f0,#7b2cbf);opacity:0.8; }
+.line1{width:46%;bottom:-14px;} .line2{width:32%;bottom:-22px;} .line3{width:18%;bottom:-30px;}
 .logo-text { font-size: 22px; font-weight: 700; color: white; letter-spacing: 0.5px; }
 .logo-text span { color: #41e1ae; }
 .auth-buttons { display: flex; gap: 10px; }
-.btn-outline {
-  padding: 7px 18px; border-radius: 20px; border: 1.5px solid rgba(255,255,255,0.7);
-  background: transparent; color: white; font-size: 14px; cursor: pointer; transition: background 0.2s;
-}
+.btn-outline { padding:7px 18px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.7);background:transparent;color:white;font-size:14px;cursor:pointer;transition:background 0.2s; }
 .btn-outline:hover { background: rgba(255,255,255,0.12); }
-.btn-fill {
-  padding: 7px 18px; border-radius: 20px; border: none; background: white;
-  color: #6a7bd1; font-size: 14px; font-weight: 600; cursor: pointer;
-}
-.profile-avatar {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: linear-gradient(135deg, #41e1ae, #6a7bd1); color: white;
-  font-weight: 700; font-size: 15px; display: none; align-items: center;
-  justify-content: center; cursor: pointer; border: 2px solid rgba(255,255,255,0.5);
-}
-
+.btn-fill { padding:7px 18px;border-radius:20px;border:none;background:white;color:#6a7bd1;font-size:14px;font-weight:600;cursor:pointer; }
+.profile-avatar { width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#41e1ae,#6a7bd1);color:white;font-weight:700;font-size:15px;display:none;align-items:center;justify-content:center;cursor:pointer;border:2px solid rgba(255,255,255,0.5); }
+/* ── HOME ── */
+.watermark { position:absolute;top:42%;left:50%;transform:translate(-50%,-50%);font-size:clamp(60px,12vw,110px);font-weight:800;letter-spacing:6px;color:rgba(255,255,255,0.09);pointer-events:none;user-select:none; }
+.home-subtitle { position:absolute;top:56%;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.5);font-size:15px;text-align:center;pointer-events:none;white-space:nowrap; }
 /* ── CHAT ── */
-#chatWrapper {
-  position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
-  width: min(94%, 760px); bottom: 130px; display: none;
-  overflow-y: auto; scroll-behavior: smooth;
-}
-#chatWrapper::-webkit-scrollbar { width: 5px; }
-#chatWrapper::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
-#chatArea { display: flex; flex-direction: column; gap: 14px; padding: 12px 0 24px; }
-
-/* ── MESSAGE BUBBLES ── */
-.chat-msg-wrapper {
-  display: flex; flex-direction: column; animation: fadeUp 0.22s ease;
-}
-.chat-msg-wrapper.user-wrapper { align-items: flex-end; }
-.chat-msg-wrapper.bot-wrapper { align-items: flex-start; }
-.chat-msg {
-  padding: 12px 16px; border-radius: 20px; max-width: 78%;
-  word-wrap: break-word; line-height: 1.6; font-size: 15px;
-}
-@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-.user-msg { background: rgba(255,255,255,0.88); color: #1a1a2e; border-bottom-right-radius: 4px; }
-.bot-msg { background: var(--glass-dark); color: white; border-bottom-left-radius: 4px; backdrop-filter: blur(8px); }
-.bot-msg code { background: rgba(255,255,255,0.15); padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; }
-.bot-msg strong { color: #41e1ae; }
-
-.model-badge {
-  font-size: 10px; padding: 2px 8px; border-radius: 10px;
-  margin-top: 4px; display: inline-block; opacity: 0.7;
-}
-.badge-gemini { background: rgba(66,133,244,0.3); color: #aac8ff; }
-
-/* ── MESSAGE ATTACHMENTS ── */
-.msg-attachments {
-  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;
-  max-width: 78%;
-}
-.msg-attachments.user-side { align-self: flex-end; justify-content: flex-end; }
-.msg-attachments.bot-side { align-self: flex-start; }
-.msg-attach-img {
-  height: 120px; border-radius: 12px; object-fit: cover; cursor: zoom-in;
-  border: 2px solid rgba(255,255,255,0.3); transition: transform 0.15s;
-  max-width: 180px;
-}
-.msg-attach-img:hover { transform: scale(1.03); }
-
+#chatWrapper { position:fixed;top:72px;left:50%;transform:translateX(-50%);width:min(94%,760px);bottom:130px;display:none;overflow-y:auto;scroll-behavior:smooth; }
+#chatWrapper::-webkit-scrollbar{width:5px;} #chatWrapper::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.3);border-radius:10px;}
+#chatArea { display:flex;flex-direction:column;gap:14px;padding:12px 0 24px; }
+/* ── BUBBLES ── */
+.chat-msg-wrapper { display:flex;flex-direction:column;animation:fadeUp 0.22s ease; }
+.chat-msg-wrapper.user-wrapper{align-items:flex-end;} .chat-msg-wrapper.bot-wrapper{align-items:flex-start;}
+.chat-msg { padding:12px 16px;border-radius:20px;max-width:78%;word-wrap:break-word;line-height:1.6;font-size:15px; }
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.user-msg{background:rgba(255,255,255,0.88);color:#1a1a2e;border-bottom-right-radius:4px;}
+.bot-msg{background:var(--glass-dark);color:white;border-bottom-left-radius:4px;backdrop-filter:blur(8px);}
+.bot-msg code{background:rgba(255,255,255,0.15);padding:1px 6px;border-radius:4px;font-family:monospace;font-size:13px;}
+.bot-msg strong{color:#41e1ae;}
+.model-badge{font-size:10px;padding:2px 8px;border-radius:10px;margin-top:4px;display:inline-block;opacity:0.7;}
+.badge-gemini{background:rgba(66,133,244,0.3);color:#aac8ff;}
+/* ── ATTACHMENTS ── */
+.msg-attachments{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;max-width:78%;}
+.msg-attachments.user-side{align-self:flex-end;justify-content:flex-end;} .msg-attachments.bot-side{align-self:flex-start;}
+.msg-attach-img{height:120px;border-radius:12px;object-fit:cover;cursor:zoom-in;border:2px solid rgba(255,255,255,0.3);transition:transform 0.15s;max-width:200px;}
+.msg-attach-img:hover{transform:scale(1.03);}
 /* ── MESSAGE ACTIONS ── */
-.msg-actions {
-  display: flex; gap: 4px; margin-top: 4px; opacity: 0; transition: opacity 0.2s;
-}
-.chat-msg-wrapper:hover .msg-actions { opacity: 1; }
-.msg-action-btn {
-  background: rgba(0,0,0,0.35); border: none; color: white; cursor: pointer;
-  padding: 4px 8px; border-radius: 12px; font-size: 11px; display: flex;
-  align-items: center; gap: 3px; transition: background 0.15s; backdrop-filter: blur(6px);
-}
-.msg-action-btn:hover { background: rgba(0,0,0,0.6); }
-.msg-action-btn .material-icons { font-size: 14px; }
-
+.msg-actions{display:flex;gap:4px;margin-top:4px;opacity:0;transition:opacity 0.2s;flex-wrap:wrap;}
+.chat-msg-wrapper:hover .msg-actions{opacity:1;}
+.msg-action-btn{background:rgba(0,0,0,0.35);border:none;color:white;cursor:pointer;padding:4px 8px;border-radius:12px;font-size:11px;display:flex;align-items:center;gap:3px;transition:background 0.15s;backdrop-filter:blur(6px);}
+.msg-action-btn:hover{background:rgba(0,0,0,0.6);}
+.msg-action-btn .material-icons{font-size:14px;}
 /* ── PROMPT ── */
-.prompt-wrap {
-  position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
-  width: min(94%, 760px); z-index: 700;
-}
-.prompt-container {
-  background: var(--glass); backdrop-filter: blur(18px);
-  border: 1px solid rgba(255,255,255,0.3); border-radius: 22px;
-  padding: 10px 14px 10px 18px; display: flex; flex-direction: column; gap: 8px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-}
-.prompt-container:focus-within { border-color: rgba(255,255,255,0.6); }
-.prompt-container.dragover { border: 2px dashed white; background: rgba(255,255,255,0.28); }
-#attachmentPreview { display: none; gap: 8px; flex-wrap: wrap; padding: 4px 0; }
-#attachmentPreview.has-files { display: flex; }
-.attach-thumb { position: relative; height: 72px; }
-.attach-thumb img { height: 72px; width: 72px; border-radius: 10px; object-fit: cover; cursor: zoom-in; border: 2px solid rgba(255,255,255,0.4); }
-.attach-remove {
-  position: absolute; top: -6px; right: -6px; width: 20px; height: 20px;
-  background: white; color: #333; border-radius: 50%; display: flex;
-  align-items: center; justify-content: center; font-size: 13px; cursor: pointer; font-weight: bold;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-}
-.input-row { display: flex; align-items: flex-end; gap: 10px; }
-
-.prompt-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-size: 15px;
-  color: white;
-  min-width: 0;
-  resize: none;
-  overflow-y: auto;
-  min-height: 24px;
-  max-height: 160px;
-  line-height: 1.5;
-  font-family: 'Segoe UI', Arial, sans-serif;
-  padding: 2px 0;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.3) transparent;
-}
-.prompt-input::-webkit-scrollbar { width: 4px; }
-.prompt-input::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
-.prompt-input::placeholder { color: rgba(255,255,255,0.55); }
-
-.icon-btn {
-  background: transparent; border: none; color: white; cursor: pointer;
-  padding: 4px; border-radius: 50%; display: flex; align-items: center; transition: background 0.15s;
-  flex-shrink: 0;
-}
-.icon-btn:hover { background: rgba(255,255,255,0.15); }
-.icon-btn .material-icons { font-size: 24px; }
-.send-btn {
-  width: 40px; height: 40px; border-radius: 50%; border: none; background: white;
-  display: flex; align-items: center; justify-content: center; cursor: pointer;
-  flex-shrink: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.2); transition: transform 0.15s;
-}
-.send-btn:hover { transform: scale(1.08); }
-.send-btn .material-icons { color: #6a7bd1; font-size: 22px; }
-.send-btn.stop-mode { background: #ff6b6b; }
-.send-btn.stop-mode .material-icons { color: white; }
-
+.prompt-wrap{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);width:min(94%,760px);z-index:700;}
+.prompt-container{background:var(--glass);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.3);border-radius:22px;padding:10px 14px 10px 18px;display:flex;flex-direction:column;gap:8px;box-shadow:0 8px 32px rgba(0,0,0,0.2);}
+.prompt-container:focus-within{border-color:rgba(255,255,255,0.6);}
+.prompt-container.dragover{border:2px dashed white;background:rgba(255,255,255,0.28);}
+#attachmentPreview{display:none;gap:8px;flex-wrap:wrap;padding:4px 0;}
+#attachmentPreview.has-files{display:flex;}
+.attach-thumb{position:relative;height:72px;}
+.attach-thumb img{height:72px;width:72px;border-radius:10px;object-fit:cover;cursor:zoom-in;border:2px solid rgba(255,255,255,0.4);}
+.attach-remove{position:absolute;top:-6px;right:-6px;width:20px;height:20px;background:white;color:#333;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.3);}
+.input-row{display:flex;align-items:flex-end;gap:10px;}
+.prompt-input{flex:1;background:transparent;border:none;outline:none;font-size:15px;color:white;min-width:0;resize:none;overflow-y:auto;min-height:24px;max-height:160px;line-height:1.5;font-family:'Segoe UI',Arial,sans-serif;padding:2px 0;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.3) transparent;}
+.prompt-input::-webkit-scrollbar{width:4px;} .prompt-input::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.3);border-radius:4px;}
+.prompt-input::placeholder{color:rgba(255,255,255,0.55);}
+.icon-btn{background:transparent;border:none;color:white;cursor:pointer;padding:4px;border-radius:50%;display:flex;align-items:center;transition:background 0.15s;flex-shrink:0;}
+.icon-btn:hover{background:rgba(255,255,255,0.15);}
+.icon-btn .material-icons{font-size:24px;}
+.send-btn{width:40px;height:40px;border-radius:50%;border:none;background:white;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;box-shadow:0 2px 10px rgba(0,0,0,0.2);transition:transform 0.15s;}
+.send-btn:hover{transform:scale(1.08);}
+.send-btn .material-icons{color:#6a7bd1;font-size:22px;}
+.send-btn.stop-mode{background:#ff6b6b;} .send-btn.stop-mode .material-icons{color:white;}
 /* ── BOTTOM TOOLS ── */
-.bottom-tools {
-  position: fixed; bottom: 22px; right: 22px; display: flex; gap: 12px;
-  padding: 10px 16px; background: var(--glass); backdrop-filter: blur(14px);
-  border-radius: 50px; border: 1px solid rgba(255,255,255,0.2);
-}
-.bottom-tools button {
-  background: transparent; border: none; cursor: pointer; color: white;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 50%; width: 36px; height: 36px; transition: background 0.15s;
-}
-.bottom-tools button:hover { background: rgba(255,255,255,0.15); }
-.bottom-tools .material-icons { font-size: 22px; }
-
-/* ── WATERMARK ── */
-.watermark {
-  position: absolute; top: 42%; left: 50%; transform: translate(-50%,-50%);
-  font-size: clamp(60px,12vw,110px); font-weight: 800; letter-spacing: 6px;
-  color: rgba(255,255,255,0.09); pointer-events: none; user-select: none;
-}
-.home-subtitle {
-  position: absolute; top: 56%; left: 50%; transform: translateX(-50%);
-  color: rgba(255,255,255,0.5); font-size: 15px; text-align: center;
-  pointer-events: none; white-space: nowrap;
-}
-
-/* ── SAVED GALLERY PANEL ── */
-.gallery-panel {
-  display: none; position: fixed; right: 0; top: 0; width: 320px; height: 100%;
-  background: rgba(10,10,30,0.85); backdrop-filter: blur(16px);
-  padding: 20px 16px; overflow-y: auto; color: white; z-index: 900;
-  border-left: 1px solid rgba(255,255,255,0.12);
-}
-.gallery-panel h3 { font-size: 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-.gallery-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.gallery-item {
-  position: relative; cursor: pointer; border-radius: 12px; overflow: hidden;
-  border: 2px solid rgba(255,255,255,0.1); transition: all 0.2s;
-}
-.gallery-item:hover { border-color: rgba(65,225,174,0.5); transform: scale(1.02); }
-.gallery-item img { width: 100%; height: 120px; object-fit: cover; display: block; }
-.gallery-item-remove {
-  position: absolute; top: 4px; right: 4px; width: 24px; height: 24px;
-  background: rgba(255,0,0,0.7); color: white; border: none;
-  border-radius: 50%; cursor: pointer; font-size: 16px; display: flex;
-  align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;
-}
-.gallery-item:hover .gallery-item-remove { opacity: 1; }
-.gallery-empty { padding: 20px; text-align: center; color: rgba(255,255,255,0.5); font-size: 13px; }
-
+.bottom-tools{position:fixed;bottom:22px;right:22px;display:flex;gap:12px;padding:10px 16px;background:var(--glass);backdrop-filter:blur(14px);border-radius:50px;border:1px solid rgba(255,255,255,0.2);}
+.bottom-tools button{background:transparent;border:none;cursor:pointer;color:white;display:flex;align-items:center;justify-content:center;border-radius:50%;width:36px;height:36px;transition:background 0.15s;position:relative;}
+.bottom-tools button:hover{background:rgba(255,255,255,0.15);}
+.bottom-tools .material-icons{font-size:22px;}
+.tool-badge{position:absolute;top:-4px;right:-4px;background:#ff6b6b;color:white;border-radius:50%;width:16px;height:16px;font-size:10px;display:none;align-items:center;justify-content:center;font-weight:700;}
 /* ── TYPING ── */
-.typing { display: flex; gap: 5px; align-items: center; padding: 4px 0; }
-.typing span { width: 8px; height: 8px; background: rgba(255,255,255,0.7); border-radius: 50%; animation: bounce 1.3s infinite ease-in-out; }
-.typing span:nth-child(2) { animation-delay: 0.2s; }
-.typing span:nth-child(3) { animation-delay: 0.4s; }
-@keyframes bounce { 0%,80%,100%{transform:scale(0.5);opacity:0.5} 40%{transform:scale(1);opacity:1} }
-
+.typing{display:flex;gap:5px;align-items:center;padding:4px 0;}
+.typing span{width:8px;height:8px;background:rgba(255,255,255,0.7);border-radius:50%;animation:bounce 1.3s infinite ease-in-out;}
+.typing span:nth-child(2){animation-delay:0.2s;} .typing span:nth-child(3){animation-delay:0.4s;}
+@keyframes bounce{0%,80%,100%{transform:scale(0.5);opacity:0.5}40%{transform:scale(1);opacity:1}}
 /* ── HISTORY PANEL ── */
-.history-panel {
-  display: none; position: fixed; right: 0; top: 0; width: 300px; height: 100%;
-  background: rgba(10,10,30,0.78); backdrop-filter: blur(16px);
-  padding: 20px 16px; overflow-y: auto; color: white; z-index: 900;
-  border-left: 1px solid rgba(255,255,255,0.12);
-}
-.history-item {
-  padding: 12px; background: rgba(255,255,255,0.08); border-radius: 10px;
-  margin-bottom: 10px; cursor: pointer; transition: background 0.15s;
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
-}
-.history-item:hover { background: rgba(255,255,255,0.15); }
-.history-item.active-chat { background: rgba(65,225,174,0.15); border: 1px solid rgba(65,225,174,0.3); }
-.history-item .title { font-size: 13px; font-weight: 600; flex: 1; word-break: break-word; }
-.history-item .date { font-size: 11px; opacity: 0.5; white-space: nowrap; margin-top: 2px; }
-.history-item .del-btn { background: transparent; border: none; color: rgba(255,255,255,0.4); cursor: pointer; font-size: 16px; }
-.history-item .del-btn:hover { color: #ff6b6b; }
-
-/* ── PROFILE MENU ── */
-.profile-menu {
-  display: none; position: fixed; top: 68px; right: 18px; width: 240px;
-  background: rgba(10,10,30,0.78); backdrop-filter: blur(20px); border-radius: 14px;
-  padding: 14px; color: white; z-index: 1000; border: 1px solid rgba(255,255,255,0.15);
-}
-.profile-menu .menu-header { padding: 8px 0 12px; border-bottom: 1px solid rgba(255,255,255,0.15); margin-bottom: 6px; }
-.profile-menu .menu-item {
-  display: flex; align-items: center; gap: 10px; padding: 10px 6px;
-  cursor: pointer; border-radius: 8px; font-size: 14px; transition: background 0.15s;
-}
-.profile-menu .menu-item:hover { background: rgba(255,255,255,0.1); }
-.profile-menu .menu-item .material-icons { font-size: 20px; opacity: 0.8; }
-
-/* ── LIGHTBOX ── */
-.lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); justify-content: center; align-items: center; z-index: 3000; cursor: zoom-out; }
-.lightbox-inner { position: relative; max-width: 92%; max-height: 92%; }
-.lightbox img { max-width: 100%; max-height: 90vh; border-radius: 12px; object-fit: contain; display: block; }
-.lightbox-actions {
-  position: absolute; top: -44px; right: 0; display: flex; gap: 8px;
-}
-.lightbox-btn {
-  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
-  color: white; padding: 6px 14px; border-radius: 20px; cursor: pointer;
-  font-size: 13px; display: flex; align-items: center; gap: 5px; backdrop-filter: blur(8px);
-  transition: background 0.15s;
-}
-.lightbox-btn:hover { background: rgba(255,255,255,0.3); }
-.lightbox-btn .material-icons { font-size: 16px; }
-
-/* ── TOAST ── */
-.toast {
-  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
-  background: rgba(10,10,30,0.9); color: white; padding: 10px 20px;
-  border-radius: 20px; font-size: 13px; z-index: 4000;
-  opacity: 0; transition: opacity 0.3s; pointer-events: none;
-  backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15);
-}
-.toast.show { opacity: 1; }
-
+.history-panel{display:none;position:fixed;right:0;top:0;width:300px;height:100%;background:rgba(10,10,30,0.78);backdrop-filter:blur(16px);padding:20px 16px;overflow-y:auto;color:white;z-index:900;border-left:1px solid rgba(255,255,255,0.12);}
+.history-item{padding:12px;background:rgba(255,255,255,0.08);border-radius:10px;margin-bottom:10px;cursor:pointer;transition:background 0.15s;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.history-item:hover{background:rgba(255,255,255,0.15);}
+.history-item.active-chat{background:rgba(65,225,174,0.15);border:1px solid rgba(65,225,174,0.3);}
+.history-item .title{font-size:13px;font-weight:600;flex:1;word-break:break-word;}
+.history-item .date{font-size:11px;opacity:0.5;white-space:nowrap;margin-top:2px;}
+.history-item .del-btn{background:transparent;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:16px;}
+.history-item .del-btn:hover{color:#ff6b6b;}
+/* ── SAVED GALLERY ── */
+.gallery-panel{display:none;position:fixed;right:0;top:0;width:320px;height:100%;background:rgba(10,10,30,0.85);backdrop-filter:blur(16px);padding:20px 16px;overflow-y:auto;color:white;z-index:900;border-left:1px solid rgba(255,255,255,0.15);}
+.gallery-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
+.gallery-item{position:relative;cursor:pointer;border-radius:12px;overflow:hidden;border:2px solid rgba(255,255,255,0.1);transition:all 0.2s;}
+.gallery-item:hover{border-color:rgba(65,225,174,0.5);transform:scale(1.02);}
+.gallery-item img{width:100%;height:110px;object-fit:cover;display:block;}
+.gallery-item-info{padding:6px 8px;font-size:11px;opacity:0.7;background:rgba(0,0,0,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gallery-item-remove{position:absolute;top:4px;right:4px;width:22px;height:22px;background:rgba(255,0,0,0.8);color:white;border:none;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;}
+.gallery-item:hover .gallery-item-remove{opacity:1;}
+.gallery-empty{padding:30px 10px;text-align:center;color:rgba(255,255,255,0.4);font-size:13px;line-height:1.8;}
 /* ── OPS PANEL ── */
-.medical-panel {
-  display: none; position: fixed; left: 0; top: 0; width: 300px; height: 100%;
-  background: rgba(10,10,30,0.85); backdrop-filter: blur(16px);
-  padding: 20px 16px; overflow-y: auto; color: white; z-index: 900;
-  border-right: 1px solid rgba(255,107,107,0.2);
-}
-.medical-panel h3 { font-size: 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-.op-category { margin-bottom: 16px; }
-.op-category-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.4); margin-bottom: 8px; }
-.op-chip {
-  display: inline-block; padding: 5px 12px; background: rgba(255,255,255,0.08);
-  border-radius: 20px; font-size: 12px; cursor: pointer; margin: 3px;
-  transition: background 0.15s; border: 1px solid transparent;
-}
-.op-chip:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.3); }
-
-body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
-
-/* ── MODAL/AUTH BASICS ── */
-.modal-overlay {
-  display: none; position: fixed; inset: 0; backdrop-filter: blur(12px);
-  background: rgba(0,0,0,0.3); justify-content: center; align-items: center; z-index: 2000;
-}
-.modal-box {
-  width: 420px; max-height: 90vh; overflow-y: auto; padding: 30px 28px;
-  background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 22px; backdrop-filter: blur(20px); display: flex; flex-direction: column; gap: 12px;
-}
-.modal-box h3 { color: white; text-align: center; font-size: 20px; }
-
-.saved-accounts-dropdown {
-  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 100;
-  background: rgba(20,20,50,0.95); border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 10px; backdrop-filter: blur(20px); overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4); display: none;
-}
-.saved-accounts-dropdown.show { display: block; }
-.saved-account-item {
-  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
-  cursor: pointer; transition: background 0.15s; color: white;
-}
-.saved-account-item:hover { background: rgba(255,255,255,0.12); }
+.medical-panel{display:none;position:fixed;left:0;top:0;width:300px;height:100%;background:rgba(10,10,30,0.85);backdrop-filter:blur(16px);padding:20px 16px;overflow-y:auto;color:white;z-index:900;border-right:1px solid rgba(255,107,107,0.2);}
+.op-category{margin-bottom:16px;}
+.op-category-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4);margin-bottom:8px;}
+.op-chip{display:inline-block;padding:5px 12px;background:rgba(255,255,255,0.08);border-radius:20px;font-size:12px;cursor:pointer;margin:3px;transition:background 0.15s;border:1px solid transparent;}
+.op-chip:hover{background:rgba(255,255,255,0.18);border-color:rgba(255,255,255,0.3);}
+.op-chip.medical{border-color:rgba(255,107,107,0.4);color:#ffaaaa;} .op-chip.creative{border-color:rgba(65,225,174,0.4);color:#afffdc;}
+/* ── PROFILE MENU ── */
+.profile-menu{display:none;position:fixed;top:68px;right:18px;width:240px;background:rgba(10,10,30,0.85);backdrop-filter:blur(20px);border-radius:14px;padding:14px;color:white;z-index:1000;border:1px solid rgba(255,255,255,0.15);}
+.profile-menu .menu-header{padding:8px 0 12px;border-bottom:1px solid rgba(255,255,255,0.15);margin-bottom:6px;}
+.profile-menu .menu-item{display:flex;align-items:center;gap:10px;padding:10px 6px;cursor:pointer;border-radius:8px;font-size:14px;transition:background 0.15s;}
+.profile-menu .menu-item:hover{background:rgba(255,255,255,0.1);}
+.profile-menu .menu-item .material-icons{font-size:20px;opacity:0.8;}
+/* ── AUTH MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;backdrop-filter:blur(12px);background:rgba(0,0,0,0.3);justify-content:center;align-items:center;z-index:2000;}
+.modal-box{width:420px;max-height:90vh;overflow-y:auto;padding:30px 28px;background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.3);border-radius:22px;backdrop-filter:blur(20px);display:flex;flex-direction:column;gap:12px;}
+.modal-box h3{color:white;text-align:center;font-size:20px;}
+.modal-input{padding:11px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.12);color:white;font-size:14px;outline:none;width:100%;transition:border-color 0.2s;}
+.modal-input::placeholder{color:rgba(255,255,255,0.5);}
+.modal-input:focus{border-color:rgba(255,255,255,0.7);}
+.modal-input.input-error{border-color:var(--err)!important;} .modal-input.input-ok{border-color:var(--ok)!important;}
+.input-field-wrap{display:flex;flex-direction:column;gap:4px;position:relative;}
+.field-hint{font-size:11px;color:rgba(255,255,255,0.55);padding-left:4px;}
+.field-error{font-size:11px;color:var(--err);padding-left:4px;display:none;}
+.pw-bars{display:flex;gap:4px;} .pw-bar{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.2);transition:background 0.3s;}
+.pw-label{font-size:11px;color:rgba(255,255,255,0.6);}
+.pw-reqs{display:flex;flex-direction:column;gap:2px;}
+.pw-req{font-size:11px;display:flex;align-items:center;gap:4px;} .pw-req.met{color:var(--ok);} .pw-req.unmet{color:rgba(255,255,255,0.45);}
+.pw-wrap{position:relative;} .pw-wrap .modal-input{padding-right:42px;}
+.pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;color:rgba(255,255,255,0.6);font-size:20px;user-select:none;}
+.modal-btn-primary{padding:11px;border-radius:10px;border:none;background:white;color:#6a7bd1;font-size:15px;font-weight:700;cursor:pointer;width:100%;transition:opacity 0.2s;}
+.modal-btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+.modal-btn-text{background:none;border:none;color:rgba(255,255,255,0.7);font-size:13px;cursor:pointer;text-decoration:underline;width:100%;text-align:center;}
+.modal-divider{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,0.4);font-size:12px;}
+.modal-divider::before,.modal-divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.2);}
+.modal-terms{font-size:11px;color:rgba(255,255,255,0.5);text-align:center;line-height:1.6;} .modal-terms a{color:rgba(255,255,255,0.8);}
+.modal-alert{padding:10px 14px;border-radius:10px;font-size:13px;display:none;align-items:center;gap:8px;}
+.modal-alert.error{background:rgba(255,107,107,0.2);border:1px solid rgba(255,107,107,0.5);color:#ffaaaa;}
+.modal-alert.success{background:rgba(107,203,119,0.2);border:1px solid rgba(107,203,119,0.5);color:#aaffbb;}
+.rate-limit-timer{text-align:center;font-size:12px;color:var(--warn);display:none;}
+/* ── SAVED ACCOUNTS DROPDOWN ── */
+.saved-accounts-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:200;background:rgba(15,15,40,0.97);border:1px solid rgba(255,255,255,0.2);border-radius:10px;backdrop-filter:blur(20px);overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.5);display:none;}
+.saved-accounts-dropdown.show{display:block;}
+.saved-account-item{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background 0.15s;color:white;}
+.saved-account-item:hover{background:rgba(255,255,255,0.12);}
+.saved-account-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#41e1ae,#6a7bd1);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:white;flex-shrink:0;}
+.saved-account-info{flex:1;min-width:0;}
+.saved-account-name{font-size:13px;font-weight:600;}
+.saved-account-email{font-size:11px;opacity:0.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.saved-accounts-header{padding:8px 14px 4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4);border-bottom:1px solid rgba(255,255,255,0.1);}
+/* ── OTP ── */
+.otp-grid{display:flex;gap:8px;justify-content:center;}
+.otp-digit{width:44px;height:52px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.12);color:white;font-size:22px;font-weight:700;text-align:center;outline:none;}
+.otp-digit:focus{border-color:var(--accent);}
+/* ── LIGHTBOX ── */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);justify-content:center;align-items:center;z-index:3000;cursor:zoom-out;}
+.lightbox-inner{position:relative;max-width:92%;max-height:92%;}
+.lightbox img{max-width:100%;max-height:90vh;border-radius:12px;object-fit:contain;display:block;}
+.lightbox-actions{position:absolute;top:-44px;right:0;display:flex;gap:8px;}
+.lightbox-btn{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:5px;backdrop-filter:blur(8px);transition:background 0.15s;}
+.lightbox-btn:hover{background:rgba(255,255,255,0.3);}
+.lightbox-btn .material-icons{font-size:16px;}
+/* ── TOAST ── */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(10,10,30,0.9);color:white;padding:10px 20px;border-radius:20px;font-size:13px;z-index:4000;opacity:0;transition:opacity 0.3s;pointer-events:none;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.15);}
+.toast.show{opacity:1;}
+/* ── SHARE MODAL ── */
+.share-modal-overlay{display:none;position:fixed;inset:0;backdrop-filter:blur(12px);background:rgba(0,0,0,0.4);justify-content:center;align-items:center;z-index:2500;}
+.share-modal-box{width:440px;padding:28px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.3);border-radius:22px;backdrop-filter:blur(24px);color:white;display:flex;flex-direction:column;gap:14px;}
+.share-link-box{background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.2);border-radius:10px;padding:10px 14px;font-size:13px;word-break:break-all;color:#41e1ae;font-family:monospace;}
+body.dragging-over{outline:4px dashed rgba(255,255,255,0.6);}
+.modal-box.small{max-width:380px;}
 </style>
 </head>
 <body>
@@ -382,6 +220,16 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 <!-- ── CHAT ── -->
 <div id="chatWrapper"><div id="chatArea"></div></div>
 
+<!-- ── PROFILE MENU ── -->
+<div class="profile-menu" id="profileMenu">
+  <div class="menu-header"><strong id="profileName">User</strong><br><span style="font-size:12px;opacity:0.6;" id="planLabel">Free Plan</span></div>
+  <div class="menu-item" onclick="newChat()"><span class="material-icons">edit_note</span> New Chat</div>
+  <div class="menu-item" onclick="openShareModal()"><span class="material-icons">share</span> Share Chat</div>
+  <div class="menu-item" onclick="showChangePassword()"><span class="material-icons">lock</span> Change Password</div>
+  <div class="menu-item" onclick="checkApiStatus()"><span class="material-icons">wifi</span> API Status</div>
+  <div class="menu-item" onclick="logout()"><span class="material-icons">logout</span> Log Out</div>
+</div>
+
 <!-- ── PROMPT ── -->
 <div class="prompt-wrap">
   <div class="prompt-container" id="promptContainer">
@@ -389,7 +237,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     <div class="input-row">
       <button class="icon-btn" onclick="triggerUpload()" title="Attach image"><span class="material-icons">add_photo_alternate</span></button>
       <textarea class="prompt-input" id="promptInput" rows="1"
-        placeholder="Ask Lumina anything about your image… or generate one!"
+        placeholder="Ask Lumina anything… or generate an image!"
         oninput="autoResizeTextarea(this)"
         onkeydown="handlePromptKeydown(event)"></textarea>
       <button class="icon-btn" onclick="micAction()" title="Voice input"><span class="material-icons">mic</span></button>
@@ -404,65 +252,257 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 <div class="bottom-tools">
   <button onclick="newChat()" title="New Chat"><span class="material-icons">edit_note</span></button>
   <button onclick="openHistory()" title="Chat History"><span class="material-icons">history</span></button>
-  <button onclick="openGallery()" title="Saved Images"><span class="material-icons">image</span></button>
+  <!-- FIXED: Photos/Gallery button — shows saved images, not upload -->
+  <button onclick="openGallery()" title="Saved Images" id="galleryBtn">
+    <span class="material-icons">photo_library</span>
+    <span class="tool-badge" id="galleryBadge"></span>
+  </button>
   <button onclick="openOpsPanel()" title="Operations"><span class="material-icons">auto_awesome</span></button>
-</div>
-
-<!-- ── GALLERY PANEL ── -->
-<div class="gallery-panel" id="galleryPanel">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-    <h3><span class="material-icons" style="color:#41e1ae;">collections</span> Saved Images</h3>
-    <span class="material-icons" style="cursor:pointer;" onclick="closeGallery()">close</span>
-  </div>
-  <div id="galleryList"></div>
 </div>
 
 <!-- ── HISTORY PANEL ── -->
 <div class="history-panel" id="historyPanel">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-    <h3 style="font-size:17px;">Chat History</h3>
+    <h3 style="font-size:17px;">💬 Chat History</h3>
     <span class="material-icons" style="cursor:pointer;" onclick="closeHistory()">close</span>
   </div>
   <div id="historyList"></div>
 </div>
 
+<!-- ── SAVED GALLERY PANEL ── -->
+<div class="gallery-panel" id="galleryPanel">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+    <h3 style="font-size:17px;">🖼️ Saved Images</h3>
+    <span class="material-icons" style="cursor:pointer;" onclick="closeGallery()">close</span>
+  </div>
+  <p style="font-size:12px;opacity:0.5;margin-bottom:12px;">Images you save appear here. Click ❤️ under any image to save.</p>
+  <div id="galleryList"></div>
+</div>
+
 <!-- ── OPS PANEL ── -->
 <div class="medical-panel" id="opsPanel">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-    <h3><span class="material-icons" style="color:#41e1ae;">auto_awesome</span> Operations</h3>
+    <h3><span class="material-icons" style="color:#41e1ae;font-size:18px;">auto_awesome</span> Quick Operations</h3>
     <span class="material-icons" style="cursor:pointer;" onclick="closeOpsPanel()">close</span>
   </div>
   <div class="op-category">
-    <div class="op-category-title">🎨 Creative</div>
-    <span class="op-chip" onclick="quickOp('cartoon')">Cartoon</span>
-    <span class="op-chip" onclick="quickOp('watercolor')">Watercolor</span>
-    <span class="op-chip" onclick="quickOp('sketch')">Sketch</span>
-    <span class="op-chip" onclick="quickOp('neon glow')">Neon Glow</span>
-    <span class="op-chip" onclick="quickOp('glitch')">Glitch</span>
-    <span class="op-chip" onclick="quickOp('thermal vision')">Thermal</span>
-    <span class="op-chip" onclick="quickOp('pop art')">Pop Art</span>
+    <div class="op-category-title">🏥 Medical</div>
+    <span class="op-chip medical" onclick="quickOp('enhance this xray')">X-Ray Enhance</span>
+    <span class="op-chip medical" onclick="quickOp('enhance MRI scan')">MRI Enhance</span>
+    <span class="op-chip medical" onclick="quickOp('enhance ct scan')">CT Enhance</span>
+    <span class="op-chip medical" onclick="quickOp('fundus enhance')">Fundus/Retina</span>
+    <span class="op-chip medical" onclick="quickOp('analyze skin')">Skin Analysis</span>
+    <span class="op-chip medical" onclick="quickOp('analyze wound')">Wound Analysis</span>
+    <span class="op-chip medical" onclick="quickOp('clahe enhance')">CLAHE</span>
+    <span class="op-chip medical" onclick="quickOp('denoise image')">Denoise</span>
+    <span class="op-chip medical" onclick="quickOp('segment image')">Segmentation</span>
   </div>
   <div class="op-category">
-    <div class="op-category-title">🏥 Medical</div>
-    <span class="op-chip" onclick="quickOp('xray enhance')">X-Ray</span>
-    <span class="op-chip" onclick="quickOp('mri enhance')">MRI</span>
-    <span class="op-chip" onclick="quickOp('skin analyze')">Skin</span>
+    <div class="op-category-title">🎨 Creative Filters</div>
+    <span class="op-chip creative" onclick="quickOp('apply cartoon effect')">Cartoon</span>
+    <span class="op-chip creative" onclick="quickOp('apply watercolor effect')">Watercolor</span>
+    <span class="op-chip creative" onclick="quickOp('apply pencil sketch')">Sketch</span>
+    <span class="op-chip creative" onclick="quickOp('apply oil painting')">Oil Painting</span>
+    <span class="op-chip creative" onclick="quickOp('apply neon glow')">Neon Glow</span>
+    <span class="op-chip creative" onclick="quickOp('apply glitch effect')">Glitch Art</span>
+    <span class="op-chip creative" onclick="quickOp('apply halftone effect')">Halftone</span>
+    <span class="op-chip creative" onclick="quickOp('apply pop art effect')">Pop Art</span>
+    <span class="op-chip creative" onclick="quickOp('apply stained glass effect')">Stained Glass</span>
+    <span class="op-chip creative" onclick="quickOp('apply pointillism effect')">Pointillism</span>
+    <span class="op-chip creative" onclick="quickOp('apply thermal vision')">Thermal Vision</span>
+    <span class="op-chip creative" onclick="quickOp('apply vintage filter')">Lomo/Vintage</span>
+    <span class="op-chip creative" onclick="quickOp('apply duotone effect')">Duotone</span>
+    <span class="op-chip creative" onclick="quickOp('double exposure effect')">Double Exposure</span>
+    <span class="op-chip creative" onclick="quickOp('tilt shift miniature')">Tilt-Shift</span>
+    <span class="op-chip creative" onclick="quickOp('apply bokeh blur background')">Bokeh</span>
+    <span class="op-chip creative" onclick="quickOp('apply HDR effect')">HDR</span>
+    <span class="op-chip creative" onclick="quickOp('fisheye lens effect')">Fisheye</span>
+    <span class="op-chip creative" onclick="quickOp('ascii art')">ASCII Art</span>
+    <span class="op-chip creative" onclick="quickOp('apply mosaic effect')">Mosaic</span>
+    <span class="op-chip creative" onclick="quickOp('cross process effect')">Cross Process</span>
+  </div>
+  <div class="op-category">
+    <div class="op-category-title">🔬 Detection & Analysis</div>
+    <span class="op-chip" onclick="quickOp('detect faces')">Face Detect</span>
+    <span class="op-chip" onclick="quickOp('extract color palette')">Color Palette</span>
+    <span class="op-chip" onclick="quickOp('canny edge detection')">Canny Edges</span>
+    <span class="op-chip" onclick="quickOp('sobel gradient')">Sobel</span>
+    <span class="op-chip" onclick="quickOp('check image quality')">Quality Check</span>
+    <span class="op-chip" onclick="quickOp('analyze colors')">Color Analysis</span>
+    <span class="op-chip" onclick="quickOp('histogram equalization')">Histogram Eq</span>
+  </div>
+  <div class="op-category">
+    <div class="op-category-title">✨ Restoration</div>
+    <span class="op-chip" onclick="quickOp('super resolution upscale')">Super Resolution</span>
+    <span class="op-chip" onclick="quickOp('deblur image')">Deblur</span>
+    <span class="op-chip" onclick="quickOp('colorize black and white')">Colorize B&W</span>
+    <span class="op-chip" onclick="quickOp('restore old photo')">Restore Old Photo</span>
   </div>
   <div class="op-category">
     <div class="op-category-title">⚙️ Basic</div>
-    <span class="op-chip" onclick="quickOp('grayscale')">Grayscale</span>
-    <span class="op-chip" onclick="quickOp('rotate 90')">Rotate</span>
-    <span class="op-chip" onclick="quickOp('blur')">Blur</span>
-    <span class="op-chip" onclick="quickOp('sharpen')">Sharpen</span>
+    <span class="op-chip" onclick="quickOp('rotate 90 degrees')">Rotate 90°</span>
+    <span class="op-chip" onclick="quickOp('flip horizontally')">Flip H</span>
+    <span class="op-chip" onclick="quickOp('flip vertically')">Flip V</span>
+    <span class="op-chip" onclick="quickOp('make grayscale')">Grayscale</span>
+    <span class="op-chip" onclick="quickOp('invert colors')">Invert</span>
+    <span class="op-chip" onclick="quickOp('apply sepia')">Sepia</span>
+    <span class="op-chip" onclick="quickOp('sharpen image')">Sharpen</span>
+    <span class="op-chip" onclick="quickOp('blur image')">Blur</span>
+    <span class="op-chip" onclick="quickOp('increase contrast')">Contrast+</span>
+    <span class="op-chip" onclick="quickOp('increase brightness')">Brightness+</span>
+    <span class="op-chip" onclick="quickOp('increase saturation')">Saturation+</span>
+    <span class="op-chip" onclick="quickOp('add vignette')">Vignette</span>
+    <span class="op-chip" onclick="quickOp('add film grain')">Film Grain</span>
+    <span class="op-chip" onclick="quickOp('warm white balance')">Warm Tone</span>
+    <span class="op-chip" onclick="quickOp('cool white balance')">Cool Tone</span>
+    <span class="op-chip" onclick="quickOp('image info')">Image Info</span>
+  </div>
+  <div class="op-category">
+    <div class="op-category-title">🤖 Generate</div>
+    <span class="op-chip creative" onclick="promptGenerate()">✨ Generate from Text</span>
   </div>
 </div>
 
-<!-- ── PROFILE MENU ── -->
-<div class="profile-menu" id="profileMenu">
-  <div class="menu-header"><strong id="profileName">User</strong></div>
-  <div class="menu-item" onclick="newChat()"><span class="material-icons">add_circle_outline</span> New Chat</div>
-  <div class="menu-item" onclick="shareCurrentChat()"><span class="material-icons">share</span> Share Chat</div>
-  <div class="menu-item" onclick="logout()"><span class="material-icons">logout</span> Log Out</div>
+<!-- ── AUTH MODAL ── -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal-box" id="authBox">
+    <h3 id="authTitle">Sign In</h3>
+    <div class="modal-alert" id="authAlert"></div>
+    <div class="rate-limit-timer" id="rateLimitMsg">⏳ Too many attempts. Wait <span id="rateLimitCountdown">30</span>s</div>
+    <div id="signupSection" style="display:none;flex-direction:column;gap:10px;">
+      <div style="display:flex;gap:10px;">
+        <div class="input-field-wrap" style="flex:1">
+          <input class="modal-input" id="firstName" placeholder="First Name" oninput="clearFieldError(this)">
+          <span class="field-error" id="firstNameErr">Required</span>
+        </div>
+        <div class="input-field-wrap" style="flex:1">
+          <input class="modal-input" id="lastName" placeholder="Last Name" oninput="clearFieldError(this)">
+          <span class="field-error" id="lastNameErr">Required</span>
+        </div>
+      </div>
+      <div class="input-field-wrap">
+        <input class="modal-input" id="email" placeholder="Email address" oninput="validateEmailField()">
+        <span class="field-error" id="emailErr">Invalid email</span>
+      </div>
+      <div class="input-field-wrap">
+        <input class="modal-input" id="username" placeholder="Username (3-20 chars)" oninput="validateUsernameField()">
+        <span class="field-hint">Letters, numbers, underscore only</span>
+        <span class="field-error" id="usernameErr">Invalid username</span>
+      </div>
+      <div class="input-field-wrap">
+        <input class="modal-input" id="dob" type="date" placeholder="Date of Birth">
+        <span class="field-hint">Must be 13 or older</span>
+        <span class="field-error" id="dobErr">Must be 13+</span>
+      </div>
+    </div>
+    <!-- Login identifier with saved accounts dropdown -->
+    <div class="input-field-wrap" id="loginIdentifierWrap" style="position:relative;">
+      <input class="modal-input" id="loginIdentifier" placeholder="Email or Username"
+        oninput="onLoginIdentifierInput()"
+        onfocus="showSavedAccountsDropdown()"
+        autocomplete="off">
+      <span class="field-error" id="identifierErr">Required</span>
+      <div class="saved-accounts-dropdown" id="savedAccountsDropdown"></div>
+    </div>
+    <div class="input-field-wrap">
+      <div class="pw-wrap">
+        <input class="modal-input" id="password" type="password" placeholder="Password" oninput="onPasswordInput()">
+        <span class="pw-eye material-icons" onclick="togglePwEye('password','eyeIcon1')" id="eyeIcon1">visibility</span>
+      </div>
+      <div id="pwStrengthWrap" style="display:none;">
+        <div class="pw-bars">
+          <div class="pw-bar" id="bar1"></div><div class="pw-bar" id="bar2"></div>
+          <div class="pw-bar" id="bar3"></div><div class="pw-bar" id="bar4"></div><div class="pw-bar" id="bar5"></div>
+        </div>
+        <div class="pw-label" id="pwLabel">Enter a password</div>
+        <div class="pw-reqs">
+          <div class="pw-req unmet" id="req-len">✗ At least 8 characters</div>
+          <div class="pw-req unmet" id="req-upper">✗ One uppercase letter</div>
+          <div class="pw-req unmet" id="req-lower">✗ One lowercase letter</div>
+          <div class="pw-req unmet" id="req-num">✗ One number</div>
+          <div class="pw-req unmet" id="req-special">✗ One special character</div>
+        </div>
+      </div>
+      <span class="field-error" id="passwordErr">Required</span>
+    </div>
+    <div class="input-field-wrap" id="confirmPwWrap" style="display:none;">
+      <div class="pw-wrap">
+        <input class="modal-input" id="confirmPassword" type="password" placeholder="Confirm Password" oninput="validateConfirmPw()">
+        <span class="pw-eye material-icons" onclick="togglePwEye('confirmPassword','eyeIcon2')" id="eyeIcon2">visibility</span>
+      </div>
+      <span class="field-error" id="confirmPwErr">Passwords don't match</span>
+    </div>
+    <div id="termsWrap" style="display:none;">
+      <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="agreeTerms" style="margin-top:2px;flex-shrink:0;">
+        <span class="modal-terms">I agree to the Terms of Service and Privacy Policy. I am 13 years of age or older.</span>
+      </label>
+    </div>
+    <button class="modal-btn-primary" id="authSubmitBtn" onclick="submitAuth()">Submit</button>
+    <button class="modal-btn-text" id="forgotBtn" onclick="showForgotPassword()">Forgot Password?</button>
+    <div class="modal-divider" id="switchDivider">or</div>
+    <button class="modal-btn-text" id="switchBtn" onclick="switchAuthMode()">Don't have an account? Sign Up</button>
+    <button class="modal-btn-text" onclick="closeAuth()">Cancel</button>
+  </div>
+</div>
+
+<!-- ── FORGOT PASSWORD MODAL ── -->
+<div class="modal-overlay" id="forgotModal">
+  <div class="modal-box small">
+    <h3>Reset Password</h3>
+    <div class="modal-alert" id="forgotAlert"></div>
+    <div id="forgotStep1">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <input class="modal-input" id="forgotEmail" placeholder="Enter your email or username">
+        <button class="modal-btn-primary" onclick="sendOTP()">Send OTP</button>
+      </div>
+    </div>
+    <div id="forgotStep2" style="display:none;flex-direction:column;gap:12px;">
+      <p style="color:rgba(255,255,255,0.7);font-size:13px;text-align:center;">Enter the 6-digit code</p>
+      <div class="otp-grid">
+        <input class="otp-digit" maxlength="1" oninput="otpInput(this,0)" onkeydown="otpBack(this,event,0)">
+        <input class="otp-digit" maxlength="1" oninput="otpInput(this,1)" onkeydown="otpBack(this,event,1)">
+        <input class="otp-digit" maxlength="1" oninput="otpInput(this,2)" onkeydown="otpBack(this,event,2)">
+        <input class="otp-digit" maxlength="1" oninput="otpInput(this,3)" onkeydown="otpBack(this,event,3)">
+        <input class="otp-digit" maxlength="1" oninput="otpInput(this,4)" onkeydown="otpBack(this,event,4)">
+        <input class="otp-digit" maxlength="1" oninput="otpInput(this,5)" onkeydown="otpBack(this,event,5)">
+      </div>
+      <div id="otpTimer" style="text-align:center;font-size:12px;color:rgba(255,255,255,0.5);">Resend in <span id="otpCountdown">60</span>s</div>
+      <button class="modal-btn-primary" onclick="verifyOTP()">Verify OTP</button>
+    </div>
+    <div id="forgotStep3" style="display:none;flex-direction:column;gap:12px;">
+      <div class="pw-wrap"><input class="modal-input" id="newPassword" type="password" placeholder="New Password"><span class="pw-eye material-icons" onclick="togglePwEye('newPassword','eyeIcon3')" id="eyeIcon3">visibility</span></div>
+      <div class="pw-wrap"><input class="modal-input" id="confirmNewPassword" type="password" placeholder="Confirm New Password"><span class="pw-eye material-icons" onclick="togglePwEye('confirmNewPassword','eyeIcon4')" id="eyeIcon4">visibility</span></div>
+      <button class="modal-btn-primary" onclick="resetPassword()">Reset Password</button>
+    </div>
+    <button class="modal-btn-text" onclick="closeForgot()">Cancel</button>
+  </div>
+</div>
+
+<!-- ── CHANGE PASSWORD MODAL ── -->
+<div class="modal-overlay" id="changePwModal">
+  <div class="modal-box small">
+    <h3>Change Password</h3>
+    <div class="modal-alert" id="changePwAlert"></div>
+    <div class="pw-wrap"><input class="modal-input" id="currentPassword" type="password" placeholder="Current Password"><span class="pw-eye material-icons" onclick="togglePwEye('currentPassword','eyeIcon5')" id="eyeIcon5">visibility</span></div>
+    <div class="pw-wrap"><input class="modal-input" id="newPwChange" type="password" placeholder="New Password"><span class="pw-eye material-icons" onclick="togglePwEye('newPwChange','eyeIcon6')" id="eyeIcon6">visibility</span></div>
+    <div class="pw-wrap"><input class="modal-input" id="confirmNewPwChange" type="password" placeholder="Confirm New Password"><span class="pw-eye material-icons" onclick="togglePwEye('confirmNewPwChange','eyeIcon7')" id="eyeIcon7">visibility</span></div>
+    <button class="modal-btn-primary" onclick="submitChangePassword()">Update Password</button>
+    <button class="modal-btn-text" onclick="document.getElementById('changePwModal').style.display='none'">Cancel</button>
+  </div>
+</div>
+
+<!-- ── SHARE MODAL ── -->
+<div class="share-modal-overlay" id="shareModal">
+  <div class="share-modal-box">
+    <h3 style="font-size:18px;">📤 Share This Chat</h3>
+    <p style="font-size:13px;opacity:0.7;">Anyone with this link can view your chat (read-only).</p>
+    <div class="share-link-box" id="shareLinkBox">Generating link...</div>
+    <div style="display:flex;gap:10px;">
+      <button class="modal-btn-primary" style="flex:1;" onclick="copyShareLink()">📋 Copy Link</button>
+      <button class="modal-btn-primary" style="flex:1;background:rgba(255,255,255,0.2);color:white;" onclick="closeShareModal()">Close</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── LIGHTBOX ── -->
@@ -471,6 +511,7 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
     <div class="lightbox-actions">
       <button class="lightbox-btn" onclick="downloadLightboxImage()"><span class="material-icons">download</span> Download</button>
       <button class="lightbox-btn" onclick="copyLightboxImage()"><span class="material-icons">content_copy</span> Copy</button>
+      <button class="lightbox-btn" onclick="saveToGalleryFromLightbox()"><span class="material-icons">favorite</span> Save</button>
       <button class="lightbox-btn" onclick="document.getElementById('lightbox').style.display='none'"><span class="material-icons">close</span></button>
     </div>
     <img id="lightboxImg" alt="Preview">
@@ -480,440 +521,402 @@ body.dragging-over { outline: 4px dashed rgba(255,255,255,0.6); }
 <!-- ── TOAST ── -->
 <div class="toast" id="toast"></div>
 
+<!-- Hidden file input -->
 <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="handleFileInputChange(event)">
 
 <script>
 (function () {
 'use strict';
 
-// ── STATE ─────────────────────────────────────────────────
+// ── STATE ──────────────────────────────────────────────────
 let chatStarted=false, generating=false;
 let attachedFiles=[], conversationHistory=[];
 let currentChatTitle=null, currentChatKey=null;
+let authMode='signin';
+let loginAttempts=0, lockUntil=0;
+let otpCode='', otpExpiry=0, otpTimerInt=null;
 let currentUser=null;
 let lastImageB64=null;
 let savedImages=[];
 
-const MAX_SIZE=10*1024*1024;
-const ALLOWED=['image/jpeg','image/png','image/webp','image/gif','image/bmp'];
+const MAX_FILE_SIZE=10*1024*1024;
+const ALLOWED_TYPES=['image/jpeg','image/png','image/webp','image/gif','image/bmp'];
 const LS_USER='luminaUser_v2';
+const MAX_LOGIN_ATTEMPTS=5, LOCK_DURATION=30;
 
-function userKey(suffix) {
-  const uid = currentUser ? currentUser.username : 'guest';
-  return `lumina_${uid}_${suffix}`;
-}
+// ── UTILS ──────────────────────────────────────────────────
+function truncate(s,n){ return s&&s.length>n?s.slice(0,n)+'…':s||''; }
+function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function userKey(suffix){ return `lumina_${currentUser?currentUser.username:'guest'}_${suffix}`; }
+function getChatIndex(){ try{ return JSON.parse(localStorage.getItem(userKey('index'))||'[]'); }catch{ return []; } }
+function updateChatIndex(a){ localStorage.setItem(userKey('index'),JSON.stringify(a)); }
 
 // ── TEXTAREA AUTO-RESIZE ───────────────────────────────────
 window.autoResizeTextarea = function(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,160)+'px';
+};
+window.handlePromptKeydown = function(e) {
+  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 };
 
-window.handlePromptKeydown = function(event) {
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault();
-    sendMessage();
-  }
-};
-
-// ── TOAST ─────────────────────────────────────────────────
-function toast(msg, dur=2500) {
+// ── TOAST ──────────────────────────────────────────────────
+function toast(msg,dur=2500){
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), dur);
+  setTimeout(()=>t.classList.remove('show'),dur);
 }
 
-// ── SEND/STOP ─────────────────────────────────────────────
-window.handleSendOrStop = function() {
-  if (generating) { stopGeneration(); } else { sendMessage(); }
-};
-
-function setGenerating(val) {
-  generating = val;
-  const btn = document.getElementById('sendBtn');
-  const icon = document.getElementById('actionIcon');
-  if (val) {
-    btn.classList.add('stop-mode'); icon.textContent = 'stop';
-  } else {
-    btn.classList.remove('stop-mode'); icon.textContent = 'arrow_upward';
-  }
+// ── SEND/STOP ──────────────────────────────────────────────
+window.handleSendOrStop = function(){ generating?stopGeneration():sendMessage(); };
+function setGenerating(val){
+  generating=val;
+  const btn=document.getElementById('sendBtn'), icon=document.getElementById('actionIcon');
+  btn.classList.toggle('stop-mode',val);
+  icon.textContent=val?'stop':'arrow_upward';
 }
+function stopGeneration(){ setGenerating(false); removeTyping(); addBotMsg('⛔ Generation stopped.',false,null); }
 
-function stopGeneration() {
-  setGenerating(false);
-  removeTyping();
-  addBotMsg('⛔ Generation stopped.', false, null);
-}
-
-// ── CHAT HELPERS ──────────────────────────────────────────
-function startChatMode() {
-  if (chatStarted) return; chatStarted=true;
+// ── CHAT HELPERS ───────────────────────────────────────────
+function startChatMode(){
+  if(chatStarted)return; chatStarted=true;
   document.getElementById('watermark').style.display='none';
   document.getElementById('homeSubtitle').style.display='none';
   document.getElementById('chatWrapper').style.display='block';
 }
-
-function createMsgWrapper(role) {
-  const wrapper = document.createElement('div');
-  wrapper.className = `chat-msg-wrapper ${role === 'user' ? 'user-wrapper' : 'bot-wrapper'}`;
-  return wrapper;
+function createMsgWrapper(role){
+  const w=document.createElement('div');
+  w.className=`chat-msg-wrapper ${role==='user'?'user-wrapper':'bot-wrapper'}`;
+  return w;
 }
-
-function addUserMsg(text, images) {
-  const wrapper = createMsgWrapper('user');
-  if (text) {
-    const div = document.createElement('div');
-    div.classList.add('chat-msg', 'user-msg');
-    div.innerText = text;
+function addUserMsg(text,images){
+  const wrapper=createMsgWrapper('user');
+  if(text){
+    const div=document.createElement('div'); div.classList.add('chat-msg','user-msg'); div.innerText=text;
     wrapper.appendChild(div);
-    const actions = document.createElement('div');
-    actions.className = 'msg-actions';
-    actions.innerHTML = `<button class="msg-action-btn" onclick="copyText(${JSON.stringify(text)})"><span class="material-icons">content_copy</span> Copy</button>`;
+    const actions=document.createElement('div'); actions.className='msg-actions';
+    actions.innerHTML=`<button class="msg-action-btn" onclick="copyText(${JSON.stringify(text)})"><span class="material-icons">content_copy</span> Copy</button>`;
     wrapper.appendChild(actions);
   }
-  if (images && images.length > 0) {
-    const attachBox = document.createElement('div');
-    attachBox.className = 'msg-attachments user-side';
-    images.forEach(src => {
-      const img = document.createElement('img');
-      img.src = src; img.className = 'msg-attach-img';
-      img.onclick = () => openLightbox(src);
-      attachBox.appendChild(img);
-    });
-    wrapper.appendChild(attachBox);
+  if(images&&images.length>0){
+    const box=document.createElement('div'); box.className='msg-attachments user-side';
+    images.forEach(src=>{ const img=document.createElement('img'); img.src=src; img.className='msg-attach-img'; img.onclick=()=>openLightbox(src); box.appendChild(img); });
+    wrapper.appendChild(box);
   }
-  document.getElementById('chatArea').appendChild(wrapper);
-  scrollChat();
-  return wrapper;
+  document.getElementById('chatArea').appendChild(wrapper); scrollChat(); return wrapper;
 }
-
-function addBotMsg(content, isHTML=false, imgSrc=null) {
-  const wrapper = createMsgWrapper('bot');
-  const div = document.createElement('div');
-  div.classList.add('chat-msg', 'bot-msg');
-  if (isHTML) div.innerHTML = content; else div.innerText = content;
+function addBotMsg(content,isHTML=false,imgSrc=null,modelUsed=''){
+  const wrapper=createMsgWrapper('bot');
+  const div=document.createElement('div'); div.classList.add('chat-msg','bot-msg');
+  if(isHTML) div.innerHTML=content; else div.innerText=content;
   wrapper.appendChild(div);
-
-  if (imgSrc) {
-    const attachBox = document.createElement('div');
-    attachBox.className = 'msg-attachments bot-side';
-    const img = document.createElement('img');
-    img.src = imgSrc; img.className = 'msg-attach-img';
-    img.onclick = () => openLightbox(imgSrc);
-    attachBox.appendChild(img);
-    wrapper.appendChild(attachBox);
+  if(modelUsed==='gemini'){
+    const badge=document.createElement('span'); badge.className='model-badge badge-gemini'; badge.textContent='🌟 Lumina AI';
+    wrapper.appendChild(badge);
   }
-
-  const plainText = div.innerText || div.textContent;
-  const actions = document.createElement('div');
-  actions.className = 'msg-actions';
-  let actHtml = `<button class="msg-action-btn" onclick="copyText(${JSON.stringify(plainText)})"><span class="material-icons">content_copy</span> Copy</button>`;
-  if (imgSrc) {
-    actHtml += `<button class="msg-action-btn" onclick="downloadImage(${JSON.stringify(imgSrc)})"><span class="material-icons">download</span> Download</button>`;
-    actHtml += `<button class="msg-action-btn" onclick="saveImageToGallery(${JSON.stringify(imgSrc)})"><span class="material-icons">favorite</span> Save</button>`;
+  if(imgSrc){
+    const box=document.createElement('div'); box.className='msg-attachments bot-side';
+    const img=document.createElement('img'); img.src=imgSrc; img.className='msg-attach-img';
+    img.style.maxWidth='320px'; img.style.height='auto'; img.onclick=()=>openLightbox(imgSrc);
+    box.appendChild(img); wrapper.appendChild(box);
   }
-  actions.innerHTML = actHtml;
-  wrapper.appendChild(actions);
-  document.getElementById('chatArea').appendChild(wrapper);
-  scrollChat();
-  return wrapper;
+  const plainText=div.innerText||div.textContent;
+  const actions=document.createElement('div'); actions.className='msg-actions';
+  let actHtml=`<button class="msg-action-btn" onclick="copyText(${JSON.stringify(plainText)})"><span class="material-icons">content_copy</span> Copy</button>`;
+  if(imgSrc){
+    actHtml+=`<button class="msg-action-btn" onclick="downloadImage(${JSON.stringify(imgSrc)})"><span class="material-icons">download</span> Download</button>`;
+    actHtml+=`<button class="msg-action-btn" onclick="saveToGallery(${JSON.stringify(imgSrc)})"><span class="material-icons">favorite</span> Save</button>`;
+    actHtml+=`<button class="msg-action-btn" onclick="copyImageToClipboard(${JSON.stringify(imgSrc)})"><span class="material-icons">image</span> Copy Image</button>`;
+  }
+  actions.innerHTML=actHtml; wrapper.appendChild(actions);
+  document.getElementById('chatArea').appendChild(wrapper); scrollChat(); return wrapper;
 }
-
-function scrollChat() {
-  const w=document.getElementById('chatWrapper');
-  setTimeout(()=>{w.scrollTop=w.scrollHeight;},60);
-}
-
-function showTyping() {
-  const wrapper = createMsgWrapper('bot');
-  wrapper.id = 'typingWrapper';
-  const div=document.createElement('div');
-  div.classList.add('chat-msg','bot-msg'); div.id='typing';
+function scrollChat(){ const w=document.getElementById('chatWrapper'); setTimeout(()=>{w.scrollTop=w.scrollHeight;},60); }
+function showTyping(){
+  const wrapper=createMsgWrapper('bot'); wrapper.id='typingWrapper';
+  const div=document.createElement('div'); div.classList.add('chat-msg','bot-msg'); div.id='typing';
   div.innerHTML='<div class="typing"><span></span><span></span><span></span></div>';
-  wrapper.appendChild(div);
-  document.getElementById('chatArea').appendChild(wrapper); scrollChat();
+  wrapper.appendChild(div); document.getElementById('chatArea').appendChild(wrapper); scrollChat();
+}
+function removeTyping(){ const t=document.getElementById('typingWrapper'); if(t)t.remove(); }
+function formatReply(text){
+  return text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\n/g,'<br>');
 }
 
-function removeTyping() {
-  const t=document.getElementById('typingWrapper'); if(t) t.remove();
-}
-
-function formatReply(text) {
-  return text
-    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g,'<em>$1</em>')
-    .replace(/`([^`]+)`/g,'<code>$1</code>')
-    .replace(/\n/g,'<br>');
-}
-
-// ── COPY / DOWNLOAD ──────────────────────────────────────
-window.copyText = function(text) {
+// ── COPY / DOWNLOAD ────────────────────────────────────────
+window.copyText = function(text){
   navigator.clipboard.writeText(text).then(()=>toast('Copied!')).catch(()=>{
-    const ta=document.createElement('textarea'); ta.value=text;
-    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
-    document.body.removeChild(ta); toast('Copied!');
+    const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('Copied!');
   });
 };
-
-window.downloadImage = function(src, name='lumina-image.png') {
-  const a=document.createElement('a'); a.href=src; a.download=name;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  toast('Image downloaded!');
+window.downloadImage = function(src,name='lumina-image.png'){
+  const a=document.createElement('a'); a.href=src; a.download=name; document.body.appendChild(a); a.click(); document.body.removeChild(a); toast('Image downloaded!');
+};
+window.copyImageToClipboard = async function(src){
+  try{
+    const res=await fetch(src); const blob=await res.blob();
+    await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+    toast('Image copied to clipboard!');
+  }catch(e){ toast('Copy not supported in this browser. Use Download instead.'); }
 };
 
-window.saveImageToGallery = async function(src) {
-  const id = 'img_' + Date.now();
-  const saveData = {
-    id: id,
-    image: src,
-    title: 'Generated Image',
-    timestamp: new Date().toISOString()
-  };
-  
-  savedImages.push(saveData);
-  const key = userKey('gallery');
-  localStorage.setItem(key, JSON.stringify(savedImages));
-  
-  toast('Image saved to gallery!');
-  renderGallery();
+// ── SAVE TO GALLERY ────────────────────────────────────────
+window.saveToGallery = function(src, title='Saved Image'){
+  loadSavedImages();
+  const id='img_'+Date.now();
+  savedImages.push({id, image:src, title, timestamp:new Date().toISOString()});
+  localStorage.setItem(userKey('gallery'), JSON.stringify(savedImages));
+  updateGalleryBadge();
+  toast('✅ Image saved to gallery!');
 };
+window.saveToGalleryFromLightbox = function(){
+  const src=document.getElementById('lightboxImg').src;
+  if(src) saveToGallery(src,'Saved from Chat');
+};
+function loadSavedImages(){
+  try{ savedImages=JSON.parse(localStorage.getItem(userKey('gallery'))||'[]'); }catch{ savedImages=[]; }
+}
+function updateGalleryBadge(){
+  loadSavedImages();
+  const badge=document.getElementById('galleryBadge');
+  if(savedImages.length>0){
+    badge.style.display='flex'; badge.textContent=savedImages.length>9?'9+':savedImages.length;
+  } else { badge.style.display='none'; }
+}
 
-window.copyImageToClipboard = async function(src) {
-  try {
-    const res = await fetch(src);
-    const blob = await res.blob();
-    await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
-    toast('Image copied!');
-  } catch(e) {
-    toast('Copy not supported. Use Download instead.');
+// ── GALLERY PANEL ──────────────────────────────────────────
+window.openGallery = function(){
+  loadSavedImages(); renderGallery();
+  document.getElementById('galleryPanel').style.display='block';
+  closeHistory(); closeOpsPanel();
+};
+window.closeGallery = function(){ document.getElementById('galleryPanel').style.display='none'; };
+function renderGallery(){
+  const list=document.getElementById('galleryList');
+  if(!savedImages.length){
+    list.innerHTML='<div class="gallery-empty">📸 No saved images yet.<br><br>Click <strong>❤️ Save</strong> below any image to add it here.<br><br>Your saves are stored per account.</div>';
+    return;
   }
+  list.innerHTML='<div class="gallery-grid">'+
+    savedImages.map((img,i)=>`
+      <div class="gallery-item" onclick="openLightbox('${img.image.replace(/'/g,"\\'")}')">
+        <img src="${img.image}" alt="Saved" loading="lazy">
+        <div class="gallery-item-info">${escapeHtml(truncate(img.title,20))}</div>
+        <button class="gallery-item-remove" onclick="deleteGalleryItem(event,${i})" title="Remove">×</button>
+      </div>`).join('')+'</div>';
+}
+window.deleteGalleryItem = function(e,idx){
+  e.stopPropagation(); savedImages.splice(idx,1);
+  localStorage.setItem(userKey('gallery'),JSON.stringify(savedImages));
+  renderGallery(); updateGalleryBadge(); toast('Removed from gallery.');
 };
 
-// ── SEND MESSAGE ──────────────────────────────────────────
-window.sendMessage = async function() {
-  if (generating) return;
-  
-  const input = document.getElementById('promptInput');
-  let text = input.value.trim();
-  
-  if (!text && attachedFiles.length === 0) return;
+// ── IMAGE COMPRESSION ──────────────────────────────────────
+async function compressImage(dataUrl, maxPx=1024, quality=0.85){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.width,h=img.height;
+      if(w>maxPx){ h=Math.round(maxPx/w*h); w=maxPx; }
+      else if(h>maxPx){ w=Math.round(maxPx/h*w); h=maxPx; }
+      const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(canvas.toDataURL('image/jpeg',quality));
+    };
+    img.src=dataUrl;
+  });
+}
 
-  setGenerating(true);
-  startChatMode();
+// ── SEND MESSAGE ───────────────────────────────────────────
+window.sendMessage = async function(){
+  if(generating)return;
+  const input=document.getElementById('promptInput');
+  const text=input.value.trim();
+  if(!text&&attachedFiles.length===0)return;
 
-  addUserMsg(text, attachedFiles.length > 0 ? [...attachedFiles] : []);
+  setGenerating(true); startChatMode();
 
-  const promptText = text;
-  const filesToSend = attachedFiles.length > 0 ? [...attachedFiles] : [];
+  const promptText=text;
+  const filesToSend=[...attachedFiles];
+  addUserMsg(text, filesToSend.length>0?[...filesToSend]:[]);
 
-  input.value = '';
-  input.style.height = 'auto';
-  attachedFiles = [];
-  renderPreviews();
-
+  input.value=''; input.style.height='auto';
+  attachedFiles=[]; renderPreviews();
   showTyping();
 
-  try {
-    const fd = new FormData();
-    fd.append('prompt', promptText);
-    fd.append('history', JSON.stringify(conversationHistory));
+  try{
+    const fd=new FormData();
+    fd.append('prompt',promptText);
+    fd.append('history',JSON.stringify(conversationHistory));
+    if(lastImageB64) fd.append('last_image',lastImageB64);
 
-    if (filesToSend.length > 0) {
-      const blob = await (await fetch(filesToSend[0])).blob();
-      fd.append('image', blob, 'upload.jpg');
+    if(filesToSend.length>0){
+      let imgData=filesToSend[0];
+      if(imgData.startsWith('data:image')) imgData=await compressImage(imgData);
+      const blob=await (await fetch(imgData)).blob();
+      fd.append('image',blob,'upload.jpg');
     }
 
-    const res = await fetch('/process', {
-      method: 'POST',
-      body: fd
-    });
-
+    const res=await fetch('/process',{method:'POST',body:fd});
     removeTyping();
-    if (!res.ok) { addBotMsg('⚠️ Server error'); setGenerating(false); return; }
+    if(!res.ok){ addBotMsg('⚠️ Server error: '+res.status); setGenerating(false); return; }
 
-    const data = await res.json();
-    if (data.history) conversationHistory = data.history;
-    if (data.last_image) lastImageB64 = data.last_image;
+    const data=await res.json();
+    if(data.history) conversationHistory=data.history;
+    if(data.last_image) lastImageB64=data.last_image;
+    else if(filesToSend.length>0) lastImageB64=filesToSend[0];
 
-    const resultImg = data.image || null;
+    const resultImg=data.image||null;
+    const modelUsed=data.model||'';
 
-    if (data.message) addBotMsg(formatReply(data.message), true, resultImg);
-    else if (resultImg) addBotMsg('Here is your processed image:', false, resultImg);
+    if(data.message) addBotMsg(formatReply(data.message),true,resultImg,modelUsed);
+    else if(resultImg) addBotMsg('Here is your processed image:',false,resultImg,modelUsed);
 
+    // Auto-set chat title from first message
+    if(!currentChatTitle&&promptText){
+      currentChatTitle=truncate(promptText,40);
+      currentChatKey=userKey('chat_'+Date.now());
+    }
     saveChatHistory();
-  } catch(err) {
+  }catch(err){
     removeTyping();
-    addBotMsg('⚠️ Error: ' + err.message);
-  } finally {
+    if(err.name!=='AbortError') addBotMsg('⚠️ Connection error: '+err.message);
+  }finally{
     setGenerating(false);
   }
 };
 
-// ── QUICK OP ──────────────────────────────────────────────
-window.quickOp = function(cmd) {
-  const input = document.getElementById('promptInput');
-  input.value = cmd;
-  autoResizeTextarea(input);
+// ── QUICK OP ───────────────────────────────────────────────
+window.quickOp = function(cmd){
+  const input=document.getElementById('promptInput');
+  input.value=cmd; autoResizeTextarea(input);
+  closeOpsPanel(); sendMessage();
+};
+window.promptGenerate = function(){
   closeOpsPanel();
-  sendMessage();
+  const p=prompt('Describe the image you want to generate:');
+  if(p&&p.trim()){
+    const input=document.getElementById('promptInput');
+    input.value='generate image of '+p.trim();
+    autoResizeTextarea(input); sendMessage();
+  }
 };
 
-// ── NEW CHAT ──────────────────────────────────────────────
-window.newChat = function() {
+// ── NEW CHAT ───────────────────────────────────────────────
+window.newChat = function(){
   document.getElementById('chatArea').innerHTML='';
   document.getElementById('chatWrapper').style.display='none';
   document.getElementById('watermark').style.display='block';
   document.getElementById('homeSubtitle').style.display='block';
   chatStarted=false; attachedFiles=[]; conversationHistory=[];
-  currentChatTitle=null; currentChatKey=null;
-  lastImageB64=null;
-  const input = document.getElementById('promptInput');
-  input.value=''; input.style.height='auto';
+  currentChatTitle=null; currentChatKey=null; lastImageB64=null;
+  const input=document.getElementById('promptInput'); input.value=''; input.style.height='auto';
   renderPreviews();
   document.getElementById('profileMenu').style.display='none';
-  if (generating) stopGeneration();
+  if(generating)stopGeneration();
 };
 
-// ── SHARE CHAT ────────────────────────────────────────────
-window.shareCurrentChat = function() {
+// ── SHARE CHAT ─────────────────────────────────────────────
+window.openShareModal = async function(){
   document.getElementById('profileMenu').style.display='none';
-  const msgs = document.querySelectorAll('.chat-msg');
-  if (!msgs.length) { toast('No chat to share yet.'); return; }
-  let text = '=== Lumina Chat ===\n\n';
-  document.querySelectorAll('.chat-msg-wrapper').forEach(wrapper => {
-    const isUser = wrapper.classList.contains('user-wrapper');
-    const bubble = wrapper.querySelector('.chat-msg');
-    if (bubble) text += (isUser ? 'You: ' : 'Lumina: ') + (bubble.innerText || bubble.textContent).trim() + '\n\n';
+  const msgs=document.querySelectorAll('.chat-msg-wrapper');
+  if(!msgs.length){ toast('No chat to share yet.'); return; }
+  // Build shareable HTML (text only, no base64 images for brevity)
+  let chatHtml='';
+  msgs.forEach(wrapper=>{
+    const isUser=wrapper.classList.contains('user-wrapper');
+    const bubble=wrapper.querySelector('.chat-msg');
+    if(bubble){
+      const cls=isUser?'user-msg':'bot-msg';
+      const label=isUser?'You':'Lumina';
+      chatHtml+=`<div style="margin-bottom:12px;"><strong style="color:rgba(255,255,255,0.5);font-size:11px;">${label}</strong><div class="chat-msg ${cls}" style="margin-top:4px;">${bubble.innerHTML}</div></div>`;
+    }
   });
-  copyText(text);
-  toast('Chat copied to clipboard!');
+  document.getElementById('shareLinkBox').textContent='Creating share link...';
+  document.getElementById('shareModal').style.display='flex';
+  try{
+    const res=await fetch('/api/share-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_html:chatHtml,title:currentChatTitle||'Lumina Chat'})});
+    const data=await res.json();
+    if(data.share_url){
+      const fullUrl=window.location.origin+data.share_url;
+      document.getElementById('shareLinkBox').textContent=fullUrl;
+      document.getElementById('shareLinkBox')._shareUrl=fullUrl;
+    }
+  }catch(e){
+    document.getElementById('shareLinkBox').textContent='Share failed. Try copying the chat instead.';
+  }
+};
+window.closeShareModal = function(){ document.getElementById('shareModal').style.display='none'; };
+window.copyShareLink = function(){
+  const box=document.getElementById('shareLinkBox');
+  const url=box._shareUrl||box.textContent;
+  copyText(url);
 };
 
-// ── HISTORY ───────────────────────────────────────────────
-function saveChatHistory() {
-  if (!currentChatKey || !currentChatTitle) return;
-  const rawHTML = document.getElementById('chatArea').innerHTML;
-  const chatData = {
-    title: currentChatTitle,
-    html: rawHTML,
-    history: conversationHistory,
-    ts: Date.now()
-  };
-
-  try {
-    localStorage.setItem(currentChatKey, JSON.stringify(chatData));
-  } catch(e) {
-    console.error('Could not save chat:', e);
-  }
+// ── HISTORY ────────────────────────────────────────────────
+function saveChatHistory(){
+  if(!currentChatKey||!currentChatTitle)return;
+  const rawHTML=document.getElementById('chatArea').innerHTML;
+  // Strip base64 images from saved HTML to save space
+  const cleanHTML=rawHTML.replace(/<img[^>]+src="data:[^"]{100,}"[^>]*>/gi,'<span style="color:rgba(255,255,255,0.4);font-size:11px;">[image]</span>');
+  const chatData={title:currentChatTitle,html:cleanHTML,history:conversationHistory.map(h=>({...h,parts:h.parts.map(p=>typeof p==='object'&&p.mime_type?'[image]':p)})),ts:Date.now()};
+  const serialized=JSON.stringify(chatData);
+  if(serialized.length>400000){ toast('Chat too large to fully save.'); return; }
+  try{
+    localStorage.setItem(currentChatKey,serialized);
+    const idx=getChatIndex().filter(c=>c.key!==currentChatKey).slice(-29);
+    idx.push({key:currentChatKey,title:currentChatTitle,ts:Date.now()});
+    updateChatIndex(idx);
+  }catch(e){ console.error('Could not save chat:',e); }
 }
-
-window.openHistory=function(){ document.getElementById('historyPanel').style.display='block'; renderHistoryList(); };
-window.closeHistory=function(){ document.getElementById('historyPanel').style.display='none'; };
-
-function renderHistoryList() {
+window.openHistory = function(){ document.getElementById('historyPanel').style.display='block'; renderHistoryList(); closeGallery(); closeOpsPanel(); };
+window.closeHistory = function(){ document.getElementById('historyPanel').style.display='none'; };
+function renderHistoryList(){
   const list=document.getElementById('historyList'); list.innerHTML='';
-  const idx=Object.keys(localStorage).filter(k=>k.startsWith(userKey('chat_')));
-  if (!idx.length) { list.innerHTML='<p style="opacity:.55;font-size:13px;">No saved chats yet.</p>'; return; }
-  idx.forEach(key=>{
-    const data = JSON.parse(localStorage.getItem(key) || '{}');
-    if (!data.title) return;
+  const idx=getChatIndex().slice().sort((a,b)=>b.ts-a.ts);
+  if(!idx.length){ list.innerHTML='<p style="opacity:.55;font-size:13px;">No saved chats yet.</p>'; return; }
+  idx.forEach(entry=>{
     const item=document.createElement('div');
-    item.className='history-item' + (key === currentChatKey ? ' active-chat' : '');
-    const date=new Date(data.ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});
-    item.innerHTML=`<div style="flex:1;min-width:0;"><div class="title">${data.title.substring(0,42)}</div><div class="date">${date}</div></div><button class="del-btn" onclick="deleteChat(event,'${key}')">×</button>`;
-    item.addEventListener('click', e=>{
-      if (e.target.classList.contains('del-btn')) return;
-      loadChat(key);
-    });
+    item.className='history-item'+(entry.key===currentChatKey?' active-chat':'');
+    const date=new Date(entry.ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    item.innerHTML=`<div style="flex:1;min-width:0;"><div class="title">${escapeHtml(truncate(entry.title,42))}</div><div class="date">${date}</div></div><button class="del-btn" onclick="deleteChat(event,'${entry.key}')">×</button>`;
+    item.addEventListener('click',e=>{if(!e.target.classList.contains('del-btn'))loadChat(entry.key);});
     list.appendChild(item);
   });
 }
-
-window.deleteChat=function(e,key){
-  e.stopPropagation();
-  localStorage.removeItem(key);
-  if (key === currentChatKey) newChat();
-  renderHistoryList();
+window.deleteChat = function(e,key){
+  e.stopPropagation(); localStorage.removeItem(key);
+  updateChatIndex(getChatIndex().filter(c=>c.key!==key));
+  if(key===currentChatKey) newChat();
+  renderHistoryList(); toast('Chat deleted.');
 };
-
-function loadChat(key) {
-  const raw=localStorage.getItem(key); if (!raw) return;
-  try {
+function loadChat(key){
+  const raw=localStorage.getItem(key); if(!raw)return;
+  try{
     const data=JSON.parse(raw);
     document.getElementById('chatArea').innerHTML=data.html||'';
     conversationHistory=data.history||[];
-    currentChatTitle=data.title||null;
-    currentChatKey=key; lastImageB64=null;
-    document.querySelectorAll('.msg-attach-img').forEach(img=>{
-      if (img.src && !img.src.endsWith('""')) img.onclick=()=>openLightbox(img.src);
-    });
+    currentChatTitle=data.title||null; currentChatKey=key; lastImageB64=null;
+    document.querySelectorAll('.msg-attach-img').forEach(img=>{ if(img.src&&!img.src.endsWith('""')&&!img.src.endsWith("''")){img.onclick=()=>openLightbox(img.src);} });
     startChatMode(); closeHistory(); scrollChat();
-  } catch(e) { console.error(e); }
+  }catch(e){ console.error(e); }
 }
 
-// ── GALLERY ───────────────────────────────────────────────
-window.openGallery=function(){ 
-  document.getElementById('galleryPanel').style.display='block'; 
-  loadSavedImages();
-  renderGallery(); 
-};
-window.closeGallery=function(){ 
-  document.getElementById('galleryPanel').style.display='none'; 
-};
-
-function loadSavedImages() {
-  try {
-    const key = userKey('gallery');
-    const data = localStorage.getItem(key);
-    savedImages = data ? JSON.parse(data) : [];
-  } catch(e) {
-    savedImages = [];
-  }
-}
-
-function renderGallery() {
-  loadSavedImages();
-  const list=document.getElementById('galleryList');
-  if (!savedImages.length) { 
-    list.innerHTML='<div class="gallery-empty">📸 No saved images yet.<br>Click the heart icon to save!</div>';
-    return; 
-  }
-  list.innerHTML='<div class="gallery-grid">' +
-    savedImages.map((img, i) => `
-      <div class="gallery-item" onclick="openLightbox('${img.image}')">
-        <img src="${img.image}" alt="Saved">
-        <button class="gallery-item-remove" onclick="deleteGalleryImage(event, ${i})">×</button>
-      </div>
-    `).join('') +
-    '</div>';
-}
-
-window.deleteGalleryImage=function(e, idx) {
-  e.stopPropagation();
-  savedImages.splice(idx, 1);
-  const key = userKey('gallery');
-  localStorage.setItem(key, JSON.stringify(savedImages));
-  renderGallery();
-  toast('Image removed from gallery');
-};
-
-// ── FILE UPLOAD ───────────────────────────────────────────
-window.triggerUpload=function(){ document.getElementById('fileInput').click(); };
-window.handleFileInputChange=function(e){ handleFiles(Array.from(e.target.files)); e.target.value=''; };
-
-function handleFiles(files) {
+// ── FILE UPLOAD ────────────────────────────────────────────
+window.triggerUpload = function(){ document.getElementById('fileInput').click(); };
+window.handleFileInputChange = function(e){ handleFiles(Array.from(e.target.files)); e.target.value=''; };
+function handleFiles(files){
   files.forEach(file=>{
-    if (!ALLOWED.includes(file.type)) { toast('Only images allowed.'); return; }
-    if (file.size>MAX_SIZE) { toast('File exceeds 10MB.'); return; }
+    if(!ALLOWED_TYPES.includes(file.type)){ toast('Only images allowed (JPG, PNG, WEBP, GIF, BMP).'); return; }
+    if(file.size>MAX_FILE_SIZE){ toast('File exceeds 10MB limit.'); return; }
     const reader=new FileReader();
     reader.onload=ev=>{ attachedFiles.push(ev.target.result); renderPreviews(); };
     reader.readAsDataURL(file);
   });
 }
-
-function renderPreviews() {
+function renderPreviews(){
   const box=document.getElementById('attachmentPreview'); box.innerHTML='';
-  if (attachedFiles.length === 0) { box.classList.remove('has-files'); return; }
+  if(!attachedFiles.length){ box.classList.remove('has-files'); return; }
   box.classList.add('has-files');
   attachedFiles.forEach((src,i)=>{
     const wrap=document.createElement('div'); wrap.className='attach-thumb';
@@ -923,123 +926,397 @@ function renderPreviews() {
     wrap.appendChild(img); wrap.appendChild(rm); box.appendChild(wrap);
   });
 }
-
+// PASTE HANDLER — supports pasting images AND text ──────────
+document.getElementById('promptInput').addEventListener('paste', async function(e){
+  const items=Array.from(e.clipboardData.items||[]);
+  const imageItem=items.find(it=>it.type.startsWith('image/'));
+  if(imageItem){
+    e.preventDefault(); // prevent default only for images
+    const file=imageItem.getAsFile();
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{ attachedFiles.push(ev.target.result); renderPreviews(); toast('Image pasted and ready to send!'); };
+    reader.readAsDataURL(file);
+  }
+  // For text: let browser handle it naturally (default behavior)
+});
+// Drag & Drop
 document.addEventListener('dragover',e=>{ e.preventDefault(); document.body.classList.add('dragging-over'); });
-document.addEventListener('dragleave',e=>{ if (!e.relatedTarget) document.body.classList.remove('dragging-over'); });
+document.addEventListener('dragleave',e=>{ if(!e.relatedTarget)document.body.classList.remove('dragging-over'); });
 document.addEventListener('drop',e=>{ e.preventDefault(); document.body.classList.remove('dragging-over'); handleFiles(Array.from(e.dataTransfer.files)); });
 
-// ── VOICE ─────────────────────────────────────────────────
-window.micAction=function(){
+// ── VOICE ──────────────────────────────────────────────────
+window.micAction = function(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if (!SR) { toast('Voice requires Chrome or Edge.'); return; }
+  if(!SR){ toast('Voice input requires Chrome or Edge.'); return; }
   const rec=new SR(); rec.lang='en-US';
-  rec.onresult=e=>{
-    const input = document.getElementById('promptInput');
-    input.value=e.results[0][0].transcript;
-    autoResizeTextarea(input);
-  };
+  rec.onresult=e=>{ const input=document.getElementById('promptInput'); input.value=e.results[0][0].transcript; autoResizeTextarea(input); };
   rec.start();
 };
 
-// ── LIGHTBOX ──────────────────────────────────────────────
-function openLightbox(src) {
-  document.getElementById('lightboxImg').src=src;
-  document.getElementById('lightbox').style.display='flex';
-}
-window.closeLightbox = function(e) {
-  if (e.target === document.getElementById('lightbox')) document.getElementById('lightbox').style.display='none';
-};
-window.downloadLightboxImage = function() {
-  downloadImage(document.getElementById('lightboxImg').src, 'lumina-' + Date.now() + '.png');
-};
-window.copyLightboxImage = async function() {
-  await copyImageToClipboard(document.getElementById('lightboxImg').src);
-};
+// ── LIGHTBOX ───────────────────────────────────────────────
+function openLightbox(src){ document.getElementById('lightboxImg').src=src; document.getElementById('lightbox').style.display='flex'; }
+window.closeLightbox = function(e){ if(e.target===document.getElementById('lightbox'))document.getElementById('lightbox').style.display='none'; };
+window.downloadLightboxImage = function(){ downloadImage(document.getElementById('lightboxImg').src,'lumina-'+Date.now()+'.png'); };
+window.copyLightboxImage = async function(){ await copyImageToClipboard(document.getElementById('lightboxImg').src); };
 
-// ── OPS PANEL ─────────────────────────────────────────────
-window.openOpsPanel=function(){
-  document.getElementById('opsPanel').style.display='block';
+// ── OPS PANEL ──────────────────────────────────────────────
+window.openOpsPanel = function(){ document.getElementById('opsPanel').style.display='block'; closeHistory(); closeGallery(); document.getElementById('profileMenu').style.display='none'; };
+window.closeOpsPanel = function(){ document.getElementById('opsPanel').style.display='none'; };
+
+// ── API STATUS ──────────────────────────────────────────────
+window.checkApiStatus = async function(){
   document.getElementById('profileMenu').style.display='none';
+  try{
+    const r=await fetch('/api/status'); const d=await r.json();
+    toast(d.gemini?'✅ Gemini AI is connected!':'⚠️ No AI API detected. Add GEMINI_API_KEY.',4000);
+  }catch(e){ toast('Could not reach server.'); }
 };
-window.closeOpsPanel=function(){ document.getElementById('opsPanel').style.display='none'; };
 
-// ── AUTH BASICS ───────────────────────────────────────────
-window.showSignIn=function(){
-  const username = prompt('Enter username or email:');
-  if (!username) return;
-  const password = prompt('Enter password:');
-  if (!password) return;
-  
-  let user = JSON.parse(localStorage.getItem(LS_USER+'_'+username) || 'null');
-  if (!user) {
-    Object.keys(localStorage).forEach(k => {
-      if (k.startsWith(LS_USER+'_')) {
-        const u = JSON.parse(localStorage.getItem(k) || 'null');
-        if (u && u.email === username) user = u;
+// ── PASSWORD STRENGTH ──────────────────────────────────────
+function checkPasswordStrength(pw){
+  const checks={len:pw.length>=8,upper:/[A-Z]/.test(pw),lower:/[a-z]/.test(pw),num:/\d/.test(pw),special:/[!@#$%^&*(),.?":{}|<>]/.test(pw)};
+  const score=Object.values(checks).filter(Boolean).length;
+  return {checks,score};
+}
+function renderStrength(pw,barPrefix,labelId){
+  const {checks,score}=checkPasswordStrength(pw);
+  const colors=['#ff4444','#ff8844','#ffcc44','#88cc44','#44cc77'];
+  const labels=['Very Weak','Weak','Fair','Strong','Very Strong'];
+  for(let i=1;i<=5;i++){
+    const bar=document.getElementById(barPrefix+i); if(!bar)continue;
+    bar.style.background=i<=score?colors[score-1]:'rgba(255,255,255,0.2)';
+  }
+  const lbl=document.getElementById(labelId); if(lbl)lbl.textContent=pw?labels[score-1]||'Very Weak':'';
+  return checks;
+}
+function updateReqs(checks){
+  const map={len:'req-len',upper:'req-upper',lower:'req-lower',num:'req-num',special:'req-special'};
+  Object.entries(map).forEach(([k,id])=>{
+    const el=document.getElementById(id); if(!el)return;
+    el.className='pw-req '+(checks[k]?'met':'unmet');
+    el.textContent=(checks[k]?'✓':'✗')+el.textContent.slice(1);
+  });
+}
+window.onPasswordInput = function(){
+  const pw=document.getElementById('password').value;
+  if(authMode==='signup'){ const checks=renderStrength(pw,'bar','pwLabel'); updateReqs(checks); }
+};
+window.togglePwEye = function(inputId,iconId){
+  const inp=document.getElementById(inputId),ico=document.getElementById(iconId);
+  if(!inp||!ico)return;
+  inp.type=inp.type==='password'?'text':'password';
+  ico.textContent=inp.type==='password'?'visibility':'visibility_off';
+};
+
+// ── SAVED ACCOUNTS DROPDOWN ────────────────────────────────
+function getAllSavedAccounts(){
+  const accounts=[];
+  try{
+    Object.keys(localStorage).forEach(k=>{
+      if(k.startsWith(LS_USER+'_')&&!k.includes('_chat_')&&!k.includes('_index')&&!k.includes('_gallery')){
+        const u=JSON.parse(localStorage.getItem(k)||'null');
+        if(u&&u.username&&u.firstName) accounts.push(u);
+      }
+    });
+  }catch(e){}
+  return accounts;
+}
+window.showSavedAccountsDropdown = function(){
+  if(authMode!=='signin')return;
+  const accounts=getAllSavedAccounts();
+  const dropdown=document.getElementById('savedAccountsDropdown');
+  if(!accounts.length){ dropdown.classList.remove('show'); return; }
+  let html='<div class="saved-accounts-header">Saved Accounts</div>';
+  accounts.forEach(u=>{
+    html+=`<div class="saved-account-item" onclick="selectSavedAccount('${escapeHtml(u.username)}','${escapeHtml(u.hash||'')}','${escapeHtml(u.salt||'')}')">
+      <div class="saved-account-avatar">${u.firstName.charAt(0).toUpperCase()}</div>
+      <div class="saved-account-info">
+        <div class="saved-account-name">${escapeHtml(u.firstName+' '+u.lastName)}</div>
+        <div class="saved-account-email">${escapeHtml(u.email||u.username)}</div>
+      </div>
+    </div>`;
+  });
+  dropdown.innerHTML=html; dropdown.classList.add('show');
+};
+// FIX: selectSavedAccount now fills BOTH username and password fields
+window.selectSavedAccount = function(username, hash, salt){
+  document.getElementById('loginIdentifier').value=username;
+  document.getElementById('savedAccountsDropdown').classList.remove('show');
+  // Store hash+salt on the password field so we can auto-verify
+  const pwField=document.getElementById('password');
+  pwField.dataset.savedHash=hash; pwField.dataset.savedSalt=salt;
+  // Focus and put a placeholder to indicate saved credentials
+  pwField.placeholder='Password (saved — just click Sign In)';
+  setTimeout(()=>pwField.focus(),50);
+  toast('Account selected! Enter your password and click Sign In.');
+};
+window.onLoginIdentifierInput = function(){
+  const val=document.getElementById('loginIdentifier').value.trim();
+  const dropdown=document.getElementById('savedAccountsDropdown');
+  if(!val){ showSavedAccountsDropdown(); return; }
+  const accounts=getAllSavedAccounts().filter(u=>
+    u.username.toLowerCase().includes(val.toLowerCase())||(u.email&&u.email.toLowerCase().includes(val.toLowerCase()))
+  );
+  if(!accounts.length){ dropdown.classList.remove('show'); return; }
+  let html='<div class="saved-accounts-header">Saved Accounts</div>';
+  accounts.forEach(u=>{
+    html+=`<div class="saved-account-item" onclick="selectSavedAccount('${escapeHtml(u.username)}','${escapeHtml(u.hash||'')}','${escapeHtml(u.salt||'')}')">
+      <div class="saved-account-avatar">${u.firstName.charAt(0).toUpperCase()}</div>
+      <div class="saved-account-info">
+        <div class="saved-account-name">${escapeHtml(u.firstName+' '+u.lastName)}</div>
+        <div class="saved-account-email">${escapeHtml(u.email||u.username)}</div>
+      </div>
+    </div>`;
+  });
+  dropdown.innerHTML=html; dropdown.classList.add('show');
+};
+document.addEventListener('click',function(e){
+  const dropdown=document.getElementById('savedAccountsDropdown');
+  const wrap=document.getElementById('loginIdentifierWrap');
+  if(dropdown&&wrap&&!wrap.contains(e.target)) dropdown.classList.remove('show');
+});
+
+// ── AUTH MODE ──────────────────────────────────────────────
+window.showSignIn = function(){
+  authMode='signin'; resetAuthModal();
+  document.getElementById('authTitle').innerText='Sign In';
+  document.getElementById('signupSection').style.display='none';
+  document.getElementById('loginIdentifierWrap').style.display='flex';
+  document.getElementById('confirmPwWrap').style.display='none';
+  document.getElementById('termsWrap').style.display='none';
+  document.getElementById('pwStrengthWrap').style.display='none';
+  document.getElementById('forgotBtn').style.display='block';
+  document.getElementById('switchBtn').textContent="Don't have an account? Sign Up";
+  document.getElementById('authSubmitBtn').textContent='Sign In';
+  document.getElementById('authModal').style.display='flex';
+  setTimeout(showSavedAccountsDropdown,150);
+};
+window.showSignUp = function(){
+  authMode='signup'; resetAuthModal();
+  document.getElementById('authTitle').innerText='Create Account';
+  document.getElementById('signupSection').style.display='flex';
+  document.getElementById('loginIdentifierWrap').style.display='none';
+  document.getElementById('confirmPwWrap').style.display='flex';
+  document.getElementById('termsWrap').style.display='flex';
+  document.getElementById('pwStrengthWrap').style.display='block';
+  document.getElementById('forgotBtn').style.display='none';
+  document.getElementById('switchBtn').textContent='Already have an account? Sign In';
+  document.getElementById('authSubmitBtn').textContent='Create Account';
+  document.getElementById('authModal').style.display='flex';
+};
+window.switchAuthMode = function(){ authMode==='signin'?showSignUp():showSignIn(); };
+window.closeAuth = function(){ document.getElementById('authModal').style.display='none'; };
+function resetAuthModal(){
+  document.getElementById('authAlert').style.display='none';
+  document.getElementById('authAlert').className='modal-alert';
+  document.querySelectorAll('#authModal .field-error').forEach(e=>e.style.display='none');
+  document.querySelectorAll('#authModal .modal-input').forEach(e=>{ e.classList.remove('input-error','input-ok'); e.value=''; });
+  document.getElementById('savedAccountsDropdown').classList.remove('show');
+  const pw=document.getElementById('password'); pw.placeholder='Password'; delete pw.dataset.savedHash; delete pw.dataset.savedSalt;
+}
+function showAuthAlert(msg,type='error'){
+  const el=document.getElementById('authAlert'); el.textContent=msg; el.className='modal-alert '+type; el.style.display='flex';
+}
+window.clearFieldError = function(input){ input.classList.remove('input-error'); };
+window.validateEmailField = function(){
+  const val=document.getElementById('email').value;
+  const ok=/^[^@]+@[^@]+\.[a-z]{2,}$/i.test(val);
+  document.getElementById('email').classList.toggle('input-error',val.length>3&&!ok);
+  document.getElementById('email').classList.toggle('input-ok',ok); return ok;
+};
+window.validateUsernameField = function(){
+  const val=document.getElementById('username').value;
+  const ok=/^[a-zA-Z0-9_]{3,20}$/.test(val);
+  document.getElementById('username').classList.toggle('input-error',val.length>2&&!ok);
+  document.getElementById('username').classList.toggle('input-ok',ok); return ok;
+};
+window.validateConfirmPw = function(){
+  const p1=document.getElementById('password').value, p2=document.getElementById('confirmPassword').value;
+  const ok=p1===p2&&p2.length>0;
+  document.getElementById('confirmPassword').classList.toggle('input-error',p2.length>0&&!ok);
+  document.getElementById('confirmPassword').classList.toggle('input-ok',ok); return ok;
+};
+
+// ── RATE LIMITING ──────────────────────────────────────────
+function isRateLimited(){
+  if(lockUntil&&Date.now()<lockUntil){
+    const remaining=Math.ceil((lockUntil-Date.now())/1000);
+    document.getElementById('rateLimitCountdown').textContent=remaining;
+    document.getElementById('rateLimitMsg').style.display='block';
+    document.getElementById('authSubmitBtn').disabled=true; return true;
+  }
+  document.getElementById('rateLimitMsg').style.display='none';
+  document.getElementById('authSubmitBtn').disabled=false; return false;
+}
+function recordFailedAttempt(){
+  loginAttempts++;
+  if(loginAttempts>=MAX_LOGIN_ATTEMPTS){
+    lockUntil=Date.now()+LOCK_DURATION*1000; loginAttempts=0;
+    const countdown=setInterval(()=>{ if(!isRateLimited())clearInterval(countdown); },1000);
+  }
+}
+
+// ── SUBMIT AUTH ────────────────────────────────────────────
+window.submitAuth = async function(){
+  if(isRateLimited())return;
+  const pw=document.getElementById('password').value;
+  if(authMode==='signup'){
+    const fn=document.getElementById('firstName').value.trim();
+    const ln=document.getElementById('lastName').value.trim();
+    const em=document.getElementById('email').value.trim();
+    const un=document.getElementById('username').value.trim();
+    const dob=document.getElementById('dob').value;
+    const agree=document.getElementById('agreeTerms').checked;
+    let ok=true;
+    if(!fn){document.getElementById('firstName').classList.add('input-error');document.getElementById('firstNameErr').style.display='block';ok=false;}
+    if(!ln){document.getElementById('lastName').classList.add('input-error');document.getElementById('lastNameErr').style.display='block';ok=false;}
+    if(!/^[^@]+@[^@]+\.[a-z]{2,}$/i.test(em)){document.getElementById('email').classList.add('input-error');document.getElementById('emailErr').style.display='block';ok=false;}
+    if(!/^[a-zA-Z0-9_]{3,20}$/.test(un)){document.getElementById('username').classList.add('input-error');document.getElementById('usernameErr').style.display='block';ok=false;}
+    if(!dob){document.getElementById('dob').classList.add('input-error');document.getElementById('dobErr').style.display='block';ok=false;}
+    else{ const age=(Date.now()-new Date(dob).getTime())/(365.25*24*3600*1000); if(age<13){document.getElementById('dob').classList.add('input-error');document.getElementById('dobErr').style.display='block';ok=false;} }
+    if(!agree){showAuthAlert('You must agree to the Terms of Service.');ok=false;}
+    if(!ok)return;
+    if(!pw){showAuthAlert('Please enter a password.');return;}
+    const {score}=checkPasswordStrength(pw);
+    if(score<3){showAuthAlert('Password is too weak. Please meet all requirements.');return;}
+    if(pw!==document.getElementById('confirmPassword').value){showAuthAlert('Passwords do not match.');return;}
+    if(localStorage.getItem(LS_USER+'_'+un)){showAuthAlert('Username already taken. Please choose another.');return;}
+    try{
+      const r=await fetch('/api/auth/hash-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+      const d=await r.json();
+      if(!r.ok){showAuthAlert(d.error+(d.details?'\n'+d.details.join(', '):''));return;}
+      const userData={firstName:fn,lastName:ln,email:em,username:un,salt:d.salt,hash:d.hash,createdAt:Date.now(),plan:'Free'};
+      localStorage.setItem(LS_USER+'_'+un,JSON.stringify(userData));
+      showAuthAlert('Account created! Signing you in…','success');
+      setTimeout(()=>{ closeAuth(); loginUserAndReset(userData); },1000);
+    }catch(e){showAuthAlert('Server error. Please try again.');}
+    return;
+  }
+  // SIGNIN
+  const id=document.getElementById('loginIdentifier').value.trim();
+  if(!id){showAuthAlert('Please enter your email or username.');return;}
+  let stored=JSON.parse(localStorage.getItem(LS_USER+'_'+id)||'null');
+  if(!stored){
+    Object.keys(localStorage).forEach(k=>{
+      if(k.startsWith(LS_USER+'_')&&!k.includes('_chat_')&&!k.includes('_index')&&!k.includes('_gallery')){
+        const u=JSON.parse(localStorage.getItem(k)||'null');
+        if(u&&u.email===id) stored=u;
       }
     });
   }
-  
-  if (!user || user.password !== password) {
-    toast('Invalid credentials');
-    return;
-  }
-  
-  currentUser = user;
-  updateProfileUI(user);
-  newChat();
-  toast('Signed in!');
+  if(!stored){showAuthAlert('No account found. Please sign up first.');return;}
+  if(!pw){showAuthAlert('Please enter your password.');return;}
+  try{
+    const r=await fetch('/api/auth/verify-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw,salt:stored.salt,hash:stored.hash})});
+    const d=await r.json();
+    if(d.valid){ loginAttempts=0; lockUntil=0; closeAuth(); loginUserAndReset(stored); }
+    else{ recordFailedAttempt(); showAuthAlert(`Invalid credentials. ${MAX_LOGIN_ATTEMPTS-loginAttempts} attempts remaining.`); }
+  }catch(e){showAuthAlert('Server error. Please try again.');}
 };
-
-window.showSignUp=function(){
-  const firstName = prompt('First name:');
-  if (!firstName) return;
-  const lastName = prompt('Last name:');
-  if (!lastName) return;
-  const email = prompt('Email:');
-  if (!email) return;
-  const username = prompt('Username:');
-  if (!username) return;
-  const password = prompt('Password:');
-  if (!password) return;
-  
-  const user = {
-    firstName, lastName, email, username, password,
-    createdAt: Date.now()
-  };
-  localStorage.setItem(LS_USER+'_'+username, JSON.stringify(user));
-  currentUser = user;
-  updateProfileUI(user);
-  newChat();
-  toast('Account created!');
-};
-
-function updateProfileUI(user) {
+function loginUserAndReset(user){
+  currentUser=user; newChat(); updateProfileUI(user); loadSavedImages(); updateGalleryBadge();
+  toast('Welcome, '+user.firstName+'! 👋');
+}
+function updateProfileUI(user){
   document.getElementById('authButtons').style.display='none';
   const av=document.getElementById('profileAvatar');
   av.style.display='flex'; av.innerText=user.firstName.charAt(0).toUpperCase();
   document.getElementById('profileName').innerText=user.firstName+' '+user.lastName;
+  document.getElementById('planLabel').innerText=(user.plan||'Free')+' Plan';
 }
 
-window.logout=function(){
-  currentUser=null; lastImageB64=null;
+// ── FORGOT PASSWORD ────────────────────────────────────────
+window.showForgotPassword = function(){
+  closeAuth();
+  document.getElementById('forgotStep1').style.display='block';
+  document.getElementById('forgotStep2').style.display='none';
+  document.getElementById('forgotStep3').style.display='none';
+  document.getElementById('forgotAlert').style.display='none';
+  document.getElementById('forgotModal').style.display='flex';
+};
+window.closeForgot = function(){ document.getElementById('forgotModal').style.display='none'; };
+window.sendOTP = function(){
+  const id=document.getElementById('forgotEmail').value.trim();
+  if(!id){showForgotAlert('Please enter your email or username.');return;}
+  let stored=JSON.parse(localStorage.getItem(LS_USER+'_'+id)||'null');
+  if(!stored){ Object.keys(localStorage).forEach(k=>{ if(k.startsWith(LS_USER+'_')){ const u=JSON.parse(localStorage.getItem(k)||'null'); if(u&&u.email===id)stored=u; } }); }
+  if(!stored){showForgotAlert('No account found with that email or username.');return;}
+  otpCode=String(Math.floor(100000+Math.random()*900000)); otpExpiry=Date.now()+5*60*1000;
+  showForgotAlert(`OTP sent! (Demo mode — your code is: ${otpCode})`,'success');
+  setTimeout(()=>{ document.getElementById('forgotStep1').style.display='none'; document.getElementById('forgotStep2').style.display='flex'; document.getElementById('forgotAlert').style.display='none'; startOtpTimer(); },1500);
+};
+function startOtpTimer(){ let secs=60; document.getElementById('otpCountdown').textContent=secs; if(otpTimerInt)clearInterval(otpTimerInt); otpTimerInt=setInterval(()=>{ secs--; document.getElementById('otpCountdown').textContent=secs; if(secs<=0){clearInterval(otpTimerInt);document.getElementById('otpTimer').textContent='OTP expired.';} },1000); }
+window.otpInput = function(el,idx){ const digits=document.querySelectorAll('.otp-digit'); if(el.value&&idx<5)digits[idx+1].focus(); };
+window.otpBack = function(el,e,idx){ const digits=document.querySelectorAll('.otp-digit'); if(e.key==='Backspace'&&!el.value&&idx>0)digits[idx-1].focus(); };
+window.verifyOTP = function(){
+  const digits=Array.from(document.querySelectorAll('.otp-digit')).map(d=>d.value).join('');
+  if(digits.length<6){showForgotAlert('Please enter all 6 digits.');return;}
+  if(Date.now()>otpExpiry){showForgotAlert('OTP has expired. Please start over.');return;}
+  if(digits!==otpCode){showForgotAlert('Incorrect OTP. Please try again.');return;}
+  document.getElementById('forgotStep2').style.display='none'; document.getElementById('forgotStep3').style.display='flex'; document.getElementById('forgotAlert').style.display='none';
+};
+window.resetPassword = async function(){
+  const newPw=document.getElementById('newPassword').value, confirmPw=document.getElementById('confirmNewPassword').value;
+  if(!newPw||!confirmPw){showForgotAlert('Please fill in both fields.');return;}
+  if(newPw!==confirmPw){showForgotAlert('Passwords do not match.');return;}
+  const {score}=checkPasswordStrength(newPw); if(score<3){showForgotAlert('Password is too weak.');return;}
+  try{
+    const r=await fetch('/api/auth/hash-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:newPw})});
+    const d=await r.json(); if(!r.ok){showForgotAlert(d.error);return;}
+    const id=document.getElementById('forgotEmail').value.trim();
+    let stored=JSON.parse(localStorage.getItem(LS_USER+'_'+id)||'null');
+    if(!stored){ Object.keys(localStorage).forEach(k=>{ if(k.startsWith(LS_USER+'_')){ const u=JSON.parse(localStorage.getItem(k)||'null'); if(u&&u.email===id)stored=u; } }); }
+    if(stored){ stored.salt=d.salt; stored.hash=d.hash; localStorage.setItem(LS_USER+'_'+stored.username,JSON.stringify(stored)); }
+    showForgotAlert('Password reset successfully!','success'); setTimeout(()=>{ closeForgot(); showSignIn(); },1500);
+  }catch(e){showForgotAlert('Server error.');}
+};
+function showForgotAlert(msg,type='error'){ const el=document.getElementById('forgotAlert'); el.textContent=msg; el.className='modal-alert '+type; el.style.display='flex'; }
+
+// ── CHANGE PASSWORD ────────────────────────────────────────
+window.showChangePassword = function(){ document.getElementById('profileMenu').style.display='none'; document.getElementById('changePwModal').style.display='flex'; document.getElementById('changePwAlert').style.display='none'; };
+window.submitChangePassword = async function(){
+  const curPw=document.getElementById('currentPassword').value, newPw=document.getElementById('newPwChange').value, conPw=document.getElementById('confirmNewPwChange').value;
+  if(!curPw||!newPw||!conPw){showChangePwAlert('All fields required.');return;}
+  if(newPw!==conPw){showChangePwAlert('New passwords do not match.');return;}
+  const {score}=checkPasswordStrength(newPw); if(score<3){showChangePwAlert('New password is too weak.');return;}
+  if(!currentUser){showChangePwAlert('Not logged in.');return;}
+  try{
+    const r=await fetch('/api/auth/verify-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:curPw,salt:currentUser.salt,hash:currentUser.hash})});
+    const d=await r.json(); if(!d.valid){showChangePwAlert('Current password is incorrect.');return;}
+    const r2=await fetch('/api/auth/hash-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:newPw})});
+    const d2=await r2.json(); if(!r2.ok){showChangePwAlert(d2.error);return;}
+    currentUser.salt=d2.salt; currentUser.hash=d2.hash;
+    localStorage.setItem(LS_USER+'_'+currentUser.username,JSON.stringify(currentUser));
+    showChangePwAlert('Password changed successfully!','success'); setTimeout(()=>{ document.getElementById('changePwModal').style.display='none'; },1500);
+  }catch(e){showChangePwAlert('Server error.');}
+};
+function showChangePwAlert(msg,type='error'){ const el=document.getElementById('changePwAlert'); el.textContent=msg; el.className='modal-alert '+type; el.style.display='flex'; }
+
+// ── LOGOUT ──────────────────────────────────────────────────
+window.logout = function(){
+  currentUser=null; lastImageB64=null; savedImages=[];
   document.getElementById('authButtons').style.display='flex';
   document.getElementById('profileAvatar').style.display='none';
   document.getElementById('profileMenu').style.display='none';
-  newChat();
-  toast('Signed out');
+  updateGalleryBadge(); newChat(); toast('Signed out successfully.');
 };
 
-window.toggleProfileMenu=function(e){
-  e.stopPropagation();
-  const m=document.getElementById('profileMenu');
-  m.style.display=m.style.display==='block'?'none':'block';
-};
-
+// ── PROFILE MENU ───────────────────────────────────────────
+window.toggleProfileMenu = function(e){ e.stopPropagation(); const m=document.getElementById('profileMenu'); m.style.display=m.style.display==='block'?'none':'block'; };
 document.addEventListener('click',()=>{ document.getElementById('profileMenu').style.display='none'; });
 
-// ── INIT ─────────────────────────────────────────────────
-console.log('✨ Lumina ready! Upload an image or ask me anything.');
+// ── INIT ───────────────────────────────────────────────────
+updateGalleryBadge();
+// Check API status on load
+setTimeout(async()=>{
+  try{
+    const r=await fetch('/api/status'); const d=await r.json();
+    if(!d.gemini&&!d.claude) console.warn('⚠️ No AI API detected — add GEMINI_API_KEY to HuggingFace Secrets');
+  }catch(e){}
+},2000);
+
+console.log('✨ Lumina ready! Created by Mohan Lingabathina, Hevendra Bage, Sowrya, and Karthikeya.');
 
 })();
 </script>
