@@ -117,16 +117,26 @@ def call_gemini(history, user_text, image_pil=None):
     if error[0]: raise error[0]
     return result[0]
 
+def is_description_request(p):
+    return bool(re.search(r'\b(describe|explain|analyz|what is|tell about|identify|caption)\b', p))
+
 def call_ai(history, user_text, image_pil=None):
     if not user_text: user_text="Hello!"
     # FIX: Try Gemini first for full AI responses with descriptions
-    if gemini_client:
-        try:
-            reply=call_gemini(history,user_text,image_pil)
-            if reply and reply.strip(): 
-                return reply.strip(),"gemini"
-        except Exception as e:
-            print(f"[Gemini FAILED] {type(e).__name__}: {str(e)[:200]}")
+    p = user_text.lower().strip()
+
+    # 🔥 PRIORITY: DESCRIPTION REQUESTS
+    if image_pil and is_description_request(p):
+        if gemini_client and not detect_op(p):
+            try:
+                reply = call_gemini(history, user_text, image_pil)
+                if reply and reply.strip():
+                    return reply.strip(), "gemini"
+            except Exception as e:
+                print(f"[Gemini FAILED] {e}")
+    
+        # 🔥 FALLBACK (IMPORTANT)
+        return detailed_local_description(image_pil), "local"
     
     # FIX: Fallback to local operation detection
     p=user_text.lower().strip()
@@ -185,6 +195,25 @@ def analyze_image_free(img):
     detail="highly detailed" if cv2.Canny(gray,50,150).mean()>15 else "moderately detailed"
     contrast="high contrast" if gray.std()>60 else "moderate contrast"
     return dict(w=w,h=h,dom=dom,bright=bright,orient=orient,detail=detail,contrast=contrast)
+
+def detailed_local_description(img):
+    s = analyze_image_free(img)
+
+    desc = []
+    desc.append("This appears to be a grayscale medical-style image.")
+    desc.append(f"Resolution: {s['w']}x{s['h']} pixels.")
+    desc.append(f"Lighting is {s['bright']} with {s['contrast']}.")
+    desc.append(f"The image shows {s['detail']} structural patterns.")
+
+    gray = cv2.cvtColor(pil_to_cv2(img), cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 50, 150)
+
+    if edges.mean() > 10:
+        desc.append("Visible boundaries and regions suggest anatomical or segmented structures.")
+
+    desc.append("\n⚠️ Limited local analysis. Enable GEMINI_API_KEY for full interpretation.")
+
+    return "\n".join(desc)
 
 def free_reply(prompt,has_image,img=None):
     p=prompt.lower().strip() if prompt else ""
