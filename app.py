@@ -116,29 +116,24 @@ def validate_email(email: str) -> bool:
 
 def send_email_otp(to_email, otp):
     api_key = os.environ.get("SENDGRID_API_KEY")
-    if not api_key:
-        raise Exception("SENDGRID_API_KEY not set")
 
     message = SGMail(
-        from_email='your_verified_sender@example.com',  # IMPORTANT
+        from_email='your_verified_sender@example.com',
         to_emails=to_email,
         subject='Your OTP Code',
-        html_content=f"""
-        <div style="font-family:Arial;padding:20px">
-            <h2>🔐 Password Reset OTP</h2>
-            <p>Your OTP code is:</p>
-            <h1 style="color:#4CAF50">{otp}</h1>
-            <p>This code expires in 5 minutes.</p>
-        </div>
-        """
+        html_content=f"<h1>{otp}</h1>"
     )
 
     try:
         sg = SendGridAPIClient(api_key)
         response = sg.send(message)
-        print("SendGrid response:", response.status_code)
+
+        print("STATUS:", response.status_code)
+        print("BODY:", response.body)
+        print("HEADERS:", response.headers)
+
     except Exception as e:
-        print("SendGrid ERROR:", str(e))
+        print("SENDGRID ERROR:", str(e))
         raise
 
 
