@@ -36,7 +36,8 @@ GEMINI_TIMEOUT = 30
 GUEST_MSG_LIMIT = 5
 GUEST_SESSION_KEY = "guest_messages"
 
-SYSTEM_PROMPT = """You are Lumina, a friendly and expert AI image processing assistant with medical imaging capabilities.
+SYSTEM_PROMPT = """You are Lumina, an advanced AI image processing assistant created by four developers:
+1. Mohan Lingabathina  2. Hevendra Bage  3. Sowrya  4. Karthikeya
 
 You can:
 1. Describe and analyze images in rich detail (objects, colors, mood, quality, text, composition)
