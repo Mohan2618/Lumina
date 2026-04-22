@@ -15,9 +15,6 @@ app.config['MAX_FORM_MEMORY_SIZE'] = 100 * 1024 * 1024
 app.config['MAX_FORM_PARTS'] = 1000
 app.secret_key = secrets.token_hex(32)
 
-# ─────────────────────────────────────────────────────────────
-# API SETUP
-# ─────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
 gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
@@ -30,49 +27,33 @@ if ENABLE_CLAUDE and ANTHROPIC_API_KEY:
 GEMINI_MODEL = "gemini-2.5-flash-lite"
 GEMINI_TIMEOUT = 30
 
-# ─────────────────────────────────────────────────────────────
-#  SYSTEM PROMPT
-# ─────────────────────────────────────────────────────────────
 SYSTEM_PROMPT = """You are Lumina, an advanced AI image processing assistant created by four developers:
 1. Mohan Lingabathina  2. Hevendra Bage  3. Sowrya  4. Karthikeya
 
-You were built as a HuggingFace Spaces project. You are NOT created by Google, Anthropic, or OpenAI.
+You were built as a HuggingFace Spaces project. NOT created by Google, Anthropic, or OpenAI.
 When asked who created you — ALWAYS say: Mohan Lingabathina, Hevendra Bage, Sowrya, and Karthikeya.
 
-IMAGE CONTEXT: You have access to previously uploaded images in conversation history. When user says "the image", "rotate it", "apply filter" etc. — the image context is maintained automatically. Always produce the <OP> tag for operations.
+IMAGE CONTEXT: Image context is maintained automatically across messages. Always produce the <OP> tag for operations even if referencing a previous image.
 
 OPERATION TAG FORMAT — use at end of reply ONLY for operations:
 <OP>{"intent": "operation_name", "params": {}}</OP>
 
 Available: rotate, flip, resize, resize_pct, crop, thumbnail, grayscale, invert, sepia, blur, sharpen, edge, emboss, cartoon, watercolor, sketch, oil_painting, neon_glow, glitch, halftone, lomo, cross_process, duotone, contrast, brightness, saturation, hue, white_balance, shadows_highlights, hdr, clahe, denoise, xray_enhance, segment, morphology, sobel, canny, mri_enhance, ct_enhance, fundus_enhance, skin_analyze, wound_analyze, pixelate, noise, vignette, fisheye, tilt_shift, bokeh, super_resolution, deblur, colorize_bw, restore_old, face_detect, color_palette, histogram_eq, quality_check, color_analysis, double_exposure, mosaic, ascii_art, thermal_vision, pop_art, stained_glass, pointillism, generate_image, info
 
-CRITICAL FOR IMAGE GENERATION:
-- When user asks to "generate", "create", "make", "draw", "give" any image → ALWAYS use generate_image
-- Example: "give a cat image" → <OP>{"intent":"generate_image","params":{"prompt":"a cute cat, photorealistic, high quality"}}</OP>
-- Example: "generate a sunset" → <OP>{"intent":"generate_image","params":{"prompt":"beautiful sunset over ocean, golden sky, high quality"}}</OP>
-- ALWAYS include a detailed prompt in params
+For generate_image always include a detailed prompt in params.
+Rules: Descriptions = no OP tag. Operations = explanation + OP tag at END."""
 
-Rules:
-- Descriptions/questions: reply naturally, NO <OP>
-- Operations: explanation + <OP> at END
-- Be warm, concise, helpful"""
-
-# ─────────────────────────────────────────────────────────────
-#  AUTH
-# ─────────────────────────────────────────────────────────────
+# ── AUTH ──
 def hash_password(pw, salt=None):
     if salt is None: salt = secrets.token_hex(16)
-    dk = hashlib.pbkdf2_hmac('sha256', pw.encode(), salt.encode(), 310000)
-    return salt, dk.hex()
+    return salt, hashlib.pbkdf2_hmac('sha256', pw.encode(), salt.encode(), 310000).hex()
 
-def verify_password(pw, salt, stored_hash):
+def verify_password(pw, salt, stored):
     _, computed = hash_password(pw, salt)
-    return hmac.compare_digest(computed, stored_hash)
+    return hmac.compare_digest(computed, stored)
 
-def validate_email(e): return bool(re.match(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$', e))
-def validate_username(u): return bool(re.match(r'^[a-zA-Z0-9_]{3,20}$', u))
 def validate_password_strength(pw):
-    errors = []
+    errors=[]
     if len(pw)<8: errors.append("At least 8 characters")
     if not re.search(r'[A-Z]',pw): errors.append("One uppercase letter")
     if not re.search(r'[a-z]',pw): errors.append("One lowercase letter")
@@ -80,9 +61,7 @@ def validate_password_strength(pw):
     if not re.search(r'[!@#$%^&*(),.?":{}|<>]',pw): errors.append("One special character")
     return {"valid":len(errors)==0,"errors":errors}
 
-# ─────────────────────────────────────────────────────────────
-#  HELPERS
-# ─────────────────────────────────────────────────────────────
+# ── HELPERS ──
 def pil_to_base64(img):
     buf=io.BytesIO(); img.save(buf,format="PNG")
     return "data:image/png;base64,"+base64.b64encode(buf.getvalue()).decode()
@@ -90,8 +69,8 @@ def pil_to_base64(img):
 def file_to_pil(f): return Image.open(f.stream).convert("RGB")
 def pil_to_cv2(img): return cv2.cvtColor(np.array(img),cv2.COLOR_RGB2BGR)
 def cv2_to_pil(arr): return Image.fromarray(cv2.cvtColor(arr,cv2.COLOR_BGR2RGB))
-def pil_to_bytes(img,quality=85):
-    buf=io.BytesIO(); img.save(buf,format="JPEG",quality=quality); return buf.getvalue()
+def pil_to_bytes(img,q=85):
+    buf=io.BytesIO(); img.save(buf,format="JPEG",quality=q); return buf.getvalue()
 
 def decode_last_image(data):
     if not data: return None
@@ -103,15 +82,12 @@ def decode_last_image(data):
 def is_rate_limit(e):
     s=e.lower(); return "429" in e or "quota" in s or "rate" in s or "resource_exhausted" in s
 
-# ─────────────────────────────────────────────────────────────
-#  GEMINI CALL
-# ─────────────────────────────────────────────────────────────
+# ── GEMINI ──
 def call_gemini(history, user_text, image_pil=None):
     if not gemini_client: raise Exception("No Gemini API key")
     contents=[]
     for turn in history[-8:]:
-        role=turn.get("role","user")
-        parts_raw=turn.get("parts",[])
+        role=turn.get("role","user"); parts_raw=turn.get("parts",[])
         built=[]
         for p in parts_raw:
             if isinstance(p,str) and p!='[image]':
@@ -149,34 +125,31 @@ def call_ai(history, user_text, image_pil=None):
             if reply and reply.strip(): return reply.strip(),"gemini"
         except Exception as e:
             print(f"[Gemini FAILED] {type(e).__name__}: {str(e)[:200]}")
+    # FIX: In local mode, ALWAYS try detect_op first so operations work without API key
+    p=user_text.lower().strip()
+    op=detect_op(p)
+    if op: return op,"local"
     reply=free_reply(user_text,image_pil is not None,image_pil)
-    return reply or "✨ I'm here to help! Upload an image or ask me anything!","local"
+    return reply or "✨ Upload an image or ask me anything!","local"
 
-# ─────────────────────────────────────────────────────────────
-#  IMAGE GENERATION
-# ─────────────────────────────────────────────────────────────
+# ── IMAGE GENERATION ──
 def generate_image_from_prompt(prompt):
-    print(f"[Gen] Generating: {prompt[:80]}")
     hf_token=os.environ.get("HF_TOKEN")
     if not hf_token:
-        return create_placeholder(prompt,"Add HF_TOKEN secret to enable image generation")
+        return create_placeholder(prompt,"Add HF_TOKEN secret to enable generation")
     try:
         from huggingface_hub import InferenceClient
-        client=InferenceClient(token=hf_token)
-        img=client.text_to_image(prompt=prompt,model="black-forest-labs/FLUX.1-schnell",
+        img=InferenceClient(token=hf_token).text_to_image(
+            prompt=prompt,model="black-forest-labs/FLUX.1-schnell",
             width=1024,height=1024,num_inference_steps=4,guidance_scale=3.5)
-        print("[Gen] Success!")
         return img
     except Exception as e:
-        print(f"[Gen] Failed: {str(e)[:150]}")
         return create_placeholder(prompt,"Generation busy. Try again shortly.")
 
 def create_placeholder(prompt,status):
     w,h=1024,1024
     arr=np.zeros((h,w,3),dtype=np.uint8)
-    for y in range(h):
-        r=y/h
-        arr[y,:]=[int(20+100*r),int(80+140*r),int(220-100*r)]
+    for y in range(h): r=y/h; arr[y,:]=[int(20+100*r),int(80+140*r),int(220-100*r)]
     img=Image.fromarray(arr); draw=ImageDraw.Draw(img)
     try:
         fl=ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",48)
@@ -185,13 +158,11 @@ def create_placeholder(prompt,status):
     except: fl=fm=fs=ImageFont.load_default()
     draw.text((w//2,h//2-150),"✨ Lumina",fill=(255,255,255),anchor="mm",font=fl)
     draw.text((w//2,h//2-70),f'"{prompt[:60]}"',fill=(220,240,255),anchor="mm",font=fm)
-    draw.text((w//2,h//2+50),"Flux.1 Schnell • Image Generation",fill=(180,255,200),anchor="mm",font=fs)
+    draw.text((w//2,h//2+50),"Flux.1 Schnell",fill=(180,255,200),anchor="mm",font=fs)
     draw.text((w//2,h//2+100),status,fill=(255,220,180),anchor="mm",font=fs)
     return img
 
-# ─────────────────────────────────────────────────────────────
-#  FREE FALLBACK
-# ─────────────────────────────────────────────────────────────
+# ── FREE FALLBACK ──
 def analyze_image_free(img):
     arr=np.array(img); h,w=arr.shape[:2]
     mr,mg,mb=float(arr[:,:,0].mean()),float(arr[:,:,1].mean()),float(arr[:,:,2].mean())
@@ -205,40 +176,32 @@ def analyze_image_free(img):
     bright="very bright" if brightness>200 else "well-lit" if brightness>140 else "moderately lit" if brightness>80 else "dark"
     orient="landscape" if w>h*1.3 else "portrait" if h>w*1.3 else "square"
     gray=cv2.cvtColor(pil_to_cv2(img),cv2.COLOR_BGR2GRAY)
-    edges=cv2.Canny(gray,50,150)
-    detail="highly detailed" if edges.mean()>15 else "moderately detailed" if edges.mean()>7 else "smooth/simple"
-    contrast="high contrast" if gray.std()>60 else "moderate contrast" if gray.std()>30 else "low contrast"
+    detail="highly detailed" if cv2.Canny(gray,50,150).mean()>15 else "moderately detailed"
+    contrast="high contrast" if gray.std()>60 else "moderate contrast"
     return dict(w=w,h=h,dom=dom,bright=bright,orient=orient,detail=detail,contrast=contrast)
 
 def free_reply(prompt,has_image,img=None):
     p=prompt.lower().strip() if prompt else ""
-    if re.search(r'who (created|made|built|developed) you|your creator|your developer',p):
-        return "I'm **Lumina**, created by:\n\n1. **Mohan Lingabathina**\n2. **Hevendra Bage**\n3. **Sowrya**\n4. **Karthikeya**\n\nBuilt on HuggingFace Spaces! 😊"
+    if re.search(r'who (created|made|built|developed) you|your creator',p):
+        return "I'm **Lumina**, created by:\n1. **Mohan Lingabathina**\n2. **Hevendra Bage**\n3. **Sowrya**\n4. **Karthikeya**\n\nBuilt on HuggingFace Spaces! 😊"
     if re.search(r'who are you|what are you',p):
-        return "I'm **Lumina** — an AI image processing assistant created by Mohan Lingabathina, Hevendra Bage, Sowrya, and Karthikeya!"
-    # FIX: detect generation requests in free reply too
-    if re.search(r'\bgenerat\w*\b|\bgive\b.*\bimage\b|\bcreate\b.*\bimage\b|\bmake\b.*\bimage\b|\bdraw\b',p):
-        clean=re.sub(r'^(generate|create|make|draw|give|show)\s+(a|an|me|the)?\s*(image|picture|photo|of)?\s*','',p,flags=re.I).strip()
-        if not clean or len(clean)<3: clean=p
-        return f"✨ Generating your image...\n<OP>{{\"intent\":\"generate_image\",\"params\":{{\"prompt\":\"{clean}, high quality, detailed, photorealistic\"}}}}</OP>"
-    if has_image and re.search(r'what|describe|tell|analyz|explain|identify|see|caption|about|who|where',p):
+        return "I'm **Lumina** — an AI image processing assistant!"
+    if has_image and re.search(r'what|describe|tell|analyz|explain|identify|see|caption|about',p):
         s=analyze_image_free(img)
-        return (f"**Image Analysis:**\n\n**Size:** {s['w']}×{s['h']}px ({s['orient']})\n"
+        return (f"**Image Analysis:**\n**Size:** {s['w']}×{s['h']}px ({s['orient']})\n"
                 f"**Lighting:** {s['bright']} | **Color:** {s['dom']}\n"
                 f"**Detail:** {s['detail']} | **Contrast:** {s['contrast']}\n\n"
                 f"*Add GEMINI_API_KEY for full AI-powered understanding.*")
-    op=detect_op(p)
-    if op: return op
     replies={r'hello|hi\b|hey\b':"Hi! 👋 I'm **Lumina**, your AI image assistant!",
-             r'thank':"You're welcome! 😊",r'bye|goodbye':"Goodbye! Come back anytime! 👋"}
+             r'thank':"You're welcome! 😊",r'bye':"Goodbye! 👋"}
     for pat,rep in replies.items():
         if re.search(pat,p): return rep
-    if p: return f"I'm Lumina, your AI image assistant. *Add GEMINI_API_KEY* for full answers!\n\n**I can help with:** 🖼️ Image filters | 🤖 Generate images | 🏥 Medical analysis"
+    if p: return f"I'm Lumina, your AI image assistant. *Add GEMINI_API_KEY* for full answers!\n\n**I can:** 🖼️ Apply filters | 🤖 Generate images | 🏥 Medical analysis"
     return "Upload an image or ask me to generate one!"
 
 def detect_op(p):
     if not p: return None
-    # Generation — broadened to catch "give a cat image", "show me a dog", etc.
+    # Generation
     if re.search(r'\bgenerat\w*\b|\bgive\b.*\bimage\b|\bcreate\b.*\bimage\b|\bmake\b.*\bimage\b|\bdraw\b|\bshow me a\b|\bpicture of\b',p):
         clean=re.sub(r'^(generate|create|make|draw|give|show\s+me|get)\s+(a|an|me|the)?\s*(image|picture|photo|of)?\s*','',p,flags=re.I).strip()
         if not clean or len(clean)<3: clean=p
@@ -257,18 +220,19 @@ def detect_op(p):
         if mp: return f"Scaling!\n<OP>{{\"intent\":\"resize_pct\",\"params\":{{\"pct\":{mp.group(1)}}}}}</OP>"
         return "Resizing to 512×512!\n<OP>{\"intent\":\"resize\",\"params\":{\"width\":512,\"height\":512}}</OP>"
     if re.search(r'\bcrop\b',p): return "Cropping!\n<OP>{\"intent\":\"crop\",\"params\":{\"box\":null}}</OP>"
-    if re.search(r'\bthumbnail\b',p): return "Creating thumbnail!\n<OP>{\"intent\":\"thumbnail\",\"params\":{}}</OP>"
-    if re.search(r'\bgrayscale\b|\bgray\b|\bgrey\b|\bblack.?and.?white\b|\bb&w\b|\bmonochrome\b',p): return "Converting to grayscale!\n<OP>{\"intent\":\"grayscale\",\"params\":{}}</OP>"
-    if re.search(r'\binvert\b|\bnegative\b',p): return "Inverting colors!\n<OP>{\"intent\":\"invert\",\"params\":{}}</OP>"
-    if re.search(r'\bsepia\b',p): return "Applying sepia!\n<OP>{\"intent\":\"sepia\",\"params\":{}}</OP>"
-    if re.search(r'\bvintage\b|\blomo\b',p): return "Applying vintage/lomo!\n<OP>{\"intent\":\"lomo\",\"params\":{}}</OP>"
-    if re.search(r'\bneon\b|\bglow\b',p): return "Applying neon glow!\n<OP>{\"intent\":\"neon_glow\",\"params\":{}}</OP>"
-    if re.search(r'\bglitch\b',p): return "Applying glitch art!\n<OP>{\"intent\":\"glitch\",\"params\":{}}</OP>"
-    if re.search(r'\bhalftone\b',p): return "Applying halftone!\n<OP>{\"intent\":\"halftone\",\"params\":{}}</OP>"
+    if re.search(r'\bthumbnail\b',p): return "Thumbnail!\n<OP>{\"intent\":\"thumbnail\",\"params\":{}}</OP>"
+    if re.search(r'\bgrayscale\b|\bgray\b|\bgrey\b|\bblack.?and.?white\b|\bb&w\b|\bmonochrome\b',p): return "Grayscale!\n<OP>{\"intent\":\"grayscale\",\"params\":{}}</OP>"
+    if re.search(r'\binvert\b|\bnegative\b',p): return "Inverting!\n<OP>{\"intent\":\"invert\",\"params\":{}}</OP>"
+    if re.search(r'\bsepia\b',p): return "Sepia tone!\n<OP>{\"intent\":\"sepia\",\"params\":{}}</OP>"
+    if re.search(r'\bvintage\b|\blomo\b',p): return "Vintage/lomo!\n<OP>{\"intent\":\"lomo\",\"params\":{}}</OP>"
+    if re.search(r'\bneon\b|\bglow\b',p): return "Neon glow!\n<OP>{\"intent\":\"neon_glow\",\"params\":{}}</OP>"
+    if re.search(r'\bglitch\b',p): return "Glitch art!\n<OP>{\"intent\":\"glitch\",\"params\":{}}</OP>"
+    if re.search(r'\bhalftone\b',p): return "Halftone!\n<OP>{\"intent\":\"halftone\",\"params\":{}}</OP>"
     if re.search(r'\bsketch\b|\bpencil\b',p) and not re.search(r'cartoon',p): return "Pencil sketch!\n<OP>{\"intent\":\"sketch\",\"params\":{}}</OP>"
-    if re.search(r'\bcartoon\b|\bcomic\b|\banime\b',p): return "Cartoon effect!\n<OP>{\"intent\":\"cartoon\",\"params\":{}}</OP>"
-    if re.search(r'\bwatercolor\b',p): return "Watercolor effect!\n<OP>{\"intent\":\"watercolor\",\"params\":{}}</OP>"
-    if re.search(r'\boil paint\b|\boil art\b',p): return "Oil painting!\n<OP>{\"intent\":\"oil_painting\",\"params\":{}}</OP>"
+    if re.search(r'\bcartoon\b|\bcomic\b|\banime\b',p): return "Cartoon!\n<OP>{\"intent\":\"cartoon\",\"params\":{}}</OP>"
+    if re.search(r'\bwatercolor\b',p): return "Watercolor!\n<OP>{\"intent\":\"watercolor\",\"params\":{}}</OP>"
+    # FIX: broader oil painting detection
+    if re.search(r'\boil\b',p): return "Oil painting!\n<OP>{\"intent\":\"oil_painting\",\"params\":{}}</OP>"
     if re.search(r'\bpop art\b|\bwarhol\b',p): return "Pop art!\n<OP>{\"intent\":\"pop_art\",\"params\":{}}</OP>"
     if re.search(r'\bstained glass\b',p): return "Stained glass!\n<OP>{\"intent\":\"stained_glass\",\"params\":{}}</OP>"
     if re.search(r'\bpointillis\b',p): return "Pointillism!\n<OP>{\"intent\":\"pointillism\",\"params\":{}}</OP>"
@@ -277,9 +241,9 @@ def detect_op(p):
     if re.search(r'\bemboss\b',p): return "Embossing!\n<OP>{\"intent\":\"emboss\",\"params\":{}}</OP>"
     if re.search(r'\bdouble exposure\b',p): return "Double exposure!\n<OP>{\"intent\":\"double_exposure\",\"params\":{}}</OP>"
     if re.search(r'\btilt.?shift\b|\bminiature\b',p): return "Tilt-shift!\n<OP>{\"intent\":\"tilt_shift\",\"params\":{}}</OP>"
-    if re.search(r'\bbokeh\b|\bdepth of field\b',p): return "Bokeh effect!\n<OP>{\"intent\":\"bokeh\",\"params\":{}}</OP>"
-    if re.search(r'\bhdr\b|\bhigh dynamic range\b',p): return "HDR effect!\n<OP>{\"intent\":\"hdr\",\"params\":{}}</OP>"
-    if re.search(r'\bfisheye\b',p): return "Fisheye effect!\n<OP>{\"intent\":\"fisheye\",\"params\":{}}</OP>"
+    if re.search(r'\bbokeh\b|\bdepth of field\b',p): return "Bokeh!\n<OP>{\"intent\":\"bokeh\",\"params\":{}}</OP>"
+    if re.search(r'\bhdr\b|\bhigh dynamic range\b',p): return "HDR!\n<OP>{\"intent\":\"hdr\",\"params\":{}}</OP>"
+    if re.search(r'\bfisheye\b',p): return "Fisheye!\n<OP>{\"intent\":\"fisheye\",\"params\":{}}</OP>"
     if re.search(r'\bcross process\b',p): return "Cross process!\n<OP>{\"intent\":\"cross_process\",\"params\":{}}</OP>"
     if re.search(r'\bduotone\b',p): return "Duotone!\n<OP>{\"intent\":\"duotone\",\"params\":{}}</OP>"
     if re.search(r'\bmosaic\b',p): return "Mosaic!\n<OP>{\"intent\":\"mosaic\",\"params\":{}}</OP>"
@@ -289,31 +253,31 @@ def detect_op(p):
     if re.search(r'\bsharpen\b|\bsharp\b|\bcrisp\b',p): return "Sharpening!\n<OP>{\"intent\":\"sharpen\",\"params\":{}}</OP>"
     if re.search(r'\bcontrast\b',p):
         f=0.5 if re.search(r'decreas|reduc|lower|less',p) else 1.6
-        return f"Adjusting contrast!\n<OP>{{\"intent\":\"contrast\",\"params\":{{\"factor\":{f}}}}}</OP>"
+        return f"Contrast!\n<OP>{{\"intent\":\"contrast\",\"params\":{{\"factor\":{f}}}}}</OP>"
     if re.search(r'\bbright\b|\bbrightness\b|\blighten\b|\bdarken\b',p):
         f=0.5 if re.search(r'dark|dim|decreas|lower',p) else 1.5
-        return f"Adjusting brightness!\n<OP>{{\"intent\":\"brightness\",\"params\":{{\"factor\":{f}}}}}</OP>"
+        return f"Brightness!\n<OP>{{\"intent\":\"brightness\",\"params\":{{\"factor\":{f}}}}}</OP>"
     if re.search(r'\bsaturat\b|\bvibran\b',p):
         f=0.3 if re.search(r'decreas|reduc|less|desatur',p) else 1.7
-        return f"Adjusting saturation!\n<OP>{{\"intent\":\"saturation\",\"params\":{{\"factor\":{f}}}}}</OP>"
-    if re.search(r'\bhue\b',p): return "Shifting hue!\n<OP>{\"intent\":\"hue\",\"params\":{}}</OP>"
+        return f"Saturation!\n<OP>{{\"intent\":\"saturation\",\"params\":{{\"factor\":{f}}}}}</OP>"
+    if re.search(r'\bhue\b',p): return "Hue shift!\n<OP>{\"intent\":\"hue\",\"params\":{}}</OP>"
     if re.search(r'\bwhite balance\b|\bwarm tone\b|\bcool tone\b',p):
         temp='warm' if re.search(r'warm',p) else 'cool'
         return f"White balance!\n<OP>{{\"intent\":\"white_balance\",\"params\":{{\"temp\":\"{temp}\"}}}}</OP>"
-    if re.search(r'\bshadow\b|\bhighlight\b',p): return "Shadows & highlights!\n<OP>{\"intent\":\"shadows_highlights\",\"params\":{}}</OP>"
-    if re.search(r'\bclahe\b|\bequali\b',p): return "CLAHE enhance!\n<OP>{\"intent\":\"clahe\",\"params\":{}}</OP>"
-    if re.search(r'\bdenois\b|\bclean\b|\bnoise.?remov\b',p): return "Denoising!\n<OP>{\"intent\":\"denoise\",\"params\":{}}</OP>"
-    if re.search(r'\bxray\b|x-ray|x.?ray',p): return "X-ray enhance!\n<OP>{\"intent\":\"xray_enhance\",\"params\":{}}</OP>"
+    if re.search(r'\bshadow\b|\bhighlight\b',p): return "Shadows!\n<OP>{\"intent\":\"shadows_highlights\",\"params\":{}}</OP>"
+    if re.search(r'\bclahe\b|\bequali\b',p): return "CLAHE!\n<OP>{\"intent\":\"clahe\",\"params\":{}}</OP>"
+    if re.search(r'\bdenois\b|\bnoise.?remov\b',p): return "Denoising!\n<OP>{\"intent\":\"denoise\",\"params\":{}}</OP>"
+    if re.search(r'\bxray\b|x-ray|x.?ray',p): return "X-ray!\n<OP>{\"intent\":\"xray_enhance\",\"params\":{}}</OP>"
     if re.search(r'\bmri\b',p): return "MRI enhance!\n<OP>{\"intent\":\"mri_enhance\",\"params\":{}}</OP>"
     if re.search(r'\bct scan\b|\bct.?enhance\b',p): return "CT enhance!\n<OP>{\"intent\":\"ct_enhance\",\"params\":{}}</OP>"
-    if re.search(r'\bfundus\b|\bretina\b',p): return "Fundus enhance!\n<OP>{\"intent\":\"fundus_enhance\",\"params\":{}}</OP>"
+    if re.search(r'\bfundus\b|\bretina\b',p): return "Fundus!\n<OP>{\"intent\":\"fundus_enhance\",\"params\":{}}</OP>"
     if re.search(r'\bskin\b|\bderma\b|\blesion\b',p): return "Skin analysis!\n<OP>{\"intent\":\"skin_analyze\",\"params\":{}}</OP>"
     if re.search(r'\bwound\b|\binjur\b',p): return "Wound analysis!\n<OP>{\"intent\":\"wound_analyze\",\"params\":{}}</OP>"
     if re.search(r'\bsegment\b|\botsu\b|\bthreshold\b',p): return "Segmenting!\n<OP>{\"intent\":\"segment\",\"params\":{}}</OP>"
-    if re.search(r'\bsobel\b|\bgradient\b',p): return "Sobel gradient!\n<OP>{\"intent\":\"sobel\",\"params\":{}}</OP>"
+    if re.search(r'\bsobel\b|\bgradient\b',p): return "Sobel!\n<OP>{\"intent\":\"sobel\",\"params\":{}}</OP>"
     if re.search(r'\bcanny\b',p): return "Canny edges!\n<OP>{\"intent\":\"canny\",\"params\":{}}</OP>"
-    if re.search(r'\bedge\b|\boutline\b',p): return "Edge detection!\n<OP>{\"intent\":\"edge\",\"params\":{}}</OP>"
-    if re.search(r'\bface.?detect\b|\bdetect.?face\b|\bfind.?face\b',p): return "Face detection!\n<OP>{\"intent\":\"face_detect\",\"params\":{}}</OP>"
+    if re.search(r'\bedge\b|\boutline\b',p): return "Edges!\n<OP>{\"intent\":\"edge\",\"params\":{}}</OP>"
+    if re.search(r'\bface.?detect\b|\bdetect.?face\b|\bfind.?face\b',p): return "Face detect!\n<OP>{\"intent\":\"face_detect\",\"params\":{}}</OP>"
     if re.search(r'\bcolor.?palette\b|\bpalette\b',p): return "Color palette!\n<OP>{\"intent\":\"color_palette\",\"params\":{}}</OP>"
     if re.search(r'\bcolor.?analys\b|\banalyz.?color\b',p): return "Color analysis!\n<OP>{\"intent\":\"color_analysis\",\"params\":{}}</OP>"
     if re.search(r'\bquality\b|\bcheck.?image\b',p): return "Quality check!\n<OP>{\"intent\":\"quality_check\",\"params\":{}}</OP>"
@@ -327,7 +291,7 @@ def detect_op(p):
         return f"Pixelating!\n<OP>{{\"intent\":\"pixelate\",\"params\":{{\"size\":{sz}}}}}</OP>"
     if re.search(r'\bnoise\b|\bgrain\b',p): return "Film grain!\n<OP>{\"intent\":\"noise\",\"params\":{}}</OP>"
     if re.search(r'\bvignet\b',p): return "Vignette!\n<OP>{\"intent\":\"vignette\",\"params\":{}}</OP>"
-    if re.search(r'\binfo\b|\bsize\b|\bdimension\b',p): return "Getting info!\n<OP>{\"intent\":\"info\",\"params\":{}}</OP>"
+    if re.search(r'\binfo\b|\bsize\b|\bdimension\b',p): return "Info!\n<OP>{\"intent\":\"info\",\"params\":{}}</OP>"
     return None
 
 def extract_op(reply):
@@ -340,9 +304,7 @@ def extract_op(reply):
         return clean,d.get("intent"),d.get("params",{})
     except: return clean,None,{}
 
-# ─────────────────────────────────────────────────────────────
-#  IMAGE PROCESSORS — all operations, improved quality
-# ─────────────────────────────────────────────────────────────
+# ── IMAGE PROCESSORS ──
 def process_image(img,intent,params):
     if img is None: return None
     if intent=='rotate':
@@ -365,26 +327,19 @@ def process_image(img,intent,params):
     if intent=='invert': return ImageOps.invert(img)
     if intent=='sepia':
         gray=np.array(ImageOps.grayscale(img),dtype=np.float32)
-        return Image.fromarray(np.stack([
-            np.clip(gray*1.08,0,255).astype(np.uint8),
-            np.clip(gray*0.85,0,255).astype(np.uint8),
-            np.clip(gray*0.66,0,255).astype(np.uint8)],axis=2))
+        return Image.fromarray(np.stack([np.clip(gray*1.08,0,255).astype(np.uint8),np.clip(gray*0.85,0,255).astype(np.uint8),np.clip(gray*0.66,0,255).astype(np.uint8)],axis=2))
     if intent=='blur':
         return img.filter(ImageFilter.GaussianBlur(radius=max(1,params.get('radius',3))))
     if intent=='sharpen':
-        # Improved sharpen using unsharp mask
         return img.filter(ImageFilter.UnsharpMask(radius=2,percent=200,threshold=3))
     if intent=='edge':
-        gray=ImageOps.grayscale(img)
-        return ImageEnhance.Contrast(gray.filter(ImageFilter.FIND_EDGES)).enhance(3.0).convert("RGB")
+        return ImageEnhance.Contrast(ImageOps.grayscale(img).filter(ImageFilter.FIND_EDGES)).enhance(3.0).convert("RGB")
     if intent=='emboss': return img.filter(ImageFilter.EMBOSS).convert("RGB")
     if intent=='contrast': return ImageEnhance.Contrast(img).enhance(float(params.get('factor',1.6)))
     if intent=='brightness':
-        # Use gamma correction for better quality
         factor=float(params.get('factor',1.4))
         arr=np.array(img).astype(np.float32)/255.0
-        gamma=1/factor if factor>0 else 1.0
-        arr=np.clip(np.power(arr,gamma),0,1)*255
+        arr=np.clip(np.power(arr,1/factor if factor>0 else 1.0),0,1)*255
         return Image.fromarray(arr.astype(np.uint8))
     if intent=='saturation': return ImageEnhance.Color(img).enhance(float(params.get('factor',1.5)))
     if intent=='hue':
@@ -400,39 +355,34 @@ def process_image(img,intent,params):
             arr[:,:,0]=np.clip(arr[:,:,0]*0.85,0,255); arr[:,:,1]=np.clip(arr[:,:,1]*1.05,0,255); arr[:,:,2]=np.clip(arr[:,:,2]*1.15,0,255)
         return Image.fromarray(arr.astype(np.uint8))
     if intent=='shadows_highlights':
-        cv_img=pil_to_cv2(img)
-        lab=cv2.cvtColor(cv_img,cv2.COLOR_BGR2LAB)
-        l,a,b=cv2.split(lab)
+        cv_img=pil_to_cv2(img); lab=cv2.cvtColor(cv_img,cv2.COLOR_BGR2LAB); l,a,b=cv2.split(lab)
         lut=np.array([min(255,int(i+max(0,(100-i)*0.4))) for i in range(256)],dtype=np.uint8)
         return cv2_to_pil(cv2.cvtColor(cv2.merge([cv2.LUT(l,lut),a,b]),cv2.COLOR_LAB2BGR))
     if intent=='hdr':
-        cv_img=pil_to_cv2(img)
-        lab=cv2.cvtColor(cv_img,cv2.COLOR_BGR2LAB)
-        l,a,b=cv2.split(lab)
+        cv_img=pil_to_cv2(img); lab=cv2.cvtColor(cv_img,cv2.COLOR_BGR2LAB); l,a,b=cv2.split(lab)
         cl=cv2.createCLAHE(clipLimit=4.0,tileGridSize=(8,8)); l=cl.apply(l)
         enhanced=cv2_to_pil(cv2.cvtColor(cv2.merge([l,a,b]),cv2.COLOR_LAB2BGR))
         return ImageEnhance.Sharpness(ImageEnhance.Color(ImageEnhance.Contrast(enhanced).enhance(1.4)).enhance(1.5)).enhance(1.3)
     if intent=='sketch':
-        # Improved sketch using cv2 divide method
         gray=cv2.cvtColor(pil_to_cv2(img),cv2.COLOR_BGR2GRAY)
-        inv=255-gray
-        blur=cv2.GaussianBlur(inv,(21,21),0)
-        sketch=cv2.divide(gray,255-blur,scale=256)
-        return cv2_to_pil(cv2.cvtColor(sketch,cv2.COLOR_GRAY2BGR))
+        blur=cv2.GaussianBlur(255-gray,(21,21),0)
+        return cv2_to_pil(cv2.cvtColor(cv2.divide(gray,255-blur,scale=256),cv2.COLOR_GRAY2BGR))
     if intent=='cartoon':
-        cv_img=pil_to_cv2(img)
-        color=cv_img.copy()
+        cv_img=pil_to_cv2(img); color=cv_img.copy()
         for _ in range(4): color=cv2.bilateralFilter(color,9,75,75)
         gray=cv2.cvtColor(cv_img,cv2.COLOR_BGR2GRAY)
         edges=cv2.adaptiveThreshold(cv2.medianBlur(gray,7),255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,9,2)
         return cv2_to_pil(cv2.bitwise_and(color,color,mask=edges))
     if intent=='watercolor':
-        cv_img=pil_to_cv2(img)
-        return ImageEnhance.Color(cv2_to_pil(cv2.stylization(cv_img,sigma_s=60,sigma_r=0.5))).enhance(1.2)
+        return ImageEnhance.Color(cv2_to_pil(cv2.stylization(pil_to_cv2(img),sigma_s=60,sigma_r=0.5))).enhance(1.2)
     if intent=='oil_painting':
         cv_img=pil_to_cv2(img)
-        smooth=cv2.edgePreservingFilter(cv_img,flags=1,sigma_s=60,sigma_r=0.4)
-        return cv2_to_pil(cv2.stylization(smooth,sigma_s=60,sigma_r=0.45))
+        try:
+            result=cv2.xphoto.oilPainting(cv_img,7,1)
+        except:
+            smooth=cv2.edgePreservingFilter(cv_img,flags=1,sigma_s=60,sigma_r=0.4)
+            result=cv2.stylization(smooth,sigma_s=60,sigma_r=0.45)
+        return cv2_to_pil(result)
     if intent=='neon_glow':
         cv_img=pil_to_cv2(img)
         edges=cv2.Canny(cv2.cvtColor(cv_img,cv2.COLOR_BGR2GRAY),50,150)
@@ -443,15 +393,14 @@ def process_image(img,intent,params):
     if intent=='glitch':
         arr=np.array(img).copy(); h,w=arr.shape[:2]
         for _ in range(20):
-            y=np.random.randint(0,h); shift=np.random.randint(-50,50)
-            arr[y:y+np.random.randint(3,20)]=np.roll(arr[y:y+np.random.randint(3,20)],shift,axis=1)
+            y=np.random.randint(0,h); h2=np.random.randint(3,20); shift=np.random.randint(-50,50)
+            arr[y:y+h2]=np.roll(arr[y:y+h2],shift,axis=1)
         r,g,b=arr[:,:,0].copy(),arr[:,:,1].copy(),arr[:,:,2].copy()
         arr[:,:,0]=np.roll(r,8,axis=1); arr[:,:,2]=np.roll(b,-8,axis=1)
         return Image.fromarray(arr)
     if intent=='halftone':
         gray=np.array(ImageOps.grayscale(img)); h,w=gray.shape
-        dot_size=max(4,min(w,h)//80)
-        result=np.ones((h,w,3),dtype=np.uint8)*255
+        dot_size=max(4,min(w,h)//80); result=np.ones((h,w,3),dtype=np.uint8)*255
         for y in range(0,h,dot_size*2):
             for x in range(0,w,dot_size*2):
                 region=gray[y:y+dot_size*2,x:x+dot_size*2]
@@ -462,8 +411,7 @@ def process_image(img,intent,params):
     if intent=='lomo':
         arr=np.array(img).astype(np.float32)
         arr[:,:,0]=np.clip(arr[:,:,0]*1.25,0,255); arr[:,:,2]=np.clip(arr[:,:,2]*0.75,0,255)
-        h,w=arr.shape[:2]; cy,cx=h//2,w//2
-        Y,X=np.ogrid[:h,:w]
+        h,w=arr.shape[:2]; cy,cx=h//2,w//2; Y,X=np.ogrid[:h,:w]
         vig=1-np.clip(np.sqrt((X-cx)**2+(Y-cy)**2)/(max(h,w)*0.5),0,1)**1.5*0.8
         return Image.fromarray(np.clip(arr*vig[:,:,np.newaxis],0,255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.5))
     if intent=='cross_process':
@@ -483,13 +431,11 @@ def process_image(img,intent,params):
         colors=[(220,30,30),(30,180,30),(30,30,220),(220,180,0)]; canvas=Image.new("RGB",(w,h))
         for i,c in enumerate(colors):
             small=img.resize((hw,hh),Image.LANCZOS)
-            arr_g=np.array(ImageOps.grayscale(small))
-            _,thresh=cv2.threshold(arr_g,128,255,cv2.THRESH_BINARY)
+            _,thresh=cv2.threshold(np.array(ImageOps.grayscale(small)),128,255,cv2.THRESH_BINARY)
             canvas.paste(Image.composite(Image.new("RGB",(hw,hh),(255,255,255)),Image.new("RGB",(hw,hh),c),Image.fromarray(thresh)),(i%2*hw,i//2*hh))
         return canvas
     if intent=='stained_glass':
-        cv_img=pil_to_cv2(img)
-        Z=cv_img.reshape((-1,3)).astype(np.float32)
+        cv_img=pil_to_cv2(img); Z=cv_img.reshape((-1,3)).astype(np.float32)
         _,labels,centers=cv2.kmeans(Z,12,None,(cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER,20,1.0),10,cv2.KMEANS_RANDOM_CENTERS)
         segmented=centers[labels.flatten()].reshape(cv_img.shape).astype(np.uint8)
         edges=cv2.Canny(cv2.cvtColor(cv_img,cv2.COLOR_BGR2GRAY),30,100)
@@ -499,8 +445,7 @@ def process_image(img,intent,params):
         arr=np.array(img); h2,w2=arr.shape[:2]
         canvas=np.ones((h2,w2,3),dtype=np.uint8)*248
         dot_size=max(2,min(6,min(h2,w2)//120))
-        ys=np.random.randint(0,h2,size=min(80000,h2*w2//2))
-        xs=np.random.randint(0,w2,size=len(ys))
+        ys=np.random.randint(0,h2,size=min(80000,h2*w2//2)); xs=np.random.randint(0,w2,size=len(ys))
         for y,x in zip(ys,xs): cv2.circle(canvas,(x,y),dot_size,tuple(int(c) for c in arr[y,x]),-1)
         return Image.fromarray(canvas)
     if intent=='ascii_art':
@@ -521,8 +466,7 @@ def process_image(img,intent,params):
     if intent=='tilt_shift':
         arr=np.array(img); h2,w2=arr.shape[:2]
         blur_strong=cv2.GaussianBlur(arr,(0,0),15)
-        mask=np.zeros((h2,w2),dtype=np.float32)
-        center=h2//2; zone=h2//5
+        mask=np.zeros((h2,w2),dtype=np.float32); center=h2//2; zone=h2//5
         for y in range(h2):
             dist=abs(y-center)
             mask[y]=1.0 if dist<zone else max(0,1.0-(dist-zone)/(zone*2)) if dist<zone*3 else 0
@@ -530,8 +474,7 @@ def process_image(img,intent,params):
         return ImageEnhance.Color(Image.fromarray(np.clip(result,0,255).astype(np.uint8))).enhance(1.4)
     if intent=='bokeh':
         arr=np.array(img); h2,w2=arr.shape[:2]
-        blur=cv2.GaussianBlur(arr,(0,0),25)
-        cy,cx=h2//2,w2//2; rr=min(h2,w2)//3
+        blur=cv2.GaussianBlur(arr,(0,0),25); cy,cx=h2//2,w2//2; rr=min(h2,w2)//3
         Y,X=np.ogrid[:h2,:w2]
         mask=cv2.GaussianBlur(np.clip(1-np.sqrt((X-cx)**2+(Y-cy)**2)/rr,0,1).astype(np.float32),(61,61),0)[:,:,np.newaxis]
         return Image.fromarray(np.clip(arr.astype(np.float32)*mask+blur.astype(np.float32)*(1-mask),0,255).astype(np.uint8))
@@ -540,61 +483,51 @@ def process_image(img,intent,params):
         K=np.float32([[w2*0.8,0,w2//2],[0,h2*0.8,h2//2],[0,0,1]])
         return cv2_to_pil(cv2.undistort(cv_img,K,np.float32([-0.4,0.2,0,0])))
     if intent=='mosaic':
-        arr=np.array(img); h2,w2=arr.shape[:2]
-        block=max(8,min(32,min(h2,w2)//20))
+        arr=np.array(img); h2,w2=arr.shape[:2]; block=max(8,min(32,min(h2,w2)//20))
         for y in range(0,h2,block):
             for x in range(0,w2,block):
                 arr[y:y+block,x:x+block]=arr[y:y+block,x:x+block].mean(axis=(0,1)).astype(np.uint8)
         return Image.fromarray(arr)
     if intent=='pixelate':
         sz=max(2,int(params.get('size',10)))
-        small=img.resize((max(1,img.width//sz),max(1,img.height//sz)),Image.NEAREST)
-        return small.resize(img.size,Image.NEAREST)
+        return img.resize((max(1,img.width//sz),max(1,img.height//sz)),Image.NEAREST).resize(img.size,Image.NEAREST)
     if intent=='noise':
         arr=np.array(img,dtype=np.float32)
         return Image.fromarray(np.clip(arr+np.random.normal(0,20,arr.shape),0,255).astype(np.uint8))
     if intent=='vignette':
         cv_img=pil_to_cv2(img); rows,cols=cv_img.shape[:2]
         kx=cv2.getGaussianKernel(cols,cols*0.5); ky=cv2.getGaussianKernel(rows,rows*0.5)
-        mask=ky*kx.T; mask=(mask/mask.max())**0.5
+        mask=(ky*kx.T); mask=(mask/mask.max())**0.5
         return cv2_to_pil((cv_img*mask[:,:,np.newaxis]).astype(np.uint8))
     if intent=='clahe':
-        cv_img=pil_to_cv2(img)
-        lab=cv2.cvtColor(cv_img,cv2.COLOR_BGR2LAB); l,a,b=cv2.split(lab)
-        cl=cv2.createCLAHE(clipLimit=3.0,tileGridSize=(8,8))
-        return cv2_to_pil(cv2.cvtColor(cv2.merge([cl.apply(l),a,b]),cv2.COLOR_LAB2BGR))
+        cv_img=pil_to_cv2(img); lab=cv2.cvtColor(cv_img,cv2.COLOR_BGR2LAB); l,a,b=cv2.split(lab)
+        return cv2_to_pil(cv2.cvtColor(cv2.merge([cv2.createCLAHE(clipLimit=3.0,tileGridSize=(8,8)).apply(l),a,b]),cv2.COLOR_LAB2BGR))
     if intent=='denoise':
         return cv2_to_pil(cv2.fastNlMeansDenoisingColored(pil_to_cv2(img),None,10,10,7,21))
     if intent=='xray_enhance':
         gray=cv2.normalize(np.array(ImageOps.grayscale(img)),None,0,255,cv2.NORM_MINMAX)
-        cl=cv2.createCLAHE(clipLimit=4.0,tileGridSize=(8,8)); enhanced=cl.apply(gray)
+        enhanced=cv2.createCLAHE(clipLimit=4.0,tileGridSize=(8,8)).apply(gray)
         blur=cv2.GaussianBlur(enhanced,(0,0),3)
         return Image.fromarray(np.clip(cv2.addWeighted(enhanced,1.5,blur,-0.5,0),0,255).astype(np.uint8)).convert("RGB")
     if intent=='mri_enhance':
         gray=cv2.normalize(np.array(ImageOps.grayscale(img)),None,0,255,cv2.NORM_MINMAX)
-        cl=cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8)); clahe=cl.apply(gray)
-        table=np.array([(i/255.0)**0.75*255 for i in range(256)],dtype=np.uint8)
-        return Image.fromarray(cv2.LUT(clahe,table)).convert("RGB")
+        clahe=cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8)).apply(gray)
+        return Image.fromarray(cv2.LUT(clahe,np.array([(i/255.0)**0.75*255 for i in range(256)],dtype=np.uint8))).convert("RGB")
     if intent=='ct_enhance':
-        gray=np.array(ImageOps.grayscale(img))
-        p2,p98=np.percentile(gray,2),np.percentile(gray,98)
+        gray=np.array(ImageOps.grayscale(img)); p2,p98=np.percentile(gray,2),np.percentile(gray,98)
         windowed=np.clip((gray-p2)/(p98-p2+1e-5)*255,0,255).astype(np.uint8)
         return Image.fromarray(cv2.createCLAHE(clipLimit=3.0,tileGridSize=(8,8)).apply(windowed)).convert("RGB")
     if intent=='fundus_enhance':
         cv_img=pil_to_cv2(img); b_ch,g_ch,r_ch=cv2.split(cv_img)
-        cl=cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8))
-        result=cv2.fastNlMeansDenoisingColored(cv2.merge([b_ch,cl.apply(g_ch),r_ch]),None,5,5,7,21)
-        return cv2_to_pil(result)
+        return cv2_to_pil(cv2.fastNlMeansDenoisingColored(cv2.merge([b_ch,cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8)).apply(g_ch),r_ch]),None,5,5,7,21))
     if intent=='skin_analyze':
-        cv_img=pil_to_cv2(img)
-        lab=cv2.cvtColor(cv_img,cv2.COLOR_BGR2LAB); l,a,b=cv2.split(lab)
-        cl=cv2.createCLAHE(clipLimit=2.5,tileGridSize=(8,8)); l=cl.apply(l)
+        cv_img=pil_to_cv2(img); lab=cv2.cvtColor(cv_img,cv2.COLOR_BGR2LAB); l,a,b=cv2.split(lab)
+        l=cv2.createCLAHE(clipLimit=2.5,tileGridSize=(8,8)).apply(l)
         return cv2_to_pil(cv2.detailEnhance(cv2.cvtColor(cv2.merge([l,a,b]),cv2.COLOR_LAB2BGR),sigma_s=10,sigma_r=0.15))
     if intent=='wound_analyze':
-        cv_img=pil_to_cv2(img)
-        detail=cv2.detailEnhance(cv_img,sigma_s=10,sigma_r=0.15)
+        cv_img=pil_to_cv2(img); detail=cv2.detailEnhance(cv_img,sigma_s=10,sigma_r=0.15)
         lab=cv2.cvtColor(detail,cv2.COLOR_BGR2LAB); l,a,b=cv2.split(lab)
-        cl=cv2.createCLAHE(clipLimit=3.0,tileGridSize=(8,8)); l=cl.apply(l)
+        l=cv2.createCLAHE(clipLimit=3.0,tileGridSize=(8,8)).apply(l)
         return cv2_to_pil(cv2.cvtColor(cv2.merge([l,a,b]),cv2.COLOR_LAB2BGR))
     if intent=='segment':
         gray=np.array(ImageOps.grayscale(img))
@@ -602,8 +535,7 @@ def process_image(img,intent,params):
         return Image.fromarray(cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,np.ones((3,3),np.uint8))).convert("RGB")
     if intent=='morphology':
         gray=np.array(ImageOps.grayscale(img)); k=np.ones((5,5),np.uint8)
-        result=cv2.dilate(gray,k) if params.get('op','dilate')=='dilate' else cv2.erode(gray,k)
-        return Image.fromarray(result).convert("RGB")
+        return Image.fromarray(cv2.dilate(gray,k) if params.get('op','dilate')=='dilate' else cv2.erode(gray,k)).convert("RGB")
     if intent=='sobel':
         gray=np.array(ImageOps.grayscale(img),dtype=np.float32)
         gx=cv2.Sobel(gray,cv2.CV_64F,1,0,ksize=3); gy=cv2.Sobel(gray,cv2.CV_64F,0,1,ksize=3)
@@ -627,8 +559,8 @@ def process_image(img,intent,params):
         counts=np.bincount(labels.flatten()); sorted_idx=np.argsort(-counts)
         pal_w=max(w2,400); pal_h=80; palette=np.zeros((pal_h,pal_w,3),dtype=np.uint8); block=pal_w//8
         for i,idx in enumerate(sorted_idx): palette[:,i*block:(i+1)*block]=centers[idx].astype(np.uint8)
-        img_resized=img.resize((pal_w,int(h2*pal_w/w2)),Image.LANCZOS) if w2<pal_w else img
-        return Image.fromarray(np.vstack([np.array(img_resized)[:,:pal_w],palette]).astype(np.uint8))
+        img_r=img.resize((pal_w,int(h2*pal_w/w2)),Image.LANCZOS) if w2<pal_w else img
+        return Image.fromarray(np.vstack([np.array(img_r)[:,:pal_w],palette]).astype(np.uint8))
     if intent=='histogram_eq':
         cv_img=pil_to_cv2(img); yuv=cv2.cvtColor(cv_img,cv2.COLOR_BGR2YUV)
         yuv[:,:,0]=cv2.equalizeHist(yuv[:,:,0])
@@ -643,28 +575,25 @@ def process_image(img,intent,params):
             cv2.putText(result,t,(10,30+i*32),cv2.FONT_HERSHEY_SIMPLEX,0.75,(65,225,174),2)
         return cv2_to_pil(result)
     if intent=='super_resolution':
-        up=img.resize((img.width*2,img.height*2),Image.BICUBIC)
-        return up.filter(ImageFilter.UnsharpMask(radius=1.5,percent=150,threshold=3))
+        return img.resize((img.width*2,img.height*2),Image.BICUBIC).filter(ImageFilter.UnsharpMask(radius=1.5,percent=150,threshold=3))
     if intent=='deblur':
         cv_img=pil_to_cv2(img)
-        kernel=np.array([[-1,-1,-1,-1,-1],[-1,2,2,2,-1],[-1,2,9,2,-1],[-1,2,2,2,-1],[-1,-1,-1,-1,-1]],dtype=np.float32)/kernel_sum if (kernel_sum:=np.array([[-1,-1,-1,-1,-1],[-1,2,2,2,-1],[-1,2,9,2,-1],[-1,2,2,2,-1],[-1,-1,-1,-1,-1]],dtype=np.float32).sum())!=0 else np.array([[-1,-1,-1,-1,-1],[-1,2,2,2,-1],[-1,2,9,2,-1],[-1,2,2,2,-1],[-1,-1,-1,-1,-1]],dtype=np.float32)
-        return cv2_to_pil(cv2.fastNlMeansDenoisingColored(cv2.filter2D(cv_img,-1,kernel),None,5,5,7,21))
+        k=np.array([[-1,-1,-1,-1,-1],[-1,2,2,2,-1],[-1,2,9,2,-1],[-1,2,2,2,-1],[-1,-1,-1,-1,-1]],dtype=np.float32)
+        k=k/k.sum() if k.sum()!=0 else k
+        return cv2_to_pil(cv2.fastNlMeansDenoisingColored(cv2.filter2D(cv_img,-1,k),None,5,5,7,21))
     if intent=='colorize_bw':
         gray=np.array(ImageOps.grayscale(img),dtype=np.float32)
         return Image.fromarray(np.stack([np.clip(gray*1.05,0,255).astype(np.uint8),np.clip(gray*0.95,0,255).astype(np.uint8),np.clip(gray*0.85,0,255).astype(np.uint8)],axis=2))
     if intent=='restore_old':
-        cv_img=pil_to_cv2(img)
-        denoised=cv2.fastNlMeansDenoisingColored(cv_img,None,10,10,7,21)
+        cv_img=pil_to_cv2(img); denoised=cv2.fastNlMeansDenoisingColored(cv_img,None,10,10,7,21)
         lab=cv2.cvtColor(denoised,cv2.COLOR_BGR2LAB); l,a,b=cv2.split(lab)
-        cl=cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8)); l=cl.apply(l)
+        l=cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8)).apply(l)
         return cv2_to_pil(cv2.cvtColor(cv2.merge([l,a,b]),cv2.COLOR_LAB2BGR)).filter(ImageFilter.UnsharpMask(radius=1,percent=100,threshold=3))
     if intent=='generate_image':
         return generate_image_from_prompt(params.get('prompt','beautiful artwork, high quality'))
     return None
 
-# ─────────────────────────────────────────────────────────────
-#  AUTH ROUTES
-# ─────────────────────────────────────────────────────────────
+# ── AUTH ROUTES ──
 @app.route("/api/auth/hash-password",methods=["POST"])
 def api_hash_password():
     data=request.json or {}; pw=data.get("password","")
@@ -679,26 +608,22 @@ def api_verify_password():
     data=request.json or {}
     pw=data.get("password",""); salt=data.get("salt",""); stored_hash=data.get("hash","")
     if not all([pw,salt,stored_hash]): return jsonify({"valid":False,"error":"Missing fields"}),400
-    valid=verify_password(pw,salt,stored_hash)
-    return jsonify({"valid":valid,"token":secrets.token_urlsafe(32) if valid else None})
+    return jsonify({"valid":verify_password(pw,salt,stored_hash),"token":secrets.token_urlsafe(32)})
 
 @app.route("/api/auth/validate-email",methods=["POST"])
 def api_validate_email():
-    return jsonify({"valid":validate_email((request.json or {}).get("email",""))})
+    return jsonify({"valid":bool(re.match(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$',(request.json or {}).get("email","")))})
 
 @app.route("/api/auth/validate-username",methods=["POST"])
 def api_validate_username():
-    return jsonify({"valid":validate_username((request.json or {}).get("username",""))})
+    return jsonify({"valid":bool(re.match(r'^[a-zA-Z0-9_]{3,20}$',(request.json or {}).get("username","")))})
 
-# ─────────────────────────────────────────────────────────────
-#  SHARE CHAT
-# ─────────────────────────────────────────────────────────────
+# ── SHARE ──
 shared_chats={}
 
 @app.route("/api/share-chat",methods=["POST"])
 def share_chat():
-    data=request.json or {}
-    share_id=secrets.token_urlsafe(8)
+    data=request.json or {}; share_id=secrets.token_urlsafe(8)
     shared_chats[share_id]={"html":data.get("chat_html",""),"title":data.get("title","Lumina Chat"),"created":datetime.now().isoformat()}
     return jsonify({"success":True,"share_id":share_id,"share_url":f"/shared/{share_id}"})
 
@@ -709,22 +634,30 @@ def view_shared(share_id):
     return f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><title>{chat['title']} — Lumina</title>
 <style>body{{background:linear-gradient(135deg,#6a7bd1,#41e1ae);min-height:100vh;font-family:Segoe UI,sans-serif;padding:20px}}
 .c{{max-width:760px;margin:0 auto;background:rgba(0,0,0,0.3);border-radius:20px;padding:24px;backdrop-filter:blur(12px)}}
-h2{{color:white;margin-bottom:16px}}.chat-msg{{padding:12px 16px;border-radius:20px;max-width:78%;margin-bottom:12px;line-height:1.6;font-size:15px}}
-.user-msg{{background:rgba(255,255,255,0.88);color:#1a1a2e;margin-left:auto}}.bot-msg{{background:rgba(0,0,0,0.38);color:white}}
+h2{{color:white}}.chat-msg{{padding:12px 16px;border-radius:20px;max-width:78%;margin-bottom:12px;line-height:1.6;font-size:15px}}
+.user-msg{{background:rgba(255,255,255,0.88);color:#1a1a2e}}.bot-msg{{background:rgba(0,0,0,0.38);color:white}}
 a{{display:inline-block;margin-top:16px;padding:8px 18px;background:white;color:#6a7bd1;border-radius:20px;text-decoration:none;font-weight:600}}</style>
 </head><body><div class="c"><h2>📤 {chat['title']}</h2><p style="color:rgba(255,255,255,0.6);font-size:12px;margin-bottom:16px">Shared {chat['created'][:10]}</p>
 {chat['html']}<br><a href="/">← Open Lumina</a></div></body></html>"""
 
-# ─────────────────────────────────────────────────────────────
-#  STATUS
-# ─────────────────────────────────────────────────────────────
+# ── STATUS ──
 @app.route("/api/status",methods=["GET"])
 def api_status():
-    return jsonify({"gemini":bool(gemini_client),"claude":bool(claude_client),"local":True,"mode":"gemini-primary"})
+    return jsonify({"gemini":bool(gemini_client),"claude":bool(claude_client),"local":True})
 
-# ─────────────────────────────────────────────────────────────
-#  MAIN PROCESS ROUTE
-# ─────────────────────────────────────────────────────────────
+@app.route("/api/test-ai",methods=["GET"])
+def api_test_ai():
+    results={}
+    if gemini_client:
+        try:
+            r=gemini_client.models.generate_content(model=GEMINI_MODEL,contents="Say hello in one word")
+            results["gemini"]=f"OK: {r.text[:50]}"
+        except Exception as e: results["gemini"]=f"FAILED: {str(e)[:100]}"
+    else: results["gemini"]="No GEMINI_API_KEY"
+    results["hf_token"]="Present" if os.environ.get("HF_TOKEN") else "Not set"
+    return jsonify(results)
+
+# ── MAIN ROUTE ──
 @app.route("/")
 def index(): return render_template("index.html")
 
@@ -738,17 +671,17 @@ def process():
         try: history=json.loads(history_raw)
         except: history=[]
 
-        # Resolve image
         image_pil=None; new_file_uploaded=False
         if file and file.filename:
             try: image_pil=file_to_pil(file); new_file_uploaded=True
             except Exception as e: print(f"[Upload error] {e}")
 
         last_image_pil=decode_last_image(last_image_data) if last_image_data else None
+
+        # FIX: Use last image as working image if no new file uploaded
         if image_pil is None and last_image_pil is not None:
             image_pil=last_image_pil
 
-        # AI call — only send actual image to Gemini if new upload
         ai_image=image_pil if new_file_uploaded else None
         raw_reply,model_used=call_ai(history,prompt,ai_image)
         clean_reply,intent,params=extract_op(raw_reply)
@@ -759,24 +692,22 @@ def process():
             mr,mg,mb=arr[:,:,0].mean(),arr[:,:,1].mean(),arr[:,:,2].mean()
             gray=cv2.cvtColor(pil_to_cv2(image_pil),cv2.COLOR_BGR2GRAY)
             blur_score=cv2.Laplacian(gray,cv2.CV_64F).var()
-            clean_reply+=(f"\n\n**📊 Image Info:**\n**Size:** {w}×{h}px | **Pixels:** {w*h:,}\n"
-                          f"**Avg RGB:** ({mr:.0f},{mg:.0f},{mb:.0f})\n"
-                          f"**Sharpness:** {'Sharp' if blur_score>100 else 'Moderate' if blur_score>30 else 'Blurry'} ({blur_score:.1f})")
+            clean_reply+=(f"\n\n**📊 Image Info:**\n**Size:** {w}×{h}px\n**Avg RGB:** ({mr:.0f},{mg:.0f},{mb:.0f})\n"
+                          f"**Sharpness:** {'Sharp' if blur_score>100 else 'Blurry'} ({blur_score:.1f})")
         elif intent=='color_analysis' and image_pil:
             arr=np.array(image_pil); mr,mg,mb=arr[:,:,0].mean(),arr[:,:,1].mean(),arr[:,:,2].mean()
             hsv=cv2.cvtColor(pil_to_cv2(image_pil),cv2.COLOR_BGR2HSV)
             clean_reply+=(f"\n\n**🎨 Color Analysis:**\n**Avg RGB:** ({mr:.0f},{mg:.0f},{mb:.0f})\n"
-                          f"**Hue:** {hsv[:,:,0].mean()*2:.0f}° | **Sat:** {hsv[:,:,1].mean()/255*100:.0f}% | **Val:** {hsv[:,:,2].mean()/255*100:.0f}%\n"
                           f"**Dominant:** {'Red' if mr>mg and mr>mb else 'Green' if mg>mr and mg>mb else 'Blue'}")
         elif intent=='generate_image':
             gen_prompt=params.get('prompt','beautiful artwork, high quality, detailed')
-            print(f"[GEN] Generating: {gen_prompt}")
             result_img=generate_image_from_prompt(gen_prompt)
             if result_img:
                 result_b64=pil_to_base64(result_img)
                 if not clean_reply:
-                    clean_reply=f"✨ Here's your generated image: *\"{gen_prompt[:60]}{'...' if len(gen_prompt)>60 else ''}\"*"
+                    clean_reply=f"✨ Here's your generated image for: *\"{gen_prompt[:60]}\"*"
         elif intent and image_pil:
+            print(f"[OP] Applying '{intent}' to image {image_pil.size}")
             result_img=process_image(image_pil,intent,params or {})
             if result_img:
                 result_b64=pil_to_base64(result_img)
@@ -784,7 +715,6 @@ def process():
         elif intent and not image_pil and intent!='generate_image':
             clean_reply+="\n\n📎 Please upload an image first!"
 
-        # History update
         new_user_parts=[]
         if new_file_uploaded and image_pil:
             try:
@@ -795,7 +725,7 @@ def process():
         updated_history=list(history)+[{"role":"user","parts":new_user_parts},{"role":"model","parts":[clean_reply]}]
         if len(updated_history)>16: updated_history=updated_history[-16:]
 
-        # Maintain last_image
+        # FIX: Always return last_image so context is preserved
         new_last_image=result_b64 or (pil_to_base64(image_pil) if new_file_uploaded and image_pil else last_image_data or None)
 
         return jsonify({"message":clean_reply,"image":result_b64,"history":updated_history,"last_image":new_last_image,"model":model_used})
@@ -803,9 +733,9 @@ def process():
     except Exception as e:
         err=str(e); print(f"[ERROR] {err}")
         if "API_KEY_INVALID" in err or "API key not valid" in err:
-            msg="⚠️ Invalid API key. Check GEMINI_API_KEY in Settings → Secrets."
+            msg="⚠️ Invalid API key."
         elif is_rate_limit(err):
-            msg="⚠️ API rate limit hit. Please try again shortly."
+            msg="⚠️ API rate limit. Please try again shortly."
         else:
             msg=f"⚠️ Error: {err}"
         return jsonify({"message":msg}),200
