@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify, render_template, session
 import base64, io, os, re, json, time, hashlib, secrets, hmac
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps, ImageDraw, ImageFont
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail as SGMail
 import cv2
 from google import genai
 from google.genai import types
@@ -110,6 +112,34 @@ def validate_username(un: str) -> bool:
 
 def validate_email(email: str) -> bool:
     return bool(re.match(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$', email))
+
+
+def send_email_otp(to_email, otp):
+    api_key = os.environ.get("SENDGRID_API_KEY")
+    if not api_key:
+        raise Exception("SENDGRID_API_KEY not set")
+
+    message = SGMail(
+        from_email='your_verified_sender@example.com',  # IMPORTANT
+        to_emails=to_email,
+        subject='Your OTP Code',
+        html_content=f"""
+        <div style="font-family:Arial;padding:20px">
+            <h2>🔐 Password Reset OTP</h2>
+            <p>Your OTP code is:</p>
+            <h1 style="color:#4CAF50">{otp}</h1>
+            <p>This code expires in 5 minutes.</p>
+        </div>
+        """
+    )
+
+    try:
+        sg = SendGridAPIClient(api_key)
+        response = sg.send(message)
+        print("SendGrid response:", response.status_code)
+    except Exception as e:
+        print("SendGrid ERROR:", str(e))
+        raise
 
 
 # ─────────────────────────────────────────────────────────────
@@ -840,13 +870,7 @@ def send_otp():
     }
 
     try:
-        msg = Message(
-            subject="Your OTP Code",
-            sender=app.config['MAIL_USERNAME'],
-            recipients=[email]
-        )
-        msg.body = f"Your OTP is: {otp}"
-        mail.send(msg)
+        send_email_otp(email, otp)
     except Exception as e:
         return jsonify({"error": f"Email failed: {str(e)}"}), 500
 
