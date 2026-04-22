@@ -135,6 +135,18 @@ def is_rate_limit(err_str):
     s = err_str.lower()
     return "429" in err_str or "quota" in s or "rate" in s or "resource_exhausted" in s
 
+def check_guest_limit():
+    if "user" in session:
+        return True, None
+
+    count = session.get(GUEST_SESSION_KEY, 0)
+
+    if count >= GUEST_MSG_LIMIT:
+        return False, "⚠️ Guest limit reached. Please Sign In or Sign Up."
+
+    session[GUEST_SESSION_KEY] = count + 1
+    return True, None
+
 
 # ─────────────────────────────────────────────────────────────
 # GEMINI API CALL
@@ -207,7 +219,19 @@ def call_gemini_fast(history: list, user_text: str, image_pil=None) -> str:
 
 def is_description_request(p):
     """Check if user is asking to describe/analyze/explain the image"""
-    return bool(re.search(r'\b(describe|explain|analyz|what|tell|identify|caption|show|detail)\b', p))
+    return bool(re.search(rr'\b(describe|explain|analyz|identify|caption|detail)\b', p))
+
+def check_guest_limit():
+    if "user" in session:
+        return True, None
+
+    count = session.get(GUEST_SESSION_KEY, 0)
+
+    if count >= GUEST_MSG_LIMIT:
+        return False, "⚠️ Guest limit reached. Please Sign In or Sign Up."
+
+    session[GUEST_SESSION_KEY] = count + 1
+    return True, None
 
 
 # ─────────────────────────────────────────────────────────────
@@ -215,17 +239,12 @@ def is_description_request(p):
 # ─────────────────────────────────────────────────────────────
 
 def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
-    """
-    Primary: Try Gemini (Google AI - more reliable)
-    Fallback: Local intelligent reply (always works)
-    """
     if not user_text:
         user_text = "Hello!"
 
     p = user_text.lower().strip()
 
-    # 🔥 PRIORITY: DESCRIPTION REQUESTS WITH IMAGE
-    # If user is asking to describe/analyze the image, ALWAYS try Gemini first
+    # 🔥 STEP 1 — HARD PRIORITY: DESCRIPTION
     if image_pil and is_description_request(p):
         if gemini_client:
             try:
@@ -233,27 +252,30 @@ def call_ai(history: list, user_text: str, image_pil=None) -> tuple:
                 if reply and reply.strip():
                     return reply.strip(), "gemini"
             except Exception as e:
-                print(f"[Gemini FAILED] {type(e).__name__}: {str(e)[:200]}")
-        
-        # 🔥 FALLBACK: Detailed local description if Gemini fails
+                print(f"[Gemini FAILED - Description] {e}")
+
+        # FORCE fallback (no free_reply interference)
         return detailed_local_description(image_pil), "local"
 
-    # ──── TRY GEMINI FOR ALL OTHER REQUESTS ────
+    # 🔥 STEP 2 — OPERATIONS FIRST (avoid Gemini hijack)
+    op = detect_op(p)
+    if op:
+        return op, "local"
+
+    # 🔥 STEP 3 — NORMAL GEMINI
     if gemini_client:
         try:
             reply = call_gemini_fast(history, user_text, image_pil)
             if reply and reply.strip():
                 return reply.strip(), "gemini"
         except Exception as e:
-            print(f"[Gemini FAILED] {type(e).__name__}: {str(e)[:200]}")
+            print(f"[Gemini FAILED] {e}")
 
-    # ──── FALLBACK TO LOCAL ────
-    op = detect_op(p)
-    if op:
-        return op, "local"
+    # 🔥 STEP 4 — FINAL FALLBACK (OLD FILE LOGIC)
+    if image_pil:
+        return detailed_local_description(image_pil), "local"
 
-    reply = free_reply(user_text, image_pil is not None, image_pil)
-    return reply or "✨ Upload an image or ask me anything!", "local"
+    return free_reply(user_text, False, None), "local"
 
 
 # ─────────────────────────────────────────────────────────────
