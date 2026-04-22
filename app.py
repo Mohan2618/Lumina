@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 import math
 import anthropic
 import threading
+from flask_mail import Mail, Message
+import random
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
@@ -814,6 +816,68 @@ def api_validate_email():
 @app.route("/api/auth/validate-username", methods=["POST"])
 def api_validate_username():
     return jsonify({"valid":validate_username((request.json or {}).get("username",""))})
+
+    
+# ─────────────────────────────────────────────────────────────
+# OTP SYSTEM
+# ─────────────────────────────────────────────────────────────
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'your_email@gmail.com'
+app.config['MAIL_PASSWORD'] = 'your_app_password'
+
+mail = Mail(app)
+
+otp_store = {}  # temporary storage
+
+@app.route("/api/auth/send-otp", methods=["POST"])
+def send_otp():
+    data = request.json or {}
+    email = data.get("email")
+
+    if not email:
+        return jsonify({"error": "Email required"}), 400
+
+    otp = str(random.randint(100000, 999999))
+
+    otp_store[email] = {
+        "otp": otp,
+        "expiry": time.time() + 300
+    }
+
+    try:
+        msg = Message(
+            subject="Your OTP Code",
+            sender=app.config['MAIL_USERNAME'],
+            recipients=[email]
+        )
+        msg.body = f"Your OTP is: {otp}"
+        mail.send(msg)
+    except Exception as e:
+        return jsonify({"error": f"Email failed: {str(e)}"}), 500
+
+    return jsonify({"success": True})
+
+
+@app.route("/api/auth/verify-otp", methods=["POST"])
+def verify_otp():
+    data = request.json or {}
+    email = data.get("email")
+    otp = data.get("otp")
+
+    record = otp_store.get(email)
+
+    if not record:
+        return jsonify({"error": "No OTP found"}), 400
+
+    if time.time() > record["expiry"]:
+        return jsonify({"error": "OTP expired"}), 400
+
+    if record["otp"] != otp:
+        return jsonify({"error": "Invalid OTP"}), 400
+
+    return jsonify({"success": True})
 
 
 # ─────────────────────────────────────────────────────────────
