@@ -219,7 +219,7 @@ def call_gemini_fast(history: list, user_text: str, image_pil=None) -> str:
 
 def is_description_request(p):
     """Check if user is asking to describe/analyze/explain the image"""
-    return bool(re.search(rr'\b(describe|explain|analyz|identify|caption|detail)\b', p))
+    return bool(re.search(r'\b(describe|explain|analyz|identify|caption|detail)\b', p))
 
 def check_guest_limit():
     if "user" in session:
