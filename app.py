@@ -3,7 +3,7 @@ import base64, io, os, re, json, time, hashlib, secrets, hmac
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps, ImageDraw, ImageFont
 import cv2
-import google.generativeai as genai
+import google import genai
 from google.genai import types
 from datetime import datetime
 import anthropic
