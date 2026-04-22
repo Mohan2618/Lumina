@@ -119,16 +119,22 @@ def call_gemini(history, user_text, image_pil=None):
 
 def call_ai(history, user_text, image_pil=None):
     if not user_text: user_text="Hello!"
+    # FIX: Try Gemini first for full AI responses with descriptions
     if gemini_client:
         try:
             reply=call_gemini(history,user_text,image_pil)
-            if reply and reply.strip(): return reply.strip(),"gemini"
+            if reply and reply.strip(): 
+                return reply.strip(),"gemini"
         except Exception as e:
             print(f"[Gemini FAILED] {type(e).__name__}: {str(e)[:200]}")
-    # FIX: In local mode, ALWAYS try detect_op first so operations work without API key
+    
+    # FIX: Fallback to local operation detection
     p=user_text.lower().strip()
-    op=detect_op(p)
-    if op: return op,"local"
+    op_response=detect_op(p)
+    if op_response: 
+        return op_response,"local"
+    
+    # FIX: If no operation detected, provide helpful response
     reply=free_reply(user_text,image_pil is not None,image_pil)
     return reply or "✨ Upload an image or ask me anything!","local"
 
@@ -197,7 +203,7 @@ def free_reply(prompt,has_image,img=None):
     for pat,rep in replies.items():
         if re.search(pat,p): return rep
     if p: return f"I'm Lumina, your AI image assistant. *Add GEMINI_API_KEY* for full answers!\n\n**I can:** 🖼️ Apply filters | 🤖 Generate images | 🏥 Medical analysis"
-    return "Upload an image or ask me to generate one!"
+    return "Upload an image or ask me anything!"
 
 def detect_op(p):
     if not p: return None
