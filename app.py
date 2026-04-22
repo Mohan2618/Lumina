@@ -362,7 +362,15 @@ def free_reply(prompt, has_image, img=None):
         return detailed_local_description(img)
     
     if re.search(r'who (created|made|built|developed) you|your creator', p):
-        return "I'm **Lumina**, created by:\n1. **Mohan Lingabathina**\n2. **Hevendra Bage**\n3. **Sowrya**\n4. **Karthikeya**\n\nBuilt on HuggingFace Spaces! 😊"
+    return (
+        "👨‍💻 **Created by the Lumina Team**\n\n"
+        "• Mohan Lingabathina\n"
+        "• Hevendra Bage\n"
+        "• Sowrya\n"
+        "• Karthikeya\n\n"
+        "They built Lumina to help with AI-powered image processing, analysis, and generation.\n\n"
+        "✨ Continuously evolving."
+    )
     if re.search(r'who are you|what are you', p):
         return "I'm **Lumina** — an AI image processing assistant!"
     
