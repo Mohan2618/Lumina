@@ -118,7 +118,7 @@ def send_email_otp(to_email, otp):
     api_key = os.environ.get("SENDGRID_API_KEY")
 
     message = SGMail(
-        from_email='your_verified_sender@example.com',
+        from_email='mohanlingabathina8@gmail.com',
         to_emails=to_email,
         subject='Your OTP Code',
         html_content=f"<h1>{otp}</h1>"
