@@ -1409,12 +1409,12 @@ window.sendOTP = function(){
     const firstDigit=document.querySelector('.otp-digit');
     if(firstDigit) setTimeout(()=>firstDigit.focus(),100);
     startOtpTimer();
-  },1500);
+  },3500);
 };
 
 function startOtpTimer(){
   if(otpTimerInt) clearInterval(otpTimerInt);
-  let secs=60;
+  let secs=120;
   const timerEl=document.getElementById('otpTimer');
   const cdEl=document.getElementById('otpCountdown');
   
@@ -1433,7 +1433,7 @@ function startOtpTimer(){
         timerEl2.innerHTML='OTP expired. <button onclick="resendOTP()" style="background:none;border:none;color:#41e1ae;cursor:pointer;text-decoration:underline;font-size:12px;">Resend OTP</button>';
       }
     }
-  },1000);
+  },3000);
 }
 
 // FIX: Resend OTP function
