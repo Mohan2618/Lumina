@@ -853,6 +853,7 @@ otp_store = {}  # temporary storage
 def send_otp():
     data = request.json or {}
     email = data.get("email")
+    print("SENDGRID KEY:", os.environ.get("SENDGRID_API_KEY"))
 
     if not email:
         return jsonify({"error": "Email required"}), 400
