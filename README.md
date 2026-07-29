@@ -7,6 +7,12 @@ sdk: docker
 pinned: false
 ---
 
+## Links
+
+**Live Demo:** https://huggingface.co/spaces/mohan18m/Luminus
+
+**Source Code:** https://github.com/Mohan2618/Lumina
+
 # Lumina - AI-Powered Image Processing Chatbot
 
 ## Overview
