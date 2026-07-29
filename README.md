@@ -1,3 +1,12 @@
+---
+title: Lumina
+emoji: 🖼️
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+---
+
 # Lumina - AI-Powered Image Processing Chatbot
 
 ## Overview
