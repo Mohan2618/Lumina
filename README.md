@@ -213,9 +213,9 @@ This project demonstrates practical experience in:
 
 **Mohan Lingabathina**
 
-GitHub: https://github.com/your-username
+GitHub: https://github.com/Mohan2618/Lumina
 
-Hugging Face: https://huggingface.co/mohan18m
+Hugging Face: https://huggingface.co/spaces/mohan18m/Luminus
 
 ---
 
