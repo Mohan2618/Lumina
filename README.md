@@ -149,7 +149,7 @@ Never commit real API keys, database connection strings, passwords, or other cre
 
 ### Persistent Authentication Database
 
-**Important:** accounts created in the old Render-hosted SQLite database are not automatically migrated into the new PostgreSQL database. After configuring `DATABASE_URL`, create/test an account in the new database (or perform a deliberate data migration) before testing password reset.
+**Important:** accounts created in the old Render-hosted SQLite database are not automatically migrated into the new PostgreSQL database. After configuring `DATABASE_URL`, create/test an account in the new database (or perform a deliberate data migration) before testing password reset. The PostgreSQL authentication layer uses a database cursor for each query so result fetching works correctly with both user and OTP operations.
 
 Lumina uses **PostgreSQL in production** when the `DATABASE_URL` environment variable is configured. This keeps user accounts, password hashes, and password-reset OTP records persistent across Render deployments and restarts. SQLite remains the local-development fallback when `DATABASE_URL` is not set.
 
