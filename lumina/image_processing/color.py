@@ -1,11 +1,11 @@
-import numpy as np
-from PIL import Image, ImageEnhance, ImageOps
+import os
 import cv2
-
+import numpy as np
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps, ImageDraw, ImageFont
 from ..utils.image import pil_to_cv2, cv2_to_pil
 
 def contrast(img, params):
-
+    return ImageEnhance.Contrast(img).enhance(float(params.get('factor',1.6)))
 
 def brightness(img, params):
     factor=float(params.get('factor',1.4))
@@ -14,7 +14,7 @@ def brightness(img, params):
     return Image.fromarray(arr.astype(np.uint8))
 
 def saturation(img, params):
-
+    return ImageEnhance.Color(img).enhance(float(params.get('factor',1.5)))
 
 def hue(img, params):
     cv_img=pil_to_cv2(img)
