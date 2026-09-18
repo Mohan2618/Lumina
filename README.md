@@ -23,6 +23,12 @@ The application is developed using Flask and OpenCV and integrates Google Gemini
 
 ---
 
+## User-Facing Branding
+
+Lumina presents a consistent **Lumina AI** identity throughout the application. User-facing status messages, notifications, assistant responses, and service errors do not expose the names of underlying AI models or providers. Internal provider integrations remain implementation details and do not change the Lumina user experience.
+
+---
+
 ## Features
 
 - AI-powered conversational image assistant
