@@ -33,9 +33,14 @@ def check_guest_limit():
         return True, None
 
     count = session.get(GUEST_SESSION_KEY, 0)
-
     if count >= GUEST_MSG_LIMIT:
         return False, "⚠️ Guest limit reached. Please Sign In or Sign Up."
-
-    session[GUEST_SESSION_KEY] = count + 1
     return True, None
+
+
+def consume_guest_limit():
+    if "user" in session:
+        return
+
+    count = session.get(GUEST_SESSION_KEY, 0)
+    session[GUEST_SESSION_KEY] = count + 1
