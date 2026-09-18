@@ -94,7 +94,7 @@ body {
 /* ── BOTTOM TOOLS ── */
 .bottom-tools{position:fixed;bottom:22px;right:22px;display:flex;gap:12px;padding:10px 16px;background:var(--glass);backdrop-filter:blur(14px);border-radius:50px;border:1px solid rgba(255,255,255,0.2);}
 .bottom-tools button{background:transparent;border:none;cursor:pointer;color:white;display:flex;align-items:center;justify-content:center;border-radius:50%;width:36px;height:36px;transition:background 0.15s;position:relative;}
-.bottom-tools button:hover{background:rgba(255,255,255,0.15);}
+.bottom-tools button:hover{background:rgba(255,255,255,0.15);}.bottom-tools button:disabled{opacity:.35;cursor:not-allowed;}.bottom-tools button:disabled:hover{background:transparent;}
 .bottom-tools .material-icons{font-size:22px;}
 .tool-badge{position:absolute;top:-4px;right:-4px;background:#ff6b6b;color:white;border-radius:50%;width:16px;height:16px;font-size:10px;display:none;align-items:center;justify-content:center;font-weight:700;}
 /* ── TYPING ── */
@@ -259,6 +259,8 @@ body.dragging-over{outline:4px dashed rgba(255,255,255,0.6);}
     <span class="material-icons">photo_library</span>
     <span class="tool-badge" id="galleryBadge"></span>
   </button>
+  <button onclick="undoImage()" id="undoBtn" title="Undo Edit" disabled><span class="material-icons">undo</span></button>
+  <button onclick="redoImage()" id="redoBtn" title="Redo Edit" disabled><span class="material-icons">redo</span></button>
   <button onclick="openOpsPanel()" title="Operations"><span class="material-icons">auto_awesome</span></button>
 </div>
 
@@ -551,6 +553,8 @@ let otpTargetUser=null; // FIX: store the user object for OTP flow
 let currentUser=null;
 let lastImageB64=null;
 let savedImages=[];
+let imageEditHistory=[], imageEditIndex=-1;
+const MAX_IMAGE_HISTORY=20;
 // FIX: Store full user object when saved account is clicked — for instant login
 let _quickLoginUser = null;
 
@@ -576,6 +580,49 @@ window.handlePromptKeydown = function(e) {
 };
 
 // ── TOAST ──────────────────────────────────────────────────
+function updateImageHistoryButtons(){
+  const undo=document.getElementById('undoBtn'), redo=document.getElementById('redoBtn');
+  if(undo) undo.disabled=imageEditIndex<=0;
+  if(redo) redo.disabled=imageEditIndex<0 || imageEditIndex>=imageEditHistory.length-1;
+}
+function resetImageHistory(src=null){
+  imageEditHistory=src?[src]:[];
+  imageEditIndex=src?0:-1;
+  updateImageHistoryButtons();
+}
+function pushImageHistory(src){
+  if(!src)return;
+  if(imageEditIndex<imageEditHistory.length-1){
+    imageEditHistory=imageEditHistory.slice(0,imageEditIndex+1);
+  }
+  if(imageEditHistory[imageEditHistory.length-1]!==src){
+    imageEditHistory.push(src);
+    if(imageEditHistory.length>MAX_IMAGE_HISTORY) imageEditHistory.shift();
+    imageEditIndex=imageEditHistory.length-1;
+  }
+  updateImageHistoryButtons();
+}
+function applyHistoryImage(src){
+  if(!src)return;
+  lastImageB64=src;
+  attachedFiles=[src];
+  renderPreviews();
+  openLightbox(src);
+  updateImageHistoryButtons();
+}
+window.undoImage=function(){
+  if(imageEditIndex<=0){toast('Nothing to undo.');return;}
+  imageEditIndex--;
+  applyHistoryImage(imageEditHistory[imageEditIndex]);
+  toast('↩️ Lumina reverted the image.');
+};
+window.redoImage=function(){
+  if(imageEditIndex<0 || imageEditIndex>=imageEditHistory.length-1){toast('Nothing to redo.');return;}
+  imageEditIndex++;
+  applyHistoryImage(imageEditHistory[imageEditIndex]);
+  toast('↪️ Lumina restored the edit.');
+}
+
 function toast(msg,dur=2500){
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
@@ -827,6 +874,14 @@ window.sendMessage = async function(){
     else if(filesToSend.length>0 && !lastImageB64){ lastImageB64=filesToSend[0]; }
     const resultImg=data.image||null;
     const modelUsed=data.model||'';
+    if(resultImg){
+      if(imageEditIndex<0){
+        pushImageHistory(filesToSend[0]||lastImageB64||null);
+      } else if(imageEditHistory[imageEditIndex]!==lastImageB64 && lastImageB64){
+        pushImageHistory(lastImageB64);
+      }
+      pushImageHistory(resultImg);
+    }
     if(data.message) addBotMsg(formatReply(data.message),true,resultImg,modelUsed);
     else if(resultImg) addBotMsg('Here is your processed image:',false,resultImg,modelUsed);
     if(!currentChatTitle&&promptText){
@@ -866,6 +921,7 @@ window.newChat = function(){
   document.getElementById('homeSubtitle').style.display='block';
   chatStarted=false; attachedFiles=[]; conversationHistory=[];
   currentChatTitle=null; currentChatKey=null; lastImageB64=null;
+  resetImageHistory();
   const input=document.getElementById('promptInput'); input.value=''; input.style.height='auto';
   renderPreviews();
   document.getElementById('profileMenu').style.display='none';
@@ -952,6 +1008,7 @@ function loadChat(key){
     document.getElementById('chatArea').innerHTML=data.html||'';
     conversationHistory=data.history||[];
     currentChatTitle=data.title||null; currentChatKey=key; lastImageB64=null;
+    resetImageHistory();
     document.querySelectorAll('.msg-attach-img').forEach(img=>{
       if(img.src&&img.src.length>10){
         const src=img.src; img.onclick=null;
