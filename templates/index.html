@@ -1393,7 +1393,7 @@ window.sendOTP = async function(){
     const r=await fetch('/api/auth/send-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
     const d=await r.json();
     if(!r.ok){showForgotAlert(d.error||'Unable to send OTP.');return;}
-    otpTargetUser={email};
+    otpTargetUser={email:d.email||id};
     showForgotAlert('OTP sent to your email.','success');
     setTimeout(()=>{
       document.getElementById('forgotStep1').style.display='none';
