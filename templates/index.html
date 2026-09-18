@@ -456,7 +456,7 @@ body.dragging-over{outline:4px dashed rgba(255,255,255,0.6);}
     <div id="forgotStep1">
       <div style="display:flex;flex-direction:column;gap:12px;">
         <input class="modal-input" id="forgotEmail" placeholder="Enter your email or username">
-        <button class="modal-btn-primary" onclick="sendOTP()">Send OTP</button>
+        <button type="button" class="modal-btn-primary" id="sendOtpBtn">Send OTP</button>
       </div>
     </div>
     <div id="forgotStep2" style="display:none;flex-direction:column;gap:12px;">
@@ -1406,6 +1406,13 @@ window.sendOTP = async function(){
     },800);
   }catch(e){showForgotAlert('Server error. Please try again.');}
 };
+const sendOtpBtn = document.getElementById('sendOtpBtn');
+if(sendOtpBtn){
+  sendOtpBtn.addEventListener('click', function(){
+    sendOTP();
+  });
+}
+
 function startOtpTimer(){
   if(otpTimerInt) clearInterval(otpTimerInt);
   let secs=120;
