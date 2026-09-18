@@ -6,7 +6,7 @@ from google import genai
 from datetime import datetime, timedelta
 import anthropic
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="../templates", static_folder="../static")
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 app.config['MAX_FORM_MEMORY_SIZE'] = 100 * 1024 * 1024
 app.config['MAX_FORM_PARTS'] = 1000
