@@ -131,6 +131,10 @@ def register_routes(app):
             last_image_data=request.form.get("last_image","")
             try: history=json.loads(history_raw)
             except: history=[]
+
+            allowed, guest_error = check_guest_limit()
+            if not allowed:
+                return jsonify({"message": guest_error}), 429
     
             image_pil=None; new_file_uploaded=False
             if file and file.filename:
