@@ -33,7 +33,9 @@ def _connect():
 def _execute(conn, query, params=()):
     if _is_postgres():
         query = query.replace("?", "%s")
-        return conn.cursor().execute(query, params)
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        return cursor
     return conn.execute(query, params)
 
 
