@@ -149,6 +149,8 @@ Never commit real API keys, database connection strings, passwords, or other cre
 
 ### Persistent Authentication Database
 
+**Important:** accounts created in the old Render-hosted SQLite database are not automatically migrated into the new PostgreSQL database. After configuring `DATABASE_URL`, create/test an account in the new database (or perform a deliberate data migration) before testing password reset.
+
 Lumina uses **PostgreSQL in production** when the `DATABASE_URL` environment variable is configured. This keeps user accounts, password hashes, and password-reset OTP records persistent across Render deployments and restarts. SQLite remains the local-development fallback when `DATABASE_URL` is not set.
 
 For a hosted deployment, create a PostgreSQL database (for example, through Supabase), copy its PostgreSQL connection string into Render as `DATABASE_URL`, and redeploy. The application automatically creates the required `users` and `otps` tables on startup; no manual SQL setup is required.
@@ -204,7 +206,7 @@ https://lumina-fbhi.onrender.com
 
 ## Future Enhancements
 
-- User authentication improvements
+- Additional authentication hardening
 - Image history management
 - Batch image processing
 - Additional AI image generation models
