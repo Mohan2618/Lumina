@@ -148,7 +148,7 @@ def detailed_local_description(img):
     if edges.mean() > 10:
         desc.append("Visible structured patterns and boundaries suggest defined objects or regions.")
     
-    desc.append("\n⚠️ This is limited local analysis. Add GEMINI_API_KEY for full AI-powered interpretation.")
+    desc.append("\n⚠️ This is limited local analysis. Lumina AI can provide richer interpretation when available.")
     
     return "\n".join(desc)
 
@@ -275,11 +275,23 @@ def detect_op(p):
     return None
 
 def extract_op(reply):
-    if not reply: return "", None, {}
+    if not reply:
+        return "", None, {}
+    pipeline = re.search(r'<PIPELINE>(.*?)</PIPELINE>', reply, re.DOTALL)
+    if pipeline:
+        clean = (reply[:pipeline.start()] + reply[pipeline.end():]).strip()
+        try:
+            steps = json.loads(pipeline.group(1))
+            if isinstance(steps, list):
+                return clean, "pipeline", {"steps": steps[:8]}
+        except Exception:
+            pass
     match = re.search(r'<OP>(.*?)</OP>', reply, re.DOTALL)
-    if not match: return reply, None, {}
+    if not match:
+        return reply, None, {}
     clean = reply[:match.start()].strip()
     try:
         d = json.loads(match.group(1))
         return clean, d.get("intent"), d.get("params", {})
-    except: return clean, None, {}
+    except Exception:
+        return clean, None, {}
