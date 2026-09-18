@@ -140,21 +140,21 @@ def register_routes(app):
     
     @app.route("/health", methods=["GET"])
     def health():
-        return jsonify({"status": "ok", "gemini": bool(gemini_client), "huggingface": bool(os.environ.get("HF_TOKEN"))})
+        return jsonify({"status": "ok", "ai": bool(gemini_client or claude_client), "huggingface": bool(os.environ.get("HF_TOKEN"))})
 
     @app.route("/api/status", methods=["GET"])
     def api_status():
-        return jsonify({"gemini":bool(gemini_client),"claude":bool(claude_client),"local":True})
+        return jsonify({"ai":bool(gemini_client or claude_client),"local":True})
     
     @app.route("/api/test-ai", methods=["GET"])
     def api_test_ai():
         results={}
-        if gemini_client:
+        if gemini_client or claude_client:
             try:
                 r=gemini_client.models.generate_content(model=GEMINI_MODEL,contents="Say hello in one word")
-                results["gemini"]=f"OK: {r.text[:50]}"
-            except Exception as e: results["gemini"]=f"FAILED: {str(e)[:100]}"
-        else: results["gemini"]="No GEMINI_API_KEY"
+                results["lumina_ai"]="Connected"
+            except Exception: results["lumina_ai"]="Temporarily unavailable"
+        else: results["lumina_ai"]="Unavailable"
         results["hf_token"]="Present" if os.environ.get("HF_TOKEN") else "Not set"
         return jsonify(results)
     
