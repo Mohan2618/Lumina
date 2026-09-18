@@ -191,6 +191,8 @@ https://lumina-fbhi.onrender.com
 6. For password reset, Lumina generates a one-time OTP, stores it in the configured authentication database, and sends it through the Brevo HTTPS API.
 7. In production, PostgreSQL keeps user accounts and OTP records persistent across Render restarts and deployments.
 
+**Forgot-password UI:** The Send OTP control uses an explicit JavaScript click listener instead of relying on the inline `onclick` handler, while keeping the existing `sendOTP()` request flow unchanged.
+
 ---
 
 ## Applications
