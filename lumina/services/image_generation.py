@@ -13,6 +13,7 @@ def generate_image_from_prompt(prompt: str):
             width=1024, height=1024, num_inference_steps=4, guidance_scale=3.5)
         return img
     except Exception as e:
+        print(f"[FLUX ERROR] {type(e).__name__}: {str(e)[:300]}")
         return create_placeholder(prompt, "Generation busy. Try again shortly.")
 
 def create_placeholder(prompt, status):
