@@ -5,7 +5,7 @@ import cv2
 from PIL import Image
 from .core import app, GEMINI_MODEL, GEMINI_TIMEOUT, SYSTEM_PROMPT, gemini_client, claude_client
 from .utils.auth import hash_password, verify_password, validate_password_strength, validate_username, validate_email
-from .utils.image import pil_to_base64, file_to_pil, pil_to_bytes, pil_to_cv2, is_rate_limit, check_guest_limit
+from .utils.image import pil_to_base64, file_to_pil, pil_to_bytes, pil_to_cv2, is_rate_limit, check_guest_limit, consume_guest_limit
 from .services.email_service import send_email_otp
 from .services.image_generation import generate_image_from_prompt
 from .services.ai_service import call_ai, extract_op
@@ -53,8 +53,6 @@ def register_routes(app):
     def send_otp():
         data = request.json or {}
         email = data.get("email")
-        print("SENDGRID KEY:", os.environ.get("SENDGRID_API_KEY"))
-    
         if not email:
             return jsonify({"error": "Email required"}), 400
     
@@ -196,6 +194,7 @@ def register_routes(app):
     
             new_last_image=result_b64 or (pil_to_base64(image_pil) if new_file_uploaded and image_pil else last_image_data or None)
     
+            consume_guest_limit()
             return jsonify({"message":clean_reply,"image":result_b64,"history":updated_history,"last_image":new_last_image,"model":model_used})
     
         except Exception as e:
