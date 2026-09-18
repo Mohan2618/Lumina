@@ -1,14 +1,14 @@
-import numpy as np
-from PIL import Image, ImageFilter, ImageOps, ImageEnhance
+import os
 import cv2
-
+import numpy as np
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps, ImageDraw, ImageFont
 from ..utils.image import pil_to_cv2, cv2_to_pil
 
 def grayscale(img, params):
-
+    return ImageOps.grayscale(img).convert("RGB")
 
 def invert(img, params):
-
+    return ImageOps.invert(img)
 
 def sepia(img, params):
     gray=np.array(ImageOps.grayscale(img),dtype=np.float32)
@@ -24,7 +24,7 @@ def edge(img, params):
     return ImageEnhance.Contrast(ImageOps.grayscale(img).filter(ImageFilter.FIND_EDGES)).enhance(3.0).convert("RGB")
 
 def emboss(img, params):
-
+    return img.filter(ImageFilter.EMBOSS).convert("RGB")
 
 def sketch(img, params):
     gray=cv2.cvtColor(pil_to_cv2(img),cv2.COLOR_BGR2GRAY)
