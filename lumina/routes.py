@@ -7,7 +7,7 @@ from .core import app, GEMINI_MODEL, GEMINI_TIMEOUT, SYSTEM_PROMPT, gemini_clien
 from .utils.auth import hash_password, verify_password, validate_password_strength, validate_username, validate_email
 from .utils.image import pil_to_base64, file_to_pil, pil_to_bytes, pil_to_cv2, is_rate_limit, check_guest_limit, consume_guest_limit
 from .services.email_service import send_email_otp
-from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp
+from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp, update_password, otp_can_send
 from .services.image_generation import generate_image_from_prompt
 from .services.ai_service import call_ai, extract_op
 from .image_processing.processor import process_image
@@ -73,6 +73,25 @@ def register_routes(app):
         session.pop("user",None)
         return jsonify({"success":True})
 
+    @app.route("/api/auth/reset-password", methods=["POST"])
+    def reset_password():
+        data=request.json or {}
+        email=str(data.get("email","")).strip().lower()
+        code=str(data.get("otp","")).strip()
+        new_password=data.get("password","")
+        if not email or not code or not new_password:
+            return jsonify({"error":"Email, OTP and password are required"}),400
+        strength=validate_password_strength(new_password)
+        if not strength["valid"]:
+            return jsonify({"error":"Weak password","details":strength["errors"]}),400
+        ok,error=verify_otp(email,code)
+        if not ok:
+            return jsonify({"error":error}),400
+        salt,hashed=hash_password(new_password)
+        if not update_password(email,salt,hashed):
+            return jsonify({"error":"Account not found"}),404
+        return jsonify({"success":True})
+
     @app.route("/api/auth/validate-email", methods=["POST"])
     def api_validate_email():
         return jsonify({"valid":validate_email((request.json or {}).get("email",""))})
@@ -88,6 +107,7 @@ def register_routes(app):
         data=request.json or {}; email=str(data.get("email","")).strip().lower()
         if not email or not validate_email(email): return jsonify({"error":"Valid email required"}),400
         if not get_user(email): return jsonify({"error":"No account found"}),404
+        if not otp_can_send(email): return jsonify({"error":"Please wait before requesting another OTP"}),429
         code=str(secrets.randbelow(900000)+100000)
         save_otp(email,code)
         try: send_email_otp(email,code)
