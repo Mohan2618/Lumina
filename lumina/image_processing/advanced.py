@@ -1,7 +1,7 @@
-import numpy as np
-from PIL import Image, ImageFilter
+import os
 import cv2
-
+import numpy as np
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps, ImageDraw, ImageFont
 from ..utils.image import pil_to_cv2, cv2_to_pil
 
 def pixelate(img, params):
