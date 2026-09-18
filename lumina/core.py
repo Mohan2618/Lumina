@@ -1,17 +1,10 @@
-from flask import Flask, request, jsonify, render_template, session
-import base64, io, os, re, json, time, hashlib, secrets, hmac
+from flask import Flask
+import os, secrets
 import numpy as np
-from PIL import Image, ImageEnhance, ImageFilter, ImageOps, ImageDraw, ImageFont
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail as SGMail
-import cv2
+from PIL import Image
 from google import genai
-from google.genai import types
 from datetime import datetime, timedelta
-import math
 import anthropic
-import threading
-import random
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
@@ -88,92 +81,9 @@ Rules:
 # AUTH HELPERS
 # ─────────────────────────────────────────────────────────────
 
-def hash_password(password: str, salt: str = None) -> tuple:
-    if salt is None:
-        salt = secrets.token_hex(16)
-    dk = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 310000)
-    return salt, dk.hex()
-
-def verify_password(password: str, salt: str, stored_hash: str) -> bool:
-    _, computed = hash_password(password, salt)
-    return hmac.compare_digest(computed, stored_hash)
-
-def validate_password_strength(pw: str) -> dict:
-    errors = []
-    if len(pw) < 8: errors.append("At least 8 characters")
-    if not re.search(r'[A-Z]', pw): errors.append("One uppercase letter")
-    if not re.search(r'[a-z]', pw): errors.append("One lowercase letter")
-    if not re.search(r'\d', pw): errors.append("One number")
-    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', pw): errors.append("One special character")
-    return {"valid": len(errors)==0, "errors": errors}
-
-def validate_username(un: str) -> bool:
-    return bool(re.match(r'^[a-zA-Z0-9_]{3,20}$', un))
-
-def validate_email(email: str) -> bool:
-    return bool(re.match(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$', email))
-
-
-def send_email_otp(to_email, otp):
-    api_key = os.environ.get("SENDGRID_API_KEY")
-
-    message = SGMail(
-        from_email='mohanlingabathina8@gmail.com',
-        to_emails=to_email,
-        subject='Your OTP Code',
-        html_content=f"<h1>{otp}</h1>"
-    )
-
-    try:
-        sg = SendGridAPIClient(api_key)
-        response = sg.send(message)
-
-        print("STATUS:", response.status_code)
-        print("BODY:", response.body)
-        print("HEADERS:", response.headers)
-
-    except Exception as e:
-        print("SENDGRID ERROR:", str(e))
-        raise
-
-
 # ─────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────
-
-def pil_to_base64(img):
-    buf = io.BytesIO(); img.save(buf, format="PNG")
-    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
-
-def file_to_pil(file):
-    return Image.open(file.stream).convert("RGB")
-
-def pil_to_cv2(img):
-    return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-
-def cv2_to_pil(arr):
-    return Image.fromarray(cv2.cvtColor(arr, cv2.COLOR_BGR2RGB))
-
-def pil_to_bytes(img, quality=85):
-    buf = io.BytesIO(); img.save(buf, format="JPEG", quality=quality)
-    return buf.getvalue()
-
-def is_rate_limit(err_str):
-    s = err_str.lower()
-    return "429" in err_str or "quota" in s or "rate" in s or "resource_exhausted" in s
-
-def check_guest_limit():
-    if "user" in session:
-        return True, None
-
-    count = session.get(GUEST_SESSION_KEY, 0)
-
-    if count >= GUEST_MSG_LIMIT:
-        return False, "⚠️ Guest limit reached. Please Sign In or Sign Up."
-
-    session[GUEST_SESSION_KEY] = count + 1
-    return True, None
-
 
 # ─────────────────────────────────────────────────────────────
 # GEMINI API CALL
@@ -191,36 +101,6 @@ def check_guest_limit():
 # IMAGE GENERATION
 # ─────────────────────────────────────────────────────────────
 
-def generate_image_from_prompt(prompt: str):
-    hf_token = os.environ.get("HF_TOKEN")
-    if not hf_token:
-        return create_placeholder(prompt, "Add HF_TOKEN secret to enable generation")
-    try:
-        from huggingface_hub import InferenceClient
-        img = InferenceClient(token=hf_token).text_to_image(
-            prompt=prompt, model="black-forest-labs/FLUX.1-schnell",
-            width=1024, height=1024, num_inference_steps=4, guidance_scale=3.5)
-        return img
-    except Exception as e:
-        return create_placeholder(prompt, "Generation busy. Try again shortly.")
-
-def create_placeholder(prompt, status):
-    w, h = 1024, 1024
-    arr = np.zeros((h, w, 3), dtype=np.uint8)
-    for y in range(h): r = y/h; arr[y, :] = [int(20+100*r), int(80+140*r), int(220-100*r)]
-    img = Image.fromarray(arr); draw = ImageDraw.Draw(img)
-    try:
-        fl = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 48)
-        fm = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 28)
-        fs = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 22)
-    except: fl = fm = fs = ImageFont.load_default()
-    draw.text((w//2, h//2-150), "✨ Lumina", fill=(255, 255, 255), anchor="mm", font=fl)
-    draw.text((w//2, h//2-70), f'"{prompt[:60]}"', fill=(220, 240, 255), anchor="mm", font=fm)
-    draw.text((w//2, h//2+50), "Flux.1 Schnell", fill=(180, 255, 200), anchor="mm", font=fs)
-    draw.text((w//2, h//2+100), status, fill=(255, 220, 180), anchor="mm", font=fs)
-    return img
-
-
 # ─────────────────────────────────────────────────────────────
 # DETAILED LOCAL IMAGE DESCRIPTION (FALLBACK)
 # ─────────────────────────────────────────────────────────────
@@ -234,4 +114,10 @@ def create_placeholder(prompt, status):
 # ─────────────────────────────────────────────────────────────
 
 
+from .image_processing.processor import process_image
+
+from .utils.auth import hash_password, verify_password, validate_password_strength, validate_username, validate_email
+from .utils.image import pil_to_base64, file_to_pil, pil_to_cv2, cv2_to_pil, pil_to_bytes, is_rate_limit, check_guest_limit
+from .services.email_service import send_email_otp
+from .services.image_generation import generate_image_from_prompt, create_placeholder
 from .image_processing.processor import process_image
