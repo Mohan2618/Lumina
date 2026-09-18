@@ -95,6 +95,10 @@ def register_routes(app):
     # STATUS & TEST
     # ─────────────────────────────────────────────────────────────
     
+    @app.route("/health", methods=["GET"])
+    def health():
+        return jsonify({"status": "ok", "gemini": bool(gemini_client), "huggingface": bool(os.environ.get("HF_TOKEN"))})
+
     @app.route("/api/status", methods=["GET"])
     def api_status():
         return jsonify({"gemini":bool(gemini_client),"claude":bool(claude_client),"local":True})
