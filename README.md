@@ -255,7 +255,7 @@ This project is intended for educational and research purposes.
 
 ## Advanced Editing
 
-Lumina supports natural-language multi-step image editing. Users can request several supported edits in a single message, and Lumina can preserve the requested order and apply up to eight operations as one workflow.
+Lumina supports natural-language multi-step image editing. Users can request several supported edits in a single message, and Lumina can preserve the requested order and apply up to eight operations as one workflow. The web interface also provides local undo/redo controls for image-edit states, with up to 20 states retained per active chat.
 
 Example: "Make it grayscale, sharpen it, and resize it to 1024x1024."
 
