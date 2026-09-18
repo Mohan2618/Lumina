@@ -9,6 +9,7 @@ from .utils.image import pil_to_base64, file_to_pil, pil_to_bytes, pil_to_cv2, i
 from .services.email_service import send_email_otp
 from .services.image_generation import generate_image_from_prompt
 from .services.ai_service import call_ai, extract_op
+from .image_processing.processor import process_image
 
 
 def register_routes(app):
