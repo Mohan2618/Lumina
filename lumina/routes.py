@@ -56,7 +56,7 @@ def register_routes(app):
         if not email:
             return jsonify({"error": "Email required"}), 400
     
-        otp = str(random.randint(100000, 999999))
+        otp = str(secrets.randbelow(900000) + 100000)
     
         otp_store[email] = {
             "otp": otp,
@@ -85,9 +85,10 @@ def register_routes(app):
         if time.time() > record["expiry"]:
             return jsonify({"error": "OTP expired"}), 400
     
-        if record["otp"] != otp:
+        if not secrets.compare_digest(str(record["otp"]), str(otp or "")):
             return jsonify({"error": "Invalid OTP"}), 400
-    
+
+        del otp_store[email]
         return jsonify({"success": True})
     
     
