@@ -17,8 +17,6 @@ def send_email_otp(to_email, otp):
         response = sg.send(message)
 
         print("STATUS:", response.status_code)
-        print("BODY:", response.body)
-        print("HEADERS:", response.headers)
 
     except Exception as e:
         print("SENDGRID ERROR:", str(e))
