@@ -1,5 +1,5 @@
 from flask import request, jsonify, render_template, session
-import base64, io, os, time, secrets, random
+import base64, io, os, time, secrets, random, json
 import numpy as np
 import cv2
 from PIL import Image
@@ -220,6 +220,28 @@ def register_routes(app):
                     result_b64=pil_to_base64(result_img)
                     if not clean_reply:
                         clean_reply=f"✨ Here's your generated image for: *\"{gen_prompt[:60]}\"*"
+            elif intent=='pipeline' and image_pil:
+                steps=params.get('steps',[])
+                if not isinstance(steps,list) or not steps or len(steps)>8:
+                    return jsonify({"message":"⚠️ Lumina could not apply that edit sequence. Please use a shorter sequence."}),400
+                result_img=image_pil.copy()
+                applied=[]
+                for step in steps:
+                    if not isinstance(step,dict):
+                        continue
+                    step_intent=str(step.get('intent','')).strip()
+                    step_params=step.get('params') if isinstance(step.get('params'),dict) else {}
+                    if not step_intent or step_intent in {'pipeline','generate_image'}:
+                        continue
+                    next_img=process_image(result_img,step_intent,step_params)
+                    if next_img is None:
+                        return jsonify({"message":f"⚠️ Lumina could not apply the requested edit."}),400
+                    result_img=next_img
+                    applied.append(step_intent)
+                if not applied:
+                    return jsonify({"message":"⚠️ Lumina could not find valid edits in that sequence."}),400
+                result_b64=pil_to_base64(result_img)
+                clean_reply=(clean_reply or "✨ Lumina applied your edit sequence successfully.") + f"\n\n**Edits applied:** {len(applied)}"
             elif intent and image_pil:
                 print(f"[OP] Applying '{intent}' to image {image_pil.size}")
                 result_img=process_image(image_pil,intent,params or {})
@@ -242,16 +264,16 @@ def register_routes(app):
             new_last_image=result_b64 or (pil_to_base64(image_pil) if new_file_uploaded and image_pil else last_image_data or None)
     
             consume_guest_limit()
-            return jsonify({"message":clean_reply,"image":result_b64,"history":updated_history,"last_image":new_last_image,"model":model_used})
+            return jsonify({"message":clean_reply,"image":result_b64,"history":updated_history,"last_image":new_last_image,"model":"lumina"})
     
         except Exception as e:
             err=str(e); print(f"[ERROR] {err}")
             if "API_KEY_INVALID" in err or "API key not valid" in err:
-                msg="⚠️ Invalid API key."
+                msg="⚠️ Lumina could not connect to its AI service. Please try again."
             elif is_rate_limit(err):
-                msg="⚠️ API rate limit. Please try again shortly."
+                msg="⚠️ Lumina is temporarily busy. Please try again shortly."
             else:
-                msg=f"⚠️ Error: {err}"
+                msg="⚠️ Lumina couldn’t process your request. Please try again."
             return jsonify({"message":msg}),200
     
     if __name__=="__main__":
