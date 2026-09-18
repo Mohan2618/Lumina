@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 from PIL import Image
 from flask import session
+from ..config import GUEST_MSG_LIMIT, GUEST_SESSION_KEY
 
 def pil_to_base64(img):
     buf = io.BytesIO(); img.save(buf, format="PNG")
