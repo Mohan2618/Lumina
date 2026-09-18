@@ -1385,43 +1385,27 @@ window.closeForgot = function(){
   if(otpTimerInt){ clearInterval(otpTimerInt); otpTimerInt=null; }
 };
 
-window.sendOTP = function(){
+window.sendOTP = async function(){
   const id=document.getElementById('forgotEmail').value.trim();
   if(!id){showForgotAlert('Please enter your email or username.');return;}
-  
-  // Find the user account
-  let stored=JSON.parse(localStorage.getItem(LS_USER+'_'+id)||'null');
-  if(!stored){
-    Object.keys(localStorage).forEach(k=>{
-      if(k.startsWith(LS_USER+'_')){
-        const u=JSON.parse(localStorage.getItem(k)||'null');
-        if(u&&u.email===id) stored=u;
-      }
-    });
-  }
-  if(!stored){showForgotAlert('No account found with that email or username.');return;}
-
-  // FIX: Store target user and generate OTP
-  otpTargetUser = stored;
-  otpCode = String(Math.floor(100000+Math.random()*900000));
-  otpExpiry = Date.now()+5*60*1000; // 5 minutes
-
-  // In demo mode, show the code
-  showForgotAlert(`OTP sent! (Demo mode — your code is: ${otpCode})`, 'success');
-
-  setTimeout(()=>{
-    document.getElementById('forgotStep1').style.display='none';
-    document.getElementById('forgotStep2').style.display='flex';
-    document.getElementById('forgotAlert').style.display='none';
-    // Clear any old digits
-    document.querySelectorAll('.otp-digit').forEach(d=>d.value='');
-    // Focus first digit
-    const firstDigit=document.querySelector('.otp-digit');
-    if(firstDigit) setTimeout(()=>firstDigit.focus(),100);
-    startOtpTimer();
-  },3500);
+  let email=id;
+  try{
+    const r=await fetch('/api/auth/send-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const d=await r.json();
+    if(!r.ok){showForgotAlert(d.error||'Unable to send OTP.');return;}
+    otpTargetUser={email};
+    showForgotAlert('OTP sent to your email.','success');
+    setTimeout(()=>{
+      document.getElementById('forgotStep1').style.display='none';
+      document.getElementById('forgotStep2').style.display='flex';
+      document.getElementById('forgotAlert').style.display='none';
+      document.querySelectorAll('.otp-digit').forEach(d=>d.value='');
+      const firstDigit=document.querySelector('.otp-digit');
+      if(firstDigit) firstDigit.focus();
+      startOtpTimer();
+    },800);
+  }catch(e){showForgotAlert('Server error. Please try again.');}
 };
-
 function startOtpTimer(){
   if(otpTimerInt) clearInterval(otpTimerInt);
   let secs=120;
@@ -1449,19 +1433,8 @@ function startOtpTimer(){
 // FIX: Resend OTP function
 window.resendOTP = function(){
   if(!otpTargetUser){showForgotAlert('Please go back and enter your email again.');return;}
-  otpCode = String(Math.floor(100000+Math.random()*900000));
-  otpExpiry = Date.now()+5*60*1000;
-  // Clear existing digits
-  document.querySelectorAll('.otp-digit').forEach(d=>d.value='');
-  showForgotAlert(`New OTP sent! (Demo mode — your code is: ${otpCode})`, 'success');
-  setTimeout(()=>{ 
-    document.getElementById('forgotAlert').style.display='none';
-    startOtpTimer();
-    const firstDigit=document.querySelector('.otp-digit');
-    if(firstDigit) firstDigit.focus();
-  },1500);
+  sendOTP();
 };
-
 window.otpInput = function(el,idx){ 
   // Only allow digits
   el.value=el.value.replace(/[^0-9]/g,'');
@@ -1476,39 +1449,30 @@ window.otpBack = function(el,e,idx){
 window.verifyOTP = function(){
   const digits=Array.from(document.querySelectorAll('.otp-digit')).map(d=>d.value).join('');
   if(digits.length<6){showForgotAlert('Please enter all 6 digits.');return;}
-  if(Date.now()>otpExpiry){
-    showForgotAlert('OTP has expired. Please click Resend OTP.');return;
-  }
-  // FIX: Trim both sides to avoid any whitespace issues
-  if(digits.trim()!==otpCode.trim()){
-    showForgotAlert('Incorrect OTP. Please try again.');return;
-  }
-  // OTP correct — move to password reset step
-  if(otpTimerInt){ clearInterval(otpTimerInt); otpTimerInt=null; }
+  if(otpTimerInt){clearInterval(otpTimerInt);otpTimerInt=null;}
+  if(!otpTargetUser){showForgotAlert('Session expired. Please start over.');return;}
   document.getElementById('forgotStep2').style.display='none';
   document.getElementById('forgotStep3').style.display='flex';
   document.getElementById('forgotAlert').style.display='none';
 };
-
 window.resetPassword = async function(){
   const newPw=document.getElementById('newPassword').value;
   const confirmPw=document.getElementById('confirmNewPassword').value;
   if(!newPw||!confirmPw){showForgotAlert('Please fill in both fields.');return;}
   if(newPw!==confirmPw){showForgotAlert('Passwords do not match.');return;}
-  const {score}=checkPasswordStrength(newPw); if(score<3){showForgotAlert('Password is too weak.');return;}
-  if(!otpTargetUser){showForgotAlert('Session expired. Please start over.');return;}
+  const {score}=checkPasswordStrength(newPw);
+  if(score<3){showForgotAlert('Password is too weak.');return;}
+  if(!otpTargetUser?.email){showForgotAlert('Session expired. Please start over.');return;}
   try{
-    const r=await fetch('/api/auth/hash-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:newPw})});
-    const d=await r.json(); if(!r.ok){showForgotAlert(d.error);return;}
-    // Update user's password
-    otpTargetUser.salt=d.salt; otpTargetUser.hash=d.hash;
-    localStorage.setItem(LS_USER+'_'+otpTargetUser.username, JSON.stringify(otpTargetUser));
+    const digits=Array.from(document.querySelectorAll('.otp-digit')).map(d=>d.value).join('');
+    const r=await fetch('/api/auth/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:otpTargetUser.email,otp:digits,password:newPw})});
+    const d=await r.json();
+    if(!r.ok){showForgotAlert(d.error||'Password reset failed.');return;}
     showForgotAlert('Password reset successfully!','success');
-    otpTargetUser=null; otpCode='';
-    setTimeout(()=>{ closeForgot(); showSignIn(); },1500);
-  }catch(e){showForgotAlert('Server error.');}
+    otpTargetUser=null;
+    setTimeout(()=>{closeForgot();showSignIn();},1200);
+  }catch(e){showForgotAlert('Server error. Please try again.');}
 };
-
 function showForgotAlert(msg,type='error'){ 
   const el=document.getElementById('forgotAlert'); 
   el.textContent=msg; el.className='modal-alert '+type; el.style.display='flex'; 
