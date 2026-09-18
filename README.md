@@ -74,6 +74,8 @@ The application is developed using Flask and OpenCV and integrates Google Gemini
 
 - Render
 - Docker
+- PostgreSQL (production authentication storage)
+- SQLite (local-development fallback)
 
 ---
 
@@ -140,9 +142,18 @@ ANTHROPIC_API_KEY=your_anthropic_api_key
 BREVO_API_KEY=your_brevo_api_key
 BREVO_FROM_EMAIL=your_verified_sender_email
 BREVO_FROM_NAME=Lumina
+DATABASE_URL=your_postgresql_connection_string
 ```
 
-Never commit real API keys or other credentials to GitHub.
+Never commit real API keys, database connection strings, passwords, or other credentials to GitHub.
+
+### Persistent Authentication Database
+
+Lumina uses **PostgreSQL in production** when the `DATABASE_URL` environment variable is configured. This keeps user accounts, password hashes, and password-reset OTP records persistent across Render deployments and restarts. SQLite remains the local-development fallback when `DATABASE_URL` is not set.
+
+For a hosted deployment, create a PostgreSQL database (for example, through Supabase), copy its PostgreSQL connection string into Render as `DATABASE_URL`, and redeploy. The application automatically creates the required `users` and `otps` tables on startup; no manual SQL setup is required.
+
+Do not commit `DATABASE_URL` or any database password to the repository.
 
 ### Run the Application
 
@@ -175,7 +186,8 @@ https://lumina-fbhi.onrender.com
 3. The chatbot interprets the request using Google Gemini.
 4. OpenCV performs the requested image processing operation.
 5. The processed image and AI-generated response are returned to the user.
-6. For password reset, Lumina generates a one-time OTP and sends it through the Brevo HTTPS API.
+6. For password reset, Lumina generates a one-time OTP, stores it in the configured authentication database, and sends it through the Brevo HTTPS API.
+7. In production, PostgreSQL keeps user accounts and OTP records persistent across Render restarts and deployments.
 
 ---
 
