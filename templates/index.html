@@ -1053,7 +1053,7 @@ window.checkApiStatus = async function(){
   document.getElementById('profileMenu').style.display='none';
   try{
     const r=await fetch('/api/status'); const d=await r.json();
-    toast(d.gemini?'✅ Gemini AI is connected!':'⚠️ No AI API detected.',4000);
+    toast(d.ai?'✅ Lumina AI is connected!':'⚠️ Lumina AI service is unavailable.',4000);
   }catch(e){ toast('Could not reach server.'); }
 };
 
@@ -1542,7 +1542,7 @@ updateGalleryBadge();
 setTimeout(async()=>{
   try{
     const r=await fetch('/api/status'); const d=await r.json();
-    if(!d.gemini&&!d.claude) console.warn('⚠️ No AI API — add GEMINI_API_KEY to Secrets');
+    if(!d.ai) console.warn('⚠️ Lumina AI service is unavailable.');
   }catch(e){}
 },2000);
 
