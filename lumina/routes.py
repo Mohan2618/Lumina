@@ -1,4 +1,4 @@
-from flask import request, jsonify, render_template
+from flask import request, jsonify, render_template, session
 import base64, io, os, time, secrets, random
 import numpy as np
 import cv2
