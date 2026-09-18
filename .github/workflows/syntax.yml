@@ -1,0 +1,18 @@
+name: Lumina syntax check
+
+on:
+  push:
+    branches: ["main", "refactor/modular-architecture"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Python sources
+        run: python -m compileall -q app.py lumina tests
