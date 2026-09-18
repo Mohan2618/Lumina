@@ -7,12 +7,14 @@ from .core import app, GEMINI_MODEL, GEMINI_TIMEOUT, SYSTEM_PROMPT, gemini_clien
 from .utils.auth import hash_password, verify_password, validate_password_strength, validate_username, validate_email
 from .utils.image import pil_to_base64, file_to_pil, pil_to_bytes, pil_to_cv2, is_rate_limit, check_guest_limit, consume_guest_limit
 from .services.email_service import send_email_otp
+from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp
 from .services.image_generation import generate_image_from_prompt
 from .services.ai_service import call_ai, extract_op
 from .image_processing.processor import process_image
 
 
 def register_routes(app):
+    init_db()
     # ─────────────────────────────────────────────────────────────
     # AUTH ROUTES
     # ─────────────────────────────────────────────────────────────
@@ -24,73 +26,80 @@ def register_routes(app):
         strength=validate_password_strength(pw)
         if not strength["valid"]: return jsonify({"error":"Weak password","details":strength["errors"]}),400
         salt,hashed=hash_password(pw)
-        return jsonify({"salt":salt,"hash":hashed,"token":secrets.token_urlsafe(32)})
-    
+        return jsonify({"salt":salt,"hash":hashed})
+
+    @app.route("/api/auth/signup", methods=["POST"])
+    def api_signup():
+        data=request.json or {}
+        required=["firstName","lastName","email","username","password"]
+        if any(not str(data.get(k,"")).strip() for k in required):
+            return jsonify({"error":"All required fields must be provided"}),400
+        email=data["email"].strip().lower()
+        username=data["username"].strip()
+        if not validate_email(email): return jsonify({"error":"Invalid email"}),400
+        if not validate_username(username): return jsonify({"error":"Invalid username"}),400
+        strength=validate_password_strength(data["password"])
+        if not strength["valid"]: return jsonify({"error":"Weak password","details":strength["errors"]}),400
+        if get_user(email) or get_user(username):
+            return jsonify({"error":"Email or username already registered"}),409
+        salt,hashed=hash_password(data["password"])
+        if not create_user(data["firstName"].strip(),data["lastName"].strip(),email,username,salt,hashed):
+            return jsonify({"error":"Email or username already registered"}),409
+        user=get_user(username)
+        session["user"]={"id":user["id"],"firstName":user["first_name"],"lastName":user["last_name"],"email":user["email"],"username":user["username"]}
+        return jsonify({"success":True,"user":session["user"]})
+
     @app.route("/api/auth/verify-password", methods=["POST"])
     def api_verify_password():
         data=request.json or {}
-        pw=data.get("password",""); salt=data.get("salt",""); stored_hash=data.get("hash","")
+        identifier=str(data.get("identifier") or "").strip()
+        pw=data.get("password","")
+        if identifier:
+            user=get_user(identifier)
+            if not user or not verify_password(pw,user["salt"],user["password_hash"]):
+                return jsonify({"valid":False}),401
+            session["user"]={"id":user["id"],"firstName":user["first_name"],"lastName":user["last_name"],"email":user["email"],"username":user["username"]}
+            return jsonify({"valid":True,"user":session["user"]})
+        salt=data.get("salt",""); stored_hash=data.get("hash","")
         if not all([pw,salt,stored_hash]): return jsonify({"valid":False,"error":"Missing fields"}),400
-        return jsonify({"valid":verify_password(pw,salt,stored_hash),"token":secrets.token_urlsafe(32)})
-    
+        return jsonify({"valid":verify_password(pw,salt,stored_hash)})
+
+    @app.route("/api/auth/me", methods=["GET"])
+    def auth_me():
+        return jsonify({"authenticated": "user" in session, "user": session.get("user")})
+
+    @app.route("/api/auth/logout", methods=["POST"])
+    def auth_logout():
+        session.pop("user",None)
+        return jsonify({"success":True})
+
     @app.route("/api/auth/validate-email", methods=["POST"])
     def api_validate_email():
         return jsonify({"valid":validate_email((request.json or {}).get("email",""))})
-    
+
     @app.route("/api/auth/validate-username", methods=["POST"])
     def api_validate_username():
         return jsonify({"valid":validate_username((request.json or {}).get("username",""))})
-    
-        
-    # ─────────────────────────────────────────────────────────────
-    # OTP SYSTEM
-    # ─────────────────────────────────────────────────────────────
-    
-    
-    otp_store = {}  # temporary storage
-    
+
+    otp_store = {}
+
     @app.route("/api/auth/send-otp", methods=["POST"])
     def send_otp():
-        data = request.json or {}
-        email = data.get("email")
-        if not email:
-            return jsonify({"error": "Email required"}), 400
-    
-        otp = str(secrets.randbelow(900000) + 100000)
-    
-        otp_store[email] = {
-            "otp": otp,
-            "expiry": time.time() + 300
-        }
-    
-        try:
-            send_email_otp(email, otp)
-        except Exception as e:
-            return jsonify({"error": f"Email failed: {str(e)}"}), 500
-    
-        return jsonify({"success": True})
-    
-    
-    @app.route("/api/auth/verify-otp", methods=["POST"])
-    def verify_otp():
-        data = request.json or {}
-        email = data.get("email")
-        otp = data.get("otp")
-    
-        record = otp_store.get(email)
-    
-        if not record:
-            return jsonify({"error": "No OTP found"}), 400
-    
-        if time.time() > record["expiry"]:
-            return jsonify({"error": "OTP expired"}), 400
-    
-        if not secrets.compare_digest(str(record["otp"]), str(otp or "")):
-            return jsonify({"error": "Invalid OTP"}), 400
+        data=request.json or {}; email=str(data.get("email","")).strip().lower()
+        if not email or not validate_email(email): return jsonify({"error":"Valid email required"}),400
+        if not get_user(email): return jsonify({"error":"No account found"}),404
+        code=str(secrets.randbelow(900000)+100000)
+        save_otp(email,code)
+        try: send_email_otp(email,code)
+        except Exception as e: return jsonify({"error":"Email delivery failed"}),500
+        return jsonify({"success":True})
 
-        del otp_store[email]
-        return jsonify({"success": True})
-    
+    @app.route("/api/auth/verify-otp", methods=["POST"])
+    def verify_otp_route():
+        data=request.json or {}; email=str(data.get("email","")).strip().lower()
+        ok,error=verify_otp(email,data.get("otp"))
+        if not ok: return jsonify({"error":error}),400
+        return jsonify({"success":True})
     
     # ─────────────────────────────────────────────────────────────
     # STATUS & TEST
