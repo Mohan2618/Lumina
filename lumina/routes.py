@@ -104,15 +104,28 @@ def register_routes(app):
 
     @app.route("/api/auth/send-otp", methods=["POST"])
     def send_otp():
-        data=request.json or {}; email=str(data.get("email","")).strip().lower()
-        if not email or not validate_email(email): return jsonify({"error":"Valid email required"}),400
-        if not get_user(email): return jsonify({"error":"No account found"}),404
-        if not otp_can_send(email): return jsonify({"error":"Please wait before requesting another OTP"}),429
+        data=request.json or {}
+        identifier=str(data.get("email","")).strip()
+        if not identifier:
+            return jsonify({"error":"Email or username required"}),400
+
+        user=get_user(identifier)
+        if not user:
+            return jsonify({"error":"No account found"}),404
+
+        email=user["email"].strip().lower()
+        if not validate_email(email):
+            return jsonify({"error":"Account email is invalid"}),400
+        if not otp_can_send(email):
+            return jsonify({"error":"Please wait before requesting another OTP"}),429
+
         code=str(secrets.randbelow(900000)+100000)
         save_otp(email,code)
-        try: send_email_otp(email,code)
-        except Exception as e: return jsonify({"error":"Email delivery failed"}),500
-        return jsonify({"success":True})
+        try:
+            send_email_otp(email,code)
+        except Exception:
+            return jsonify({"error":"Email delivery failed"}),500
+        return jsonify({"success":True,"email":email})
 
     @app.route("/api/auth/verify-otp", methods=["POST"])
     def verify_otp_route():
