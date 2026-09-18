@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 from PIL import Image
 from .core import *
+from .services.ai_service import call_ai, extract_op
 
 
 def register_routes(app):
@@ -142,7 +143,7 @@ def register_routes(app):
                 image_pil=last_image_pil
     
             ai_image=image_pil if new_file_uploaded else None
-            raw_reply,model_used=call_ai(history,prompt,ai_image)
+            raw_reply,model_used=call_ai(history,prompt,ai_image,gemini_client,GEMINI_MODEL,SYSTEM_PROMPT,GEMINI_TIMEOUT)
             clean_reply,intent,params=extract_op(raw_reply)
             result_b64=None
     
