@@ -101,7 +101,7 @@ def call_ai(history: list, user_text: str, image_pil=None, gemini_client=None, g
     # 🔥 STEP 3 — NORMAL GEMINI
     if gemini_client:
         try:
-            reply = call_gemini_fast(history, user_text, image_pil)
+            reply = call_gemini_fast(history, user_text, image_pil, gemini_client, gemini_model, system_prompt, timeout)
             if reply and reply.strip():
                 return reply.strip(), "gemini"
         except Exception as e:
