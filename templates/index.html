@@ -1298,7 +1298,10 @@ window.submitAuth = async function(){
       const r=await fetch('/api/auth/hash-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
       const d=await r.json();
       if(!r.ok){showAuthAlert(d.error+(d.details?'\n'+d.details.join(', '):''));return;}
-      const userData={firstName:fn,lastName:ln,email:em,username:un,salt:d.salt,hash:d.hash,createdAt:Date.now(),plan:'Free'};
+      const sr=await fetch('/api/auth/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({firstName:fn,lastName:ln,email:em,username:un,password:pw})});
+      const sd=await sr.json();
+      if(!sr.ok){showAuthAlert(sd.error||'Unable to create account.');return;}
+      const userData={...sd.user,createdAt:Date.now(),plan:'Free'};
       localStorage.setItem(LS_USER+'_'+un,JSON.stringify(userData));
       showAuthAlert('Account created! Signing you in…','success');
       setTimeout(()=>{ closeAuth(); loginUserAndReset(userData); },1000);
@@ -1332,10 +1335,17 @@ window.submitAuth = async function(){
   }
   if(!stored){showAuthAlert('No account found. Please sign up first.');return;}
   try{
-    const r=await fetch('/api/auth/verify-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw,salt:stored.salt,hash:stored.hash})});
+    const r=await fetch('/api/auth/verify-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier:id,password:pw})});
     const d=await r.json();
-    if(d.valid){ loginAttempts=0; lockUntil=0; closeAuth(); loginUserAndReset(stored); }
-    else{ recordFailedAttempt(); showAuthAlert(`Incorrect password. ${MAX_LOGIN_ATTEMPTS-loginAttempts} attempts remaining.`); }
+    if(r.ok&&d.valid){
+      loginAttempts=0; lockUntil=0; closeAuth();
+      const userData={...d.user,plan:(stored&&stored.plan)||'Free'};
+      localStorage.setItem(LS_USER+'_'+userData.username,JSON.stringify({...stored,...userData}));
+      loginUserAndReset(userData);
+    }else{
+      recordFailedAttempt();
+      showAuthAlert(`Incorrect password. ${MAX_LOGIN_ATTEMPTS-loginAttempts} attempts remaining.`);
+    }
   }catch(e){showAuthAlert('Server error. Please try again.');}
 };
 
