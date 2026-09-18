@@ -61,6 +61,7 @@ The application is developed using Flask and OpenCV and integrates Google Gemini
 
 - Google Gemini API
 - Anthropic Claude API
+- Brevo SMTP for password-reset OTP email delivery
 
 ### Frontend
 
@@ -133,7 +134,11 @@ Create a `.env` file in the project root.
 ```text
 GOOGLE_API_KEY=your_google_api_key
 ANTHROPIC_API_KEY=your_anthropic_api_key
-SENDGRID_API_KEY=your_sendgrid_api_key
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USERNAME=your_brevo_login_email
+SMTP_PASSWORD=your_brevo_smtp_key
+SMTP_FROM_EMAIL=your_verified_sender_email
 ```
 
 ### Run the Application
