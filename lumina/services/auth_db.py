@@ -100,3 +100,22 @@ def verify_otp(email, code, max_attempts=5):
     conn.commit()
     conn.close()
     return True, None
+
+def update_password(identifier, salt, password_hash):
+    init_db()
+    conn = _connect()
+    cur = conn.execute(
+        "UPDATE users SET salt=?, password_hash=? WHERE email=? COLLATE NOCASE OR username=? COLLATE NOCASE",
+        (salt, password_hash, identifier, identifier),
+    )
+    conn.commit()
+    changed = cur.rowcount > 0
+    conn.close()
+    return changed
+
+def otp_can_send(email, cooldown=60):
+    init_db()
+    conn = _connect()
+    row = conn.execute("SELECT sent_at FROM otps WHERE email=? COLLATE NOCASE", (email,)).fetchone()
+    conn.close()
+    return not row or time.time() - row["sent_at"] >= cooldown
