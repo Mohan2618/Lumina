@@ -1,7 +1,7 @@
 import os
 import cv2
 import numpy as np
-from PIL import Image, ImageEnhance, ImageFilter, ImageOps, ImageDraw, ImageFont
+from PIL import Image, ImageFilter, ImageEnhance, ImageFilter, ImageOps, ImageDraw, ImageFont
 from ..utils.image import pil_to_cv2, cv2_to_pil
 
 def rotate(img, params):
@@ -24,44 +24,41 @@ def crop(img, params):
     return img.crop(tuple(int(x) for x in box))
 
 def thumbnail(img, params):
-    r=img.copy(); r.thumbnail((256,256),Image.LANCZOS); return r
-
-def wallpaper_4k(img, params):
-    """
-    Prepare an image as a desktop 4K wallpaper using a cover crop.
-    Defaults to 3840x2160 (16:9) and preserves the subject without stretching.
-    Optional params: width, height, position ('center', 'top', 'bottom').
-    """
+    r=img.copy(); r.thumbnail((256,256),Image.LANCZOSdef wallpaper_4k(img, params):
+    """Create a 3840x2160 wallpaper without cropping the source image."""
     target_w = max(1, int(params.get('width', 3840)))
     target_h = max(1, int(params.get('height', 2160)))
     position = str(params.get('position', 'center')).lower()
 
     src = img.convert('RGB')
     src_w, src_h = src.size
-    target_ratio = target_w / target_h
-    src_ratio = src_w / src_h
 
-    if src_ratio > target_ratio:
-        # Source is wider: crop the sides.
-        crop_w = max(1, int(src_h * target_ratio))
-        if position == 'left':
-            left = 0
-        elif position == 'right':
-            left = src_w - crop_w
-        else:
-            left = (src_w - crop_w) // 2
-        box = (left, 0, left + crop_w, src_h)
+    # Preserve the complete source image as the foreground.
+    scale = min(target_w / src_w, target_h / src_h)
+    fg_w = max(1, round(src_w * scale))
+    fg_h = max(1, round(src_h * scale))
+    foreground = src.resize((fg_w, fg_h), Image.Resampling.LANCZOS)
+
+    # Fill the remaining canvas with a softly blurred enlargement of the
+    # same image. No source pixels are removed from the foreground.
+    bg_scale = max(target_w / src_w, target_h / src_h)
+    bg_w = max(target_w, round(src_w * bg_scale))
+    bg_h = max(target_h, round(src_h * bg_scale))
+    background = src.resize((bg_w, bg_h), Image.Resampling.LANCZOS)
+    left = max(0, (bg_w - target_w) // 2)
+    top = max(0, (bg_h - target_h) // 2)
+    background = background.crop((left, top, left + target_w, top + target_h))
+    background = background.filter(ImageFilter.GaussianBlur(radius=max(18, int(min(target_w, target_h) * 0.018))))
+
+    # Keep the extended area visually subtle.
+    background = Image.blend(background, Image.new('RGB', (target_w, target_h), (0, 0, 0)), 0.16)
+
+    if position == 'top':
+        y = 0
+    elif position == 'bottom':
+        y = target_h - fg_h
     else:
-        # Source is taller/narrower: crop top/bottom.
-        crop_h = max(1, int(src_w / target_ratio))
-        if position == 'top':
-            top = 0
-        elif position == 'bottom':
-            top = src_h - crop_h
-        else:
-            top = (src_h - crop_h) // 2
-        box = (0, top, src_w, top + crop_h)
-
-    cropped = src.crop(box)
-    return cropped.resize((target_w, target_h), Image.LANCZOS)
-
+        y = (target_h - fg_h) // 2
+    x = (target_w - fg_w) // 2
+    background.paste(foreground, (x, y))
+    return background
