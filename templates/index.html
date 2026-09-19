@@ -183,6 +183,12 @@ body {
 .lightbox-btn{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:5px;backdrop-filter:blur(8px);transition:background 0.15s;}
 .lightbox-btn:hover{background:rgba(255,255,255,0.3);}
 .lightbox-btn .material-icons{font-size:16px;}
+.compare-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:3050;align-items:center;justify-content:center;flex-direction:column;gap:14px;}
+.compare-stage{position:relative;width:min(92vw,1100px);height:min(72vh,700px);overflow:hidden;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.45);}
+.compare-stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#111;}
+.compare-after{position:absolute;inset:0;width:50%;overflow:hidden;border-right:2px solid white;}
+.compare-after img{width:100%;height:100%;max-width:none;object-fit:contain;}
+.compare-range{width:min(600px,80vw);}
 /* ── TOAST ── */
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(10,10,30,0.9);color:white;padding:10px 20px;border-radius:20px;font-size:13px;z-index:4000;opacity:0;transition:opacity 0.3s;pointer-events:none;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.15);}
 .toast.show{opacity:1;}
@@ -524,6 +530,16 @@ body.dragging-over{outline:4px dashed rgba(255,255,255,0.6);}
 
 <!-- ── TOAST ── -->
 <div class="toast" id="toast"></div>
+<div class="compare-wrap" id="compareWrap">
+  <div class="compare-stage" id="compareStage">
+    <img id="compareBefore" alt="Original image">
+    <div class="compare-after" id="compareAfter"><img id="compareAfterImg" alt="Edited image"></div>
+  </div>
+  <input class="compare-range" id="compareRange" type="range" min="0" max="100" value="50" aria-label="Before and after comparison">
+  <div style="display:flex;gap:8px;">
+    <button class="lightbox-btn" type="button" onclick="closeCompare()">Close</button>
+  </div>
+</div>
 
 <!-- Hidden file input -->
 <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="handleFileInputChange(event)">
@@ -713,6 +729,12 @@ function addBotMsg(content,isHTML=false,imgSrc=null,modelUsed=''){
     copyImgBtn.innerHTML='<span class="material-icons">image</span> Copy Image';
     copyImgBtn.addEventListener('click',function(e){ e.stopPropagation(); copyImageToClipboard(imgSrc); });
     actions.appendChild(copyImgBtn);
+    if(imageEditHistory.length>=2){
+      const compareBtn=document.createElement('button'); compareBtn.className='msg-action-btn';
+      compareBtn.innerHTML='<span class="material-icons">compare</span> Compare';
+      compareBtn.addEventListener('click',function(e){ e.stopPropagation(); showLatestComparison(); });
+      actions.appendChild(compareBtn);
+    }
     const useBtn=document.createElement('button'); useBtn.className='msg-action-btn';
     useBtn.innerHTML='<span class="material-icons">input</span> Use as Input';
     useBtn.addEventListener('click',function(e){ e.stopPropagation(); useImageAsInput(imgSrc); });
@@ -776,6 +798,22 @@ window.saveToGallery = function(src, title){
   localStorage.setItem(userKey('gallery'), JSON.stringify(savedImages));
   updateGalleryBadge(); toast('✅ Saved to gallery!');
 };
+window.openCompare = function(before,after){
+  if(!before||!after){ toast('A before and after image are required.'); return; }
+  document.getElementById('compareBefore').src=before;
+  document.getElementById('compareAfterImg').src=after;
+  document.getElementById('compareRange').value=50;
+  document.getElementById('compareAfter').style.width='50%';
+  document.getElementById('compareWrap').style.display='flex';
+};
+window.closeCompare=function(){ document.getElementById('compareWrap').style.display='none'; };
+function showLatestComparison(){
+  if(imageEditHistory.length<2){ toast('Make an edit first to compare before and after.'); return; }
+  openCompare(imageEditHistory[0],imageEditHistory[imageEditIndex]);
+}
+document.addEventListener('input',function(e){
+  if(e.target.id==='compareRange') document.getElementById('compareAfter').style.width=e.target.value+'%';
+});
 window.saveToGalleryFromLightbox = function(){
   const src=document.getElementById('lightboxImg').src;
   if(src) saveToGallery(src,'Saved from Chat');
