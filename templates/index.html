@@ -762,41 +762,41 @@ function getActivityStages(prompt, hasImage){
   const p=(prompt||'').toLowerCase();
   if(/wallpaper|desktop background|4k|3840|2160/.test(p)){
     return [
-      ['✨','Thinking','Understanding your wallpaper request'],
-      ['🖼️','Analyzing','Checking the image framing'],
-      ['📐','Fitting','Preparing a 3840×2160 desktop canvas'],
-      ['✨','One last touch','Optimizing the final composition']
+      ['auto_awesome','Thinking','Understanding your wallpaper request'],
+      ['image_search','Analyzing','Checking the image framing'],
+      ['aspect_ratio','Fitting','Preparing a 3840×2160 desktop canvas'],
+      ['auto_awesome','One last touch','Optimizing the final composition']
     ];
   }
   if(/generat|create|draw|make .*image|picture of/.test(p) && !hasImage){
     return [
-      ['✨','Thinking','Understanding your image idea'],
-      ['🎨','Creating','Building the visual composition'],
-      ['🔍','Refining','Adding detail and balance'],
-      ['✨','One last touch','Polishing the final image']
+      ['auto_awesome','Thinking','Understanding your image idea'],
+      ['brush','Creating','Building the visual composition'],
+      ['search','Refining','Adding detail and balance'],
+      ['auto_awesome','One last touch','Polishing the final image']
     ];
   }
   if(hasImage && /edit|change|remove|resize|crop|filter|blur|sharpen|enhance|color|rotate|flip|background|style/.test(p)){
     return [
-      ['✨','Thinking','Understanding your edit'],
-      ['🔎','Analyzing','Checking the image and requested changes'],
-      ['🛠️','Editing','Applying your requested changes'],
-      ['✨','One last touch','Polishing the final result']
+      ['auto_awesome','Thinking','Understanding your edit'],
+      ['image_search','Analyzing','Checking the image and requested changes'],
+      ['tune','Editing','Applying your requested changes'],
+      ['auto_awesome','One last touch','Polishing the final result']
     ];
   }
   if(hasImage){
     return [
-      ['✨','Thinking','Understanding your request'],
-      ['🔎','Analyzing','Looking at your image'],
-      ['💡','Working','Putting the response together'],
-      ['✨','One last touch','Polishing the answer']
+      ['auto_awesome','Thinking','Understanding your request'],
+      ['image_search','Analyzing','Looking at your image'],
+      ['lightbulb','Working','Putting the response together'],
+      ['auto_awesome','One last touch','Polishing the answer']
     ];
   }
   return [
-    ['✨','Thinking','Understanding your request'],
-    ['💡','Working','Putting the response together'],
-    ['📝','Preparing','Making the answer clear and useful'],
-    ['✨','One last touch','Polishing the response']
+    ['auto_awesome','Thinking','Understanding your request'],
+    ['lightbulb','Working','Putting the response together'],
+    ['description','Preparing','Making the answer clear and useful'],
+    ['auto_awesome','One last touch','Polishing the response']
   ];
 }
 
@@ -810,7 +810,7 @@ function showActivity(prompt, hasImage){
   document.getElementById('chatArea').appendChild(wrapper);
   const render=()=>{
     const stage=stages[Math.min(activityStageIndex,stages.length-1)];
-    box.innerHTML='<span class="activity-icon">'+stage[0]+'</span><span class="activity-text"><strong>'+stage[1]+'</strong> — '+stage[2]+'<span class="activity-dots"><i></i><i></i><i></i></span></span>';
+    box.innerHTML='<span class="activity-icon material-icons">'+stage[0]+'</span><span class="activity-text"><strong>'+stage[1]+'</strong> — '+stage[2]+'<span class="activity-dots"><i></i><i></i><i></i></span></span>';
     scrollChat();
   };
   render();
