@@ -148,14 +148,29 @@ def register_routes(app):
     
     @app.route("/api/test-ai", methods=["GET"])
     def api_test_ai():
-        results={}
-        if gemini_client or claude_client:
+        results = {
+            "lumina_ai": "Unavailable",
+            "provider": "none",
+        }
+
+        if gemini_client:
             try:
-                r=gemini_client.models.generate_content(model=GEMINI_MODEL,contents="Say hello in one word")
-                results["lumina_ai"]="Connected"
-            except Exception: results["lumina_ai"]="Temporarily unavailable"
-        else: results["lumina_ai"]="Unavailable"
-        results["hf_token"]="Present" if os.environ.get("HF_TOKEN") else "Not set"
+                gemini_client.models.generate_content(
+                    model=GEMINI_MODEL,
+                    contents="Say hello in one word",
+                )
+                results["lumina_ai"] = "Connected"
+                results["provider"] = "gemini"
+            except Exception as exc:
+                print(f"[AI health check] Gemini failed: {type(exc).__name__}: {exc}")
+                results["lumina_ai"] = "Temporarily unavailable"
+                results["provider"] = "gemini"
+        elif claude_client:
+            results["lumina_ai"] = "Configured"
+            results["provider"] = "claude"
+            results["note"] = "Claude is configured but Lumina's request path currently uses Gemini/local fallback."
+
+        results["hf_token"] = "Present" if os.environ.get("HF_TOKEN") else "Not set"
         return jsonify(results)
     
     
