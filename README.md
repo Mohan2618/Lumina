@@ -257,6 +257,10 @@ This project is intended for educational and research purposes.
 
 Lumina supports natural-language multi-step image editing. Users can request several supported edits in a single message, and Lumina can preserve the requested order and apply up to eight operations as one workflow. The web interface also provides local undo/redo controls for image-edit states, with up to 20 states retained per active chat, plus an interactive before/after comparison with a draggable split slider.
 
+Lumina also supports **4K desktop wallpaper fitting**. A request such as "make this image into a desktop 4K wallpaper" uses a 16:9 cover crop and high-quality resize to produce a 3840×2160 result without stretching the image. The crop can preserve the center by default and supports top/bottom positioning when explicitly requested.
+
+The interface displays Lumina activity statuses while work is in progress, such as **Thinking**, **Analyzing**, **Working/Editing**, **Creating**, and **One last touch**. These are user-facing progress indicators and do not expose underlying model or provider implementation details.
+
 Example: "Make it grayscale, sharpen it, and resize it to 1024x1024."
 
 The advanced pipeline keeps provider/model implementation details internal and presents the workflow as a Lumina feature.
