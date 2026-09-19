@@ -102,6 +102,16 @@ body {
 .typing span{width:8px;height:8px;background:rgba(255,255,255,0.7);border-radius:50%;animation:bounce 1.3s infinite ease-in-out;}
 .typing span:nth-child(2){animation-delay:0.2s;} .typing span:nth-child(3){animation-delay:0.4s;}
 @keyframes bounce{0%,80%,100%{transform:scale(0.5);opacity:0.5}40%{transform:scale(1);opacity:1}}
+
+.activity-status{display:flex;align-items:center;gap:9px;padding:9px 14px;border-radius:16px;background:rgba(10,10,30,.46);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(12px);color:rgba(255,255,255,.92);font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.16);width:max-content;max-width:92%;animation:activityIn .25s ease;}
+.activity-status .activity-icon{width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(65,225,174,.18);font-size:13px;flex-shrink:0;}
+.activity-status .activity-text{min-width:145px;}
+.activity-status .activity-dots{display:inline-flex;gap:3px;margin-left:4px;vertical-align:middle;}
+.activity-status .activity-dots i{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.8);animation:activityDot 1.1s infinite;}
+.activity-status .activity-dots i:nth-child(2){animation-delay:.18s}.activity-status .activity-dots i:nth-child(3){animation-delay:.36s}
+@keyframes activityDot{0%,70%,100%{opacity:.25;transform:translateY(0)}35%{opacity:1;transform:translateY(-2px)}}
+@keyframes activityIn{from{opacity:0;transform:translateY(5px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.activity-status.activity-finished{background:rgba(65,225,174,.15);}
 /* ── HISTORY PANEL ── */
 .history-panel{display:none;position:fixed;right:0;top:0;width:300px;height:100%;background:rgba(10,10,30,0.78);backdrop-filter:blur(16px);padding:20px 16px;overflow-y:auto;color:white;z-index:900;border-left:1px solid rgba(255,255,255,0.12);}
 .history-item{padding:12px;background:rgba(255,255,255,0.08);border-radius:10px;margin-bottom:10px;cursor:pointer;transition:background 0.15s;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
@@ -745,13 +755,75 @@ function addBotMsg(content,isHTML=false,imgSrc=null,modelUsed=''){
 }
 
 function scrollChat(){ const w=document.getElementById('chatWrapper'); setTimeout(()=>{w.scrollTop=w.scrollHeight;},60); }
-function showTyping(){
-  const wrapper=createMsgWrapper('bot'); wrapper.id='typingWrapper';
-  const div=document.createElement('div'); div.classList.add('chat-msg','bot-msg'); div.id='typing';
-  div.innerHTML='<div class="typing"><span></span><span></span><span></span></div>';
-  wrapper.appendChild(div); document.getElementById('chatArea').appendChild(wrapper); scrollChat();
+let activityTimer=null;
+let activityStageIndex=0;
+
+function getActivityStages(prompt, hasImage){
+  const p=(prompt||'').toLowerCase();
+  if(/wallpaper|desktop background|4k|3840|2160/.test(p)){
+    return [
+      ['✨','Thinking','Understanding your wallpaper request'],
+      ['🖼️','Analyzing','Checking the image framing'],
+      ['📐','Fitting','Preparing a 3840×2160 desktop canvas'],
+      ['✨','One last touch','Optimizing the final composition']
+    ];
+  }
+  if(/generat|create|draw|make .*image|picture of/.test(p) && !hasImage){
+    return [
+      ['✨','Thinking','Understanding your image idea'],
+      ['🎨','Creating','Building the visual composition'],
+      ['🔍','Refining','Adding detail and balance'],
+      ['✨','One last touch','Polishing the final image']
+    ];
+  }
+  if(hasImage && /edit|change|remove|resize|crop|filter|blur|sharpen|enhance|color|rotate|flip|background|style/.test(p)){
+    return [
+      ['✨','Thinking','Understanding your edit'],
+      ['🔎','Analyzing','Checking the image and requested changes'],
+      ['🛠️','Editing','Applying your requested changes'],
+      ['✨','One last touch','Polishing the final result']
+    ];
+  }
+  if(hasImage){
+    return [
+      ['✨','Thinking','Understanding your request'],
+      ['🔎','Analyzing','Looking at your image'],
+      ['💡','Working','Putting the response together'],
+      ['✨','One last touch','Polishing the answer']
+    ];
+  }
+  return [
+    ['✨','Thinking','Understanding your request'],
+    ['💡','Working','Putting the response together'],
+    ['📝','Preparing','Making the answer clear and useful'],
+    ['✨','One last touch','Polishing the response']
+  ];
 }
-function removeTyping(){ const t=document.getElementById('typingWrapper'); if(t)t.remove(); }
+
+function showActivity(prompt, hasImage){
+  removeActivity();
+  const stages=getActivityStages(prompt,hasImage);
+  activityStageIndex=0;
+  const wrapper=createMsgWrapper('bot'); wrapper.id='activityWrapper';
+  const box=document.createElement('div'); box.className='activity-status'; box.id='activityStatus';
+  wrapper.appendChild(box);
+  document.getElementById('chatArea').appendChild(wrapper);
+  const render=()=>{
+    const stage=stages[Math.min(activityStageIndex,stages.length-1)];
+    box.innerHTML='<span class="activity-icon">'+stage[0]+'</span><span class="activity-text"><strong>'+stage[1]+'</strong> — '+stage[2]+'<span class="activity-dots"><i></i><i></i><i></i></span></span>';
+    scrollChat();
+  };
+  render();
+  activityTimer=setInterval(()=>{
+    if(activityStageIndex<stages.length-1){ activityStageIndex++; render(); }
+  },1700);
+}
+function removeActivity(){
+  if(activityTimer){clearInterval(activityTimer);activityTimer=null;}
+  const w=document.getElementById('activityWrapper'); if(w)w.remove();
+}
+function removeTyping(){ removeActivity(); const t=document.getElementById('typingWrapper'); if(t)t.remove(); }
+function showTyping(){ showActivity('',false); }
 function formatReply(text){
   return text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\n/g,'<br>');
 }
@@ -890,7 +962,7 @@ window.sendMessage = async function(){
   addUserMsg(text, filesToSend.length>0?[...filesToSend]:[]);
   input.value=''; input.style.height='auto';
   attachedFiles=[]; renderPreviews();
-  showTyping();
+  showActivity(promptText, filesToSend.length>0 || !!lastImageB64);
   try{
     const fd=new FormData();
     fd.append('prompt',promptText);
