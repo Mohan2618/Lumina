@@ -46,6 +46,13 @@ class ImageProcessorTests(unittest.TestCase):
         result = process_image(image, "wallpaper_4k", {})
         self.assertEqual(result.size, (3840, 2160))
 
+    def test_wallpaper_preserves_source_aspect_ratio(self):
+        image = Image.new("RGB", (1600, 900), (120, 80, 40))
+        result = process_image(image, "wallpaper_4k", {})
+        self.assertEqual(result.size, (3840, 2160))
+        # The source is 16:9, so the foreground should exactly cover the 4K canvas.
+        self.assertEqual(result.getpixel((1920, 1080)), (120, 80, 40))
+
 
 if __name__ == "__main__":
     unittest.main()
