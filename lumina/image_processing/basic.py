@@ -29,38 +29,37 @@ def thumbnail(img, params):
     return r
 
 def wallpaper_4k(img, params):
-    """Create a 3840x2160 wallpaper without cropping or stretching the source."""
+    """Create a 3840x2160 desktop wallpaper while preserving the source composition."""
     target_w = max(1, int(params.get('width', 3840)))
     target_h = max(1, int(params.get('height', 2160)))
     position = str(params.get('position', 'center')).lower()
 
-    src = img.convert('RGB')
+    src = ImageOps.exif_transpose(img).convert('RGB')
     src_w, src_h = src.size
 
-    # Preserve the complete source image as the sharp foreground.
-    scale = min(target_w / src_w, target_h / src_h)
-    fg_w = max(1, round(src_w * scale))
-    fg_h = max(1, round(src_h * scale))
+    # Scale the complete source image to fit inside the target canvas.
+    fit_scale = min(target_w / src_w, target_h / src_h)
+    fg_w = max(1, round(src_w * fit_scale))
+    fg_h = max(1, round(src_h * fit_scale))
     foreground = src.resize((fg_w, fg_h), Image.Resampling.LANCZOS)
 
-    # Fill unused canvas area with a softly blurred enlargement of the same image.
-    bg_scale = max(target_w / src_w, target_h / src_h)
-    bg_w = max(target_w, round(src_w * bg_scale))
-    bg_h = max(target_h, round(src_h * bg_scale))
+    # Build a full-bleed background from the same image. The blurred background
+    # avoids empty bars while keeping the original image completely visible.
+    fill_scale = max(target_w / src_w, target_h / src_h)
+    bg_w = max(target_w, round(src_w * fill_scale))
+    bg_h = max(target_h, round(src_h * fill_scale))
     background = src.resize((bg_w, bg_h), Image.Resampling.LANCZOS)
 
     left = max(0, (bg_w - target_w) // 2)
     top = max(0, (bg_h - target_h) // 2)
     background = background.crop((left, top, left + target_w, top + target_h))
     background = background.filter(
-        ImageFilter.GaussianBlur(
-            radius=max(18, int(min(target_w, target_h) * 0.018))
-        )
+        ImageFilter.GaussianBlur(radius=max(12, int(min(target_w, target_h) * 0.012)))
     )
     background = Image.blend(
         background,
         Image.new('RGB', (target_w, target_h), (0, 0, 0)),
-        0.16
+        0.18
     )
 
     if position == 'top':
@@ -72,4 +71,6 @@ def wallpaper_4k(img, params):
 
     x = (target_w - fg_w) // 2
     background.paste(foreground, (x, y))
-    return background
+
+    # Explicitly return the requested desktop canvas size.
+    return background.resize((target_w, target_h), Image.Resampling.LANCZOS)
