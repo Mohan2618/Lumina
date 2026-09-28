@@ -44,22 +44,22 @@ def _is_rate_limited(exc):
 
 
 def _gemini_interaction_image(client, model, image, prompt, image_size):
-    """Use Gemini's current Interactions image-editing API."""
-    buffer = __import__("io").BytesIO()
+    """Call Gemini's documented Interactions image-editing endpoint."""
+    import base64
+    import io
+
+    buffer = io.BytesIO()
     image.save(buffer, format="PNG")
-    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    image_data = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
     interaction = client.interactions.create(
         model=model,
         input=[
+            {"type": "text", "text": prompt},
             {
                 "type": "image",
-                "data": encoded,
                 "mime_type": "image/png",
-            },
-            {
-                "type": "text",
-                "text": prompt,
+                "data": image_data,
             },
         ],
         response_format={
@@ -70,12 +70,14 @@ def _gemini_interaction_image(client, model, image, prompt, image_size):
         },
     )
 
-    output = getattr(interaction, "output_image", None)
-    data = getattr(output, "data", None) if output else None
-    if not data:
-        raise RuntimeError("Gemini returned no output image")
-    return Image.open(__import__("io").BytesIO(base64.b64decode(data))).convert("RGB")
+    output_image = getattr(interaction, "output_image", None)
+    output_data = getattr(output_image, "data", None) if output_image else None
+    if not output_data:
+        raise RuntimeError(
+            f"Gemini returned no image output (interaction={type(interaction).__name__})"
+        )
 
+    return Image.open(io.BytesIO(base64.b64decode(output_data))).convert("RGB")
 
 def generate_desktop_outpaint(img, target_size=(3840, 2160)):
     """Extend a non-16:9 source into a clear, natural 16:9 desktop wallpaper."""
