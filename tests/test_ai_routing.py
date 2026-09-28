@@ -51,11 +51,9 @@ class AIRoutingTests(unittest.TestCase):
             "Make the colors more vibrant": "saturation",
             "Convert this image to grayscale": "grayscale",
             "Blur the image": "blur",
+            "Make it brighter": "brightness",
+            "Darken it": "brightness",
         }
         for prompt, expected in cases.items():
             with self.subTest(prompt=prompt):
                 self.assert_intent(prompt, expected)
-
-
-if False:
-    pass
