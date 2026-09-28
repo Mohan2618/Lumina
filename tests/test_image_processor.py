@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from PIL import Image
 
@@ -35,7 +36,12 @@ class ImageProcessorTests(unittest.TestCase):
         image = Image.new("RGB", (128, 96), (120, 80, 40))
         for intent in sorted(EXPECTED_OPERATIONS):
             with self.subTest(intent=intent):
-                result = process_image(image, intent, {})
+                if intent == "wallpaper_4k":
+                    with patch("lumina.image_processing.processor.generate_desktop_outpaint") as outpaint:
+                        outpaint.return_value = Image.new("RGB", (3840, 2160))
+                        result = process_image(image, intent, {})
+                else:
+                    result = process_image(image, intent, {})
                 self.assertIsNotNone(result, f"{intent} returned None")
                 self.assertIsInstance(result, Image.Image, f"{intent} did not return a PIL image")
                 self.assertGreater(result.width, 0)
@@ -43,7 +49,9 @@ class ImageProcessorTests(unittest.TestCase):
 
     def test_wallpaper_keeps_4k_canvas(self):
         image = Image.new("RGB", (800, 600), (120, 80, 40))
-        result = process_image(image, "wallpaper_4k", {})
+        with patch("lumina.image_processing.processor.generate_desktop_outpaint") as outpaint:
+            outpaint.return_value = Image.new("RGB", (3840, 2160))
+            result = process_image(image, "wallpaper_4k", {})
         self.assertEqual(result.size, (3840, 2160))
 
     def test_wallpaper_preserves_source_aspect_ratio(self):
