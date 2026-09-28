@@ -6,7 +6,7 @@ from .prompts.system_prompt import SYSTEM_PROMPT
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
 GEMINI_MODEL = "gemini-2.5-flash-lite"
-GEMINI_TIMEOUT = 30
+GEMINI_TIMEOUT = int(os.environ.get("GEMINI_TIMEOUT", "12"))
 ENABLE_CLAUDE = os.environ.get("ENABLE_CLAUDE", "false").lower() == "true"
 
 GUEST_MSG_LIMIT = 5
