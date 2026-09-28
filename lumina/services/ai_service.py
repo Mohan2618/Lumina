@@ -94,7 +94,7 @@ def call_ai(history: list, user_text: str, image_pil=None, gemini_client=None, g
         return detailed_local_description(image_pil), "local"
 
     # 🔥 STEP 2 — OPERATIONS FIRST (avoid Gemini hijack)
-    op = detect_op(p)
+    op = detect_op(p, has_image=bool(image_pil))
     if op:
         return op, "local"
 
@@ -181,15 +181,38 @@ def free_reply(prompt, has_image, img=None):
     if p: return f"I'm Lumina, your AI image assistant. *Add GEMINI_API_KEY* for full answers!\n\n**I can:** 🖼️ Apply filters | 🤖 Generate images | 🏥 Medical analysis"
     return "Upload an image or ask me anything!"
 
-def detect_op(p):
-    if not p: return None
+def detect_op(p, has_image=False):
+    if not p:
+        return None
 
-    # Desktop wallpaper requests must be handled as an edit when an image is supplied.
-    # Keep this ahead of the generic image-generation matcher because phrases such as
-    # "make this image into a 4K wallpaper" also contain "make" + "image".
-    if re.search(r'\bwallpaper\b|\bdesktop background\b|\bdesktop wallpaper\b', p) and re.search(r'\b4k\b|3840\s*[x×]\s*2160|2160p|uhd', p):
-        position = 'top' if re.search(r'\btop\b|\btop[- ]aligned\b', p) else 'bottom' if re.search(r'\bbottom\b', p) else 'center'
-        return f"Fitting your image to a 4K desktop wallpaper (3840×2160)!\n<OP>{{\"intent\":\"wallpaper_4k\",\"params\":{{\"width\":3840,\"height\":2160,\"position\":\"{position}\"}}}}</OP>"
+    # Existing-image desktop/4K requests are edits, not image-generation requests.
+    # Match natural language such as:
+    # "convert this image into a desktop high resolution 4K image"
+    # "make this picture fit my screen in 4K"
+    # "turn this into a 3840x2160 desktop background"
+    desktop_target = re.search(
+        r'\b(?:wallpaper|desktop\s+(?:background|wallpaper|image|picture)|desktop)\b'
+        r'|\b(?:screen|monitor)\b.*\b(?:fit|background|wallpaper|resolution)\b'
+        r'|\b(?:fit|fitt?ing|adapt|resize|convert|turn|transform|make)\b.*\b(?:screen|monitor)\b',
+        p,
+    )
+    high_res_target = re.search(
+        r'\b4k\b|3840\s*[x×]\s*2160|2160p|\buhd\b|ultra[- ]?hd|high[- ]?resolution',
+        p,
+    )
+    if has_image and desktop_target and high_res_target:
+        position = (
+            'top' if re.search(r'\btop\b|\btop[- ]aligned\b', p)
+            else 'bottom' if re.search(r'\bbottom\b', p)
+            else 'center'
+        )
+        return (
+            "Converting the uploaded image into a 4K desktop wallpaper at 3840×2160, "
+            "preserving the full image without cropping or stretching.\n"
+            f"<OP>{{\"intent\":\"wallpaper_4k\",\"params\":{{\"width\":3840,"
+            f"\"height\":2160,\"position\":\"{position}\"}}}}</OP>"
+        )
+
 
     if re.search(r'\bgenerat\w*\b|\bgive\b.*\bimage\b|\bcreate\b.*\bimage\b|\bmake\b.*\bimage\b|\bdraw\b|\bshow me a\b|\bpicture of\b', p):
         clean = re.sub(r'^(generate|create|make|draw|give|show\s+me|get)\s+(a|an|me|the)?\s*(image|picture|photo|of)?\s*', '', p, flags=re.I).strip()
