@@ -52,6 +52,10 @@ def file_to_pil(file):
                 raise ImageValidationError(
                     f"Image dimensions are too large. Maximum dimension is {MAX_IMAGE_DIMENSION}px."
                 )
+            if width * height > MAX_IMAGE_PIXELS:
+                raise ImageValidationError(
+                    f"Image contains too many pixels. Maximum is {MAX_IMAGE_PIXELS:,} pixels."
+                )
 
             probe.verify()
 
@@ -60,7 +64,7 @@ def file_to_pil(file):
 
     except ImageValidationError:
         raise
-    except (UnidentifiedImageError, OSError, Image.DecompressionBombError, Image.DecompressionBombWarning) as exc:
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as exc:
         raise ImageValidationError("The uploaded file is not a valid or safe image.") from exc
 
 
