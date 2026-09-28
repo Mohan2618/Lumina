@@ -80,7 +80,22 @@ def call_ai(history: list, user_text: str, image_pil=None, gemini_client=None, g
 
     p = user_text.lower().strip()
 
-    # 🔥 STEP 1 — HARD PRIORITY: DESCRIPTION
+    # Fast-path conversational messages. These must never make a network AI call.
+    if not image_pil and re.fullmatch(
+        r'(hi|hello|hey|hiya|yo|good morning|good afternoon|good evening|thanks|thank you|bye|goodbye)[!. ]*',
+        p,
+        flags=re.I,
+    ):
+        return free_reply(user_text, False, None), "local"
+
+    # Operations are deterministic and should never wait for Gemini.
+    # This also makes edits on the current image work even when the user does
+    # not re-upload the image.
+    op = detect_op(p, has_image=bool(image_pil))
+    if op:
+        return op, "local"
+
+    # 🔥 STEP 1 — DESCRIPTION
     if image_pil and is_description_request(p):
         if gemini_client:
             try:
@@ -93,12 +108,7 @@ def call_ai(history: list, user_text: str, image_pil=None, gemini_client=None, g
         # FORCE fallback (no free_reply interference)
         return detailed_local_description(image_pil), "local"
 
-    # 🔥 STEP 2 — OPERATIONS FIRST (avoid Gemini hijack)
-    op = detect_op(p, has_image=bool(image_pil))
-    if op:
-        return op, "local"
-
-    # 🔥 STEP 3 — NORMAL GEMINI
+    # 🔥 STEP 2 — NORMAL GEMINI
     if gemini_client:
         try:
             reply = call_gemini_fast(history, user_text, image_pil, gemini_client, gemini_model, system_prompt, timeout)
