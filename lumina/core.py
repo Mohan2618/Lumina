@@ -30,10 +30,12 @@ from .utils.image import (
 )
 
 app = Flask(__name__, template_folder="../templates", static_folder="../static")
-app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
-app.config["MAX_FORM_MEMORY_SIZE"] = 100 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
+app.config["MAX_FORM_MEMORY_SIZE"] = 30 * 1024 * 1024
 app.config["MAX_FORM_PARTS"] = 1000
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(32)
+app.config["SESSION_COOKIE_NAME"] = "lumina_session"
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("FLASK_ENV", "").lower() == "production"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["SESSION_COOKIE_SECURE"] = os.environ.get("FLASK_ENV", "").lower() == "production"
+app.config["SESSION_REFRESH_EACH_REQUEST"] = True
