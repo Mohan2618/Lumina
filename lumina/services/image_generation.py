@@ -50,22 +50,21 @@ def generate_desktop_outpaint(img, target_size=(3840, 2160)):
     canvas and only the newly created surrounding area is generated.
     """
     try:
-        from google import genai
-
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            print("[OUTPAINT] GEMINI_API_KEY is not configured")
-            return None
-
         target_w, target_h = target_size
         source = ImageOps.exif_transpose(img).convert("RGB")
 
-        # Already desktop-shaped: don't send it through an image model at all.
-        # This preserves every source pixel and avoids unnecessary generation.
+        # Already desktop-shaped: do not require an AI key or make a network call.
+        # This path is deterministic and preserves the complete source.
         source_ratio = source.width / source.height
         target_ratio = target_w / target_h
         if abs(source_ratio - target_ratio) < 0.01:
             return source.resize((target_w, target_h), Image.Resampling.LANCZOS)
+
+        from google import genai
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            print("[OUTPAINT] GEMINI_API_KEY is not configured")
+            return None
 
         # The complete original is kept intact and fitted inside the target.
         fitted = _fit_without_crop(source, target_w, target_h)
