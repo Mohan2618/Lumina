@@ -1,10 +1,11 @@
 import base64
 import io
 import os
-from PIL import Image, ImageFilter, ImageOps
+from PIL import Image, ImageOps
 
 
 def generate_image_from_prompt(prompt: str):
+    """Generate a new image with the existing Lumina FLUX pipeline."""
     prompt = (prompt or "").strip()
     if not prompt:
         return None
@@ -17,10 +18,12 @@ def generate_image_from_prompt(prompt: str):
     try:
         from huggingface_hub import InferenceClient
 
-        client = InferenceClient(token=hf_token)
-        return client.text_to_image(
+        return InferenceClient(token=hf_token).text_to_image(
             prompt=prompt,
-            model=os.environ.get("IMAGE_GENERATION_MODEL", "black-forest-labs/FLUX.1-schnell"),
+            model=os.environ.get(
+                "IMAGE_GENERATION_MODEL",
+                "black-forest-labs/FLUX.1-schnell",
+            ),
             width=1024,
             height=1024,
             num_inference_steps=int(os.environ.get("IMAGE_GENERATION_STEPS", "4")),
@@ -31,18 +34,23 @@ def generate_image_from_prompt(prompt: str):
         return None
 
 
-def generate_desktop_outpaint(img, target_size=(3840, 2160)):
-    """AI-expand an image into a desktop canvas without cropping its content.
+def _fit_without_crop(source: Image.Image, target_w: int, target_h: int) -> Image.Image:
+    scale = min(target_w / source.width, target_h / source.height)
+    size = (
+        max(1, round(source.width * scale)),
+        max(1, round(source.height * scale)),
+    )
+    return source.resize(size, Image.Resampling.LANCZOS)
 
-    The source image is first fitted completely inside the target. Gemini's
-    image model is then asked to extend the existing scene naturally into the
-    surrounding canvas. The original fitted image is composited back into the
-    result so important objects and pixels are not replaced by hallucinated
-    content.
+
+def generate_desktop_outpaint(img, target_size=(3840, 2160)):
+    """Extend a non-16:9 image into a desktop wallpaper without cropping it.
+
+    The source image is protected: it is fitted completely inside the desktop
+    canvas and only the newly created surrounding area is generated.
     """
     try:
         from google import genai
-        from google.genai import types
 
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
@@ -52,92 +60,94 @@ def generate_desktop_outpaint(img, target_size=(3840, 2160)):
         target_w, target_h = target_size
         source = ImageOps.exif_transpose(img).convert("RGB")
 
-        # Preserve the entire source. No source pixels are cropped.
-        scale = min(target_w / source.width, target_h / source.height)
-        fw = max(1, round(source.width * scale))
-        fh = max(1, round(source.height * scale))
-        fitted = source.resize((fw, fh), Image.Resampling.LANCZOS)
+        # Already desktop-shaped: don't send it through an image model at all.
+        # This preserves every source pixel and avoids unnecessary generation.
+        source_ratio = source.width / source.height
+        target_ratio = target_w / target_h
+        if abs(source_ratio - target_ratio) < 0.01:
+            return source.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
-        # Work at a practical generation resolution; upscale the final result
-        # after the model creates the semantic extension.
+        # The complete original is kept intact and fitted inside the target.
+        fitted = _fit_without_crop(source, target_w, target_h)
+
+        # Work at a model-friendly 16:9 size. The final result is resized to
+        # the requested 3840x2160 desktop canvas afterward.
         work_w, work_h = 1536, 864
-        work_scale = min(work_w / fitted.width, work_h / fitted.height)
-        sw = max(1, round(fitted.width * work_scale))
-        sh = max(1, round(fitted.height * work_scale))
-        work_source = fitted.resize((sw, sh), Image.Resampling.LANCZOS)
+        work_source = _fit_without_crop(fitted, work_w, work_h)
 
-        # Create a neutral canvas only to establish the required composition.
-        canvas = Image.new("RGB", (work_w, work_h), (128, 128, 128))
-        x = (work_w - sw) // 2
-        y = (work_h - sh) // 2
+        canvas = Image.new("RGB", (work_w, work_h), (0, 0, 0))
+        x = (work_w - work_source.width) // 2
+        y = (work_h - work_source.height) // 2
         canvas.paste(work_source, (x, y))
 
         buf = io.BytesIO()
         canvas.save(buf, format="PNG")
-        image_part = types.Part(
-            inline_data=types.Blob(mime_type="image/png", data=buf.getvalue())
-        )
+        encoded = base64.b64encode(buf.getvalue()).decode("utf-8")
 
         prompt = (
-            "Expand this image into a natural 16:9 desktop wallpaper. "
-            "This is an OUTPAINTING task, not a crop, resize, redesign, or style transfer. "
-            "The complete original image inside the canvas is the protected source. "
-            "Preserve every visible person, face, object, building, vehicle, text, and "
-            "important foreground detail exactly in its relative position. "
-            "Do not crop, stretch, duplicate, or remove the original content. "
-            "Only extend the existing background beyond the original image boundaries. "
-            "Continue the same environment, perspective, lighting, colors, textures, "
-            "depth, shadows, sky, ground, walls, landscape, or other background elements "
-            "naturally into the newly created desktop area. "
-            "The extension must be sharp, detailed, photorealistic, and visually seamless. "
-            "There must be no blurred side panels, artificial borders, frames, empty bars, "
-            "or obvious transition between original and extended areas. "
-            "Return a complete 16:9 desktop wallpaper."
+            "Convert the provided portrait or non-16:9 photo into a natural "
+            "16:9 desktop wallpaper by OUTPAINTING the scene. "
+            "Do not crop the original image. Do not stretch it. Do not place "
+            "the original image as a sharp rectangle over a blurred background. "
+            "The entire visible source image must remain present. "
+            "Extend the actual background continuously beyond all original "
+            "edges: continue the same sky, walls, room, landscape, road, water, "
+            "architecture, lighting, perspective, colors, textures and depth. "
+            "Keep every person, face, animal, vehicle, building, object and "
+            "important foreground detail from the source unchanged and in the "
+            "same relative position. The newly created areas must be clear, "
+            "sharp, detailed and photorealistic, with no blur panels, borders, "
+            "bars, duplicated subjects, seams or obvious transition. "
+            "The result must look like the original photograph naturally "
+            "continued to fill a 16:9 laptop/desktop wallpaper."
         )
 
         client = genai.Client(api_key=api_key)
         model = os.environ.get("IMAGE_EDIT_MODEL", "gemini-3.1-flash-image")
 
-        response = client.models.generate_content(
+        interaction = client.interactions.create(
             model=model,
-            contents=[image_part, types.Part.from_text(text=prompt)],
-            config=types.GenerateContentConfig(
-                response_modalities=["IMAGE"],
-            ),
+            input=[
+                {
+                    "type": "image",
+                    "mime_type": "image/png",
+                    "data": encoded,
+                },
+                {
+                    "type": "text",
+                    "text": prompt,
+                },
+            ],
+            response_format={
+                "type": "image",
+                "aspect_ratio": "16:9",
+                "image_size": "4K",
+            },
         )
 
-        generated = None
-        for candidate in getattr(response, "candidates", []) or []:
-            for part in getattr(getattr(candidate, "content", None), "parts", []) or []:
-                inline = getattr(part, "inline_data", None)
-                if inline and getattr(inline, "data", None):
-                    generated = Image.open(io.BytesIO(inline.data)).convert("RGB")
-                    break
-            if generated:
-                break
-
-        if generated is None:
-            print("[OUTPAINT] Gemini returned no image")
+        output = getattr(interaction, "output_image", None)
+        output_data = getattr(output, "data", None) if output else None
+        if not output_data:
+            print("[OUTPAINT] Gemini returned no output image")
             return None
 
-        generated = ImageOps.exif_transpose(generated).convert("RGB")
-        generated = generated.resize((target_w, target_h), Image.Resampling.LANCZOS)
+        generated = Image.open(
+            io.BytesIO(base64.b64decode(output_data))
+        ).convert("RGB")
 
-        # Restore the complete source at the exact final location. A soft
-        # transition only affects the extension boundary, not the source.
-        fitted_final = fitted
-        base = generated.copy()
-        x = (target_w - fitted_final.width) // 2
-        y = (target_h - fitted_final.height) // 2
+        # Never let the generated model output replace the protected source.
+        generated = generated.resize(
+            (target_w, target_h),
+            Image.Resampling.LANCZOS,
+        )
 
-        mask = Image.new("L", (fitted_final.width, fitted_final.height), 255)
-        edge = max(8, min(fitted_final.width, fitted_final.height) // 30)
-        if edge * 2 < min(mask.size):
-            # Feather only the boundary so the AI extension joins naturally.
-            mask = mask.filter(ImageFilter.GaussianBlur(edge))
+        x = (target_w - fitted.width) // 2
+        y = (target_h - fitted.height) // 2
 
-        base.paste(fitted_final, (x, y), mask)
-        return base
+        # Restore the source exactly. The extension is generated around it;
+        # no blurred extension or artificial panel is used.
+        generated.paste(fitted, (x, y))
+        return generated
 
     except Exception as exc:
         print(f"[OUTPAINT ERROR] {type(exc).__name__}: {str(exc)[:500]}")
