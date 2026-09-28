@@ -94,7 +94,7 @@ def call_ai(history: list, user_text: str, image_pil=None, gemini_client=None, g
         return detailed_local_description(image_pil), "local"
 
     # 🔥 STEP 2 — OPERATIONS FIRST (avoid Gemini hijack)
-    op = detect_op(p)
+    op = detect_op(p, bool(image_pil))
     if op:
         return op, "local"
 
@@ -190,9 +190,11 @@ def is_existing_image_edit_phrase(p):
         re.search(r'\b' + edit_action + r'\s+' + image_reference + r'(?:\s+to|\s+and)?(?:.*?\b' + edit_result + r'\b)?', p)
         or re.search(direct_edit, p)
         or re.search(r'\b(?:increase|decrease|reduce|raise|lower)\s+(?:the\s+)?(?:brightness|contrast|saturation|sharpness)\b', p)
+        or re.search(r'\b(?:make|keep|leave|adjust|change|modify|edit|enhance|improve|fix)\s+(?:it|this|that)\s+(?:brighter|darker|lighter|sharper|crisper|clearer|more\s+vibrant|warmer|cooler)\b', p)
+        or re.search(r'\b(?:brighten|darken|lighten|sharpen|blur|upscale|denoise)\s+(?:it|this|that)\b', p)
     )
 
-def detect_op(p):
+def detect_op(p, has_existing_image=False):
     if not p: return None
 
     if re.search(r'\bwallpaper\b|\bdesktop background\b|\bdesktop wallpaper\b', p) and re.search(r'\b4k\b|3840\s*[x×]\s*2160|2160p|uhd', p):
@@ -200,7 +202,7 @@ def detect_op(p):
         return f"Fitting your image to a 4K desktop wallpaper (3840×2160)!\n<OP>{{\"intent\":\"wallpaper_4k\",\"params\":{{\"width\":3840,\"height\":2160,\"position\":\"{position}\"}}}}</OP>"
 
     generation_request = re.search(r'\bgenerat\w*\b|\bgive\b.*\bimage\b|\bcreate\b.*\bimage\b|\bmake\b.*\bimage\b|\bdraw\b|\bshow me a\b|\bpicture of\b', p)
-    if generation_request and not is_existing_image_edit_phrase(p):
+    if generation_request and not (has_existing_image and is_existing_image_edit_phrase(p)):
         clean = re.sub(r'^(generate|create|make|draw|give|show\s+me|get)\s+(a|an|me|the)?\s*(image|picture|photo|of)?\s*', '', p, flags=re.I).strip()
         if not clean or len(clean)<3: clean=p
         return f"✨ Generating your image...\n<OP>{{\"intent\":\"generate_image\",\"params\":{{\"prompt\":\"{clean}, high quality, detailed\"}}}}</OP>"
