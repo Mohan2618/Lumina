@@ -1,5 +1,7 @@
 import io
+import struct
 import unittest
+import zlib
 
 from PIL import Image
 
@@ -22,8 +24,12 @@ class ImageValidationTests(unittest.TestCase):
             bytes_to_pil(b"not an image")
 
     def test_oversized_pixel_count_is_rejected(self):
+        width, height = 7000, 6000
+        ihdr = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+        chunk = struct.pack(">I", len(ihdr)) + b"IHDR" + ihdr + struct.pack(">I", zlib.crc32(b"IHDR" + ihdr) & 0xFFFFFFFF)
+        png = b"\x89PNG\r\n\x1a\n" + chunk + b"\x00\x00\x00\x00IEND\xaeB\x60\x82"
         with self.assertRaises(ImageValidationError):
-            bytes_to_pil(self.make_png((7000, 6000)))
+            bytes_to_pil(png)
 
     def test_file_upload_uses_same_validation(self):
         from werkzeug.datastructures import FileStorage
