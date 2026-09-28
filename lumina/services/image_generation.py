@@ -1,4 +1,5 @@
 import base64
+import io
 import os
 import time
 from PIL import Image, ImageOps
@@ -43,47 +44,38 @@ def _is_rate_limited(exc):
     ))
 
 
-def _gemini_interaction_image(client, model, image, prompt, image_size):
-    """Call Gemini's documented Interactions image-editing endpoint."""
-    import base64
-    import io
+def _gemini_edit_image(client, model, image, prompt):
+    """Use Google's documented Gemini image-editing GenerateContent API."""
+    from google import genai
+    from google.genai import types
 
-    buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
-    image_data = base64.b64encode(buffer.getvalue()).decode("utf-8")
-
-    interaction = client.interactions.create(
+    response = client.models.generate_content(
         model=model,
-        input=[
-            {"type": "text", "text": prompt},
-            {
-                "type": "image",
-                "mime_type": "image/png",
-                "data": image_data,
+        contents=[prompt, image],
+        config=types.GenerateContentConfig(
+            response_modalities=["IMAGE"],
+            response_format={
+                "image": {
+                    "aspect_ratio": "16:9",
+                    "image_size": "2K",
+                }
             },
-        ],
-        response_format={
-            "type": "image",
-            "mime_type": "image/png",
-            "aspect_ratio": "16:9",
-            "image_size": image_size,
-        },
+        ),
     )
 
-    output_image = getattr(interaction, "output_image", None)
-    output_data = getattr(output_image, "data", None) if output_image else None
-    if not output_data:
-        raise RuntimeError(
-            f"Gemini returned no image output (interaction={type(interaction).__name__})"
-        )
+    for part in response.parts:
+        if getattr(part, "inline_data", None) is not None:
+            return part.as_image().convert("RGB")
 
-    return Image.open(io.BytesIO(base64.b64decode(output_data))).convert("RGB")
+    raise RuntimeError("Gemini returned no image data")
+
 
 def generate_desktop_outpaint(img, target_size=(3840, 2160)):
-    """Extend a source image to 16:9 while preserving the complete original."""
+    """Create a natural 16:9 desktop extension without cropping the source."""
     target_w, target_h = target_size
     source = ImageOps.exif_transpose(img).convert("RGB")
 
+    # Exact 16:9 input needs no AI call.
     if abs((source.width / source.height) - (target_w / target_h)) < 0.01:
         return source.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
@@ -93,55 +85,54 @@ def generate_desktop_outpaint(img, target_size=(3840, 2160)):
 
     from google import genai
 
-    # Work from a 16:9 composition. The source is fitted without cropping.
+    # Fit the complete source into the target canvas. Never crop it.
     fitted = _fit_without_crop(source, target_w, target_h)
+
+    # Work at a smaller 16:9 canvas for the editing request, then upscale.
     work_w, work_h = 1536, 864
     work_source = _fit_without_crop(fitted, work_w, work_h)
     x = (work_w - work_source.width) // 2
     y = (work_h - work_source.height) // 2
 
-    # Use edge-color continuation as a neutral editable canvas. The prompt tells
-    # Gemini to replace only the surrounding area with a semantic continuation.
+    # Neutral space makes the requested extension unambiguous to the model.
     canvas = Image.new("RGB", (work_w, work_h), (128, 128, 128))
     canvas.paste(work_source, (x, y))
 
     prompt = (
-        "OUTPAINT THE SUPPLIED PHOTO INTO A 16:9 DESKTOP WALLPAPER. "
-        "The central supplied photograph is ORIGINAL CONTENT and must remain "
-        "completely visible. Do not crop, stretch, zoom, redesign, replace, or "
-        "blur it. Preserve every person, face, animal, object, building and "
-        "foreground detail. Replace only the surrounding neutral canvas with "
-        "a natural continuation of the same scene. Continue the existing sky, "
-        "ground, walls, landscape, architecture, water, road, foliage, lighting, "
-        "perspective, colors, textures and depth from the actual image edges. "
-        "The new area must be sharp, clear, detailed and photorealistic. "
-        "Do not create blurred panels, black bars, borders, frames, duplicated "
-        "subjects, stretched pixels, artificial backgrounds or visible seams. "
-        "The final image must look like the same photograph captured with a "
-        "wider 16:9 camera."
+        "OUTPAINT this supplied photograph into a 16:9 desktop wallpaper. "
+        "The photograph inside the canvas is the ORIGINAL and MUST remain "
+        "completely visible and unchanged. Do not crop, stretch, zoom, replace, "
+        "redesign, blur, or regenerate any part of the original photograph. "
+        "Preserve every person, face, animal, object, building and foreground detail. "
+        "Replace ONLY the surrounding neutral gray area with a natural continuation "
+        "of the same scene. Continue the actual background from the image edges: "
+        "sky, clouds, ground, walls, landscape, architecture, water, road, foliage, "
+        "lighting, perspective, colors, texture and depth. The extension must be "
+        "sharp, clear, detailed and photorealistic. Do not use blurred side panels, "
+        "black bars, borders, frames, duplicated subjects, stretched pixels, "
+        "artificial backgrounds or visible seams. Make it look like the same camera "
+        "captured a wider 16:9 view of the exact same scene."
     )
 
     client = genai.Client(api_key=api_key)
     model = os.environ.get("IMAGE_EDIT_MODEL", "gemini-3.1-flash-image")
-
     last_error = None
+
     for attempt in range(2):
         try:
-            generated = _gemini_interaction_image(
-                client, model, canvas, prompt, "2K"
-            )
+            generated = _gemini_edit_image(client, model, canvas, prompt)
             generated = ImageOps.exif_transpose(generated).resize(
                 (target_w, target_h), Image.Resampling.LANCZOS
             )
 
-            # Protect the original source from any generative modification.
+            # The generated image supplies only the new surrounding area.
+            # Put the original source back exactly so its content cannot change.
             final = generated.copy()
             final.paste(
                 fitted,
                 ((target_w - fitted.width) // 2, (target_h - fitted.height) // 2),
             )
             return final
-
         except Exception as exc:
             last_error = exc
             print(
