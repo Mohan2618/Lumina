@@ -309,6 +309,12 @@ The v1.1 stability work hardens the existing application without removing its cu
 
 The backend rejects oversized image payloads, malformed/truncated files, unsupported formats, and images exceeding the configured pixel/dimension limits before normal processing. Image-generation failures now return an explicit service-unavailable response instead of pretending that a result was produced.
 
+## v1.1 Image Request Routing Reliability
+
+The v1.1 routing fix separates **editing an existing image** from **generating a new image** more reliably. Requests such as "make the image brighter", "brighten this image", "increase the contrast", "make it sharper", and similar contextual edits are routed to the deterministic image-processing pipeline instead of the image-generation provider. Genuine requests such as "generate an image of a mountain" remain on the generation path.
+
+Regression tests cover common edit phrases, contextual requests using "it/this/that", and representative generation prompts.
+
 ## Future Enhancements
 
 - Streaming assistant responses
