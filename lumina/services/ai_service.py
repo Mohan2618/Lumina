@@ -248,14 +248,14 @@ def detect_op(p, has_existing_image=False):
     if re.search(r'\bblur\b|\bsmooth\b', p):
         m=re.search(r'radius\D*(\d+)', p); r=int(m.group(1)) if m else 3
         return f"Blurring!\n<OP>{{\"intent\":\"blur\",\"params\":{{\"radius\":{r}}}}}</OP>"
-    if re.search(r'\bsharpen\b|\bsharp\b|\bcrisp\b', p): return "Sharpening!\n<OP>{\"intent\":\"sharpen\",\"params\":{}}</OP>"
+    if re.search(r'\bsharpen\w*\b|\bsharp\w*\b|\bcrisp\w*\b', p): return "Sharpening!\n<OP>{\"intent\":\"sharpen\",\"params\":{}}</OP>"
     if re.search(r'\bcontrast\b', p):
         f=0.5 if re.search(r'decreas|reduc|lower|less', p) else 1.6
         return f"Contrast!\n<OP>{{\"intent\":\"contrast\",\"params\":{{\"factor\":{f}}}}}</OP>"
-    if re.search(r'\bbright\b|\bbrightness\b|\blighten\b|\bdarken\b', p):
+    if re.search(r'\bbright\w*\b|\bbrightness\b|\blighten\b|\bdarken\w*\b', p):
         f=0.5 if re.search(r'dark|dim|decreas|lower', p) else 1.5
         return f"Brightness!\n<OP>{{\"intent\":\"brightness\",\"params\":{{\"factor\":{f}}}}}</OP>"
-    if re.search(r'\bsaturat\b|\bvibran\b', p):
+    if re.search(r'\bsaturat\w*\b|\bvibran\w*\b', p):
         f=0.3 if re.search(r'decreas|reduc|less|desatur', p) else 1.7
         return f"Saturation!\n<OP>{{\"intent\":\"saturation\",\"params\":{{\"factor\":{f}}}}}</OP>"
     if re.search(r'\bhue\b', p): return "Hue shift!\n<OP>{\"intent\":\"hue\",\"params\":{}}</OP>"
