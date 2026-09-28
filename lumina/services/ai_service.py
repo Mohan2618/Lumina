@@ -201,7 +201,7 @@ def detect_op(p, has_existing_image=False):
         return f"Fitting your image to a 4K desktop wallpaper (3840×2160)!\n<OP>{{\"intent\":\"wallpaper_4k\",\"params\":{{\"width\":3840,\"height\":2160,\"position\":\"{position}\"}}}}</OP>"
 
     generation_request = re.search(r'\bgenerat\w*\b|\bgive\b.*\bimage\b|\bcreate\b.*\bimage\b|\bmake\b.*\bimage\b|\bdraw\b|\bshow me a\b|\bpicture of\b', p)
-    if generation_request and not (has_existing_image and is_existing_image_edit_phrase(p)):
+    if generation_request and not is_existing_image_edit_phrase(p):
         clean = re.sub(r'^(generate|create|make|draw|give|show\s+me|get)\s+(a|an|me|the)?\s*(image|picture|photo|of)?\s*', '', p, flags=re.I).strip()
         if not clean or len(clean)<3: clean=p
         return f"✨ Generating your image...\n<OP>{{\"intent\":\"generate_image\",\"params\":{{\"prompt\":\"{clean}, high quality, detailed\"}}}}</OP>"
