@@ -217,7 +217,9 @@ def register_routes(app):
             if image_pil is None and last_image_pil is not None:
                 image_pil=last_image_pil
     
-            ai_image=image_pil if new_file_uploaded else None
+            # Existing-image edits must use the current image, even when the
+            # browser sends it as last_image instead of a fresh multipart upload.
+            ai_image=image_pil
             raw_reply,model_used=call_ai(history,prompt,ai_image,gemini_client,GEMINI_MODEL,SYSTEM_PROMPT,GEMINI_TIMEOUT)
             clean_reply,intent,params=extract_op(raw_reply)
             result_b64=None
