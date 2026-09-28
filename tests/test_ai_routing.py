@@ -26,7 +26,7 @@ class AIRoutingTests(unittest.TestCase):
         ]
         for prompt in edit_prompts:
             with self.subTest(prompt=prompt):
-                result = detect_op(prompt)
+                result = detect_op(prompt, has_existing_image=True)
                 self.assertIsNotNone(result)
                 self.assertNotIn('"intent":"generate_image"', result)
 
@@ -56,4 +56,6 @@ class AIRoutingTests(unittest.TestCase):
         }
         for prompt, expected in cases.items():
             with self.subTest(prompt=prompt):
-                self.assert_intent(prompt, expected)
+                result = detect_op(prompt, has_existing_image=True)
+                self.assertIsNotNone(result, prompt)
+                self.assertIn(f'\"intent\":\"{expected}\"', result, prompt)
