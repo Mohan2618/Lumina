@@ -5,7 +5,7 @@ import cv2
 from PIL import Image
 from .core import app, GEMINI_MODEL, GEMINI_TIMEOUT, SYSTEM_PROMPT, gemini_client, claude_client
 from .utils.auth import hash_password, verify_password, validate_password_strength, validate_username, validate_email
-from .utils.image import pil_to_base64, file_to_pil, pil_to_bytes, pil_to_cv2, is_rate_limit, check_guest_limit, consume_guest_limit
+from .utils.image import pil_to_base64, file_to_pil, pil_to_bytes, pil_to_cv2, is_rate_limit, check_guest_limit, consume_guest_limit, ImageValidationError
 from .services.email_service import send_email_otp
 from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp, update_password, otp_can_send
 from .services.image_generation import generate_image_from_prompt
@@ -25,8 +25,7 @@ def register_routes(app):
         if not pw: return jsonify({"error":"No password"}),400
         strength=validate_password_strength(pw)
         if not strength["valid"]: return jsonify({"error":"Weak password","details":strength["errors"]}),400
-        salt,hashed=hash_password(pw)
-        return jsonify({"salt":salt,"hash":hashed})
+        return jsonify({"error":"This endpoint is no longer available"}),410
 
     @app.route("/api/auth/signup", methods=["POST"])
     def api_signup():
@@ -198,8 +197,14 @@ def register_routes(app):
     
             image_pil=None; new_file_uploaded=False
             if file and file.filename:
-                try: image_pil=file_to_pil(file); new_file_uploaded=True
-                except Exception as e: print(f"[Upload error] {e}")
+                try:
+                    image_pil=file_to_pil(file)
+                    new_file_uploaded=True
+                except ImageValidationError as e:
+                    return jsonify({"message":f"⚠️ {e}"}),400
+                except Exception as e:
+                    print(f"[Upload error] {type(e).__name__}: {e}")
+                    return jsonify({"message":"⚠️ Lumina could not read that image."}),400
     
             last_image_pil=None
             if last_image_data:
@@ -235,6 +240,8 @@ def register_routes(app):
                     result_b64=pil_to_base64(result_img)
                     if not clean_reply:
                         clean_reply=f"✨ Here's your generated image for: *\"{gen_prompt[:60]}\"*"
+                else:
+                    return jsonify({"message":"⚠️ Lumina could not generate the image right now. Please try again shortly."}),503
             elif intent=='pipeline' and image_pil:
                 steps=params.get('steps',[])
                 if not isinstance(steps,list) or not steps or len(steps)>8:
