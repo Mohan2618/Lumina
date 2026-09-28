@@ -17,15 +17,15 @@ pinned: false
 
 ## Overview
 
-Lumina is an AI-powered image processing chatbot that combines computer vision techniques with generative AI to provide an interactive platform for image analysis, enhancement, editing, and generation. Users can communicate with the application using natural language and perform various image processing operations through a simple web interface.
+Lumina is an AI-powered image processing chatbot that combines computer vision techniques with generative AI to provide an interactive platform for image analysis, enhancement, editing, and generation. Users can communicate with the application using natural language and perform image processing operations through a web interface.
 
-The application is developed using Flask and OpenCV and integrates Google Gemini for intelligent image understanding and conversational responses. It is deployed on Render for public access.
+The application is developed using Flask, OpenCV, Pillow, and NumPy and integrates Google Gemini for intelligent image understanding and conversational responses. It is deployed on Render using Docker.
 
 ---
 
 ## User-Facing Branding
 
-Lumina presents a consistent **Lumina AI** identity throughout the application. User-facing status messages, notifications, assistant responses, and service errors do not expose the names of underlying AI models or providers. Internal provider integrations remain implementation details and do not change the Lumina user experience.
+Lumina presents a consistent **Lumina AI** identity throughout the application. User-facing status messages, notifications, assistant responses, and service errors do not expose the names of underlying AI models or providers. Provider integrations remain implementation details and do not change the Lumina user experience.
 
 ---
 
@@ -46,8 +46,69 @@ Lumina presents a consistent **Lumina AI** identity throughout the application. 
 - Histogram equalization
 - Medical image analysis with appropriate disclaimer
 - Session-based conversation management
-- Web-based user interface
 - Email OTP delivery for password reset
+- Natural-language multi-step image editing
+- Local image-edit undo/redo history
+- Before/after image comparison
+- 4K desktop wallpaper fitting
+- Structured code blocks with **Copy** and **Save** controls
+- Safe client-side **Run** controls for HTML, SVG, CSS, and JavaScript response blocks
+- Markdown table rendering with **Copy table** support
+- Project/folder structures and diagrams preserved as copyable text artifacts
+- Task-specific progress states for chat, coding, structured information, image editing, and image generation
+- Responsive response artifacts for desktop and mobile layouts
+
+---
+
+## Structured AI Responses
+
+Lumina now treats assistant responses as structured content instead of displaying every response as plain text.
+
+### Code
+
+Fenced Markdown code blocks such as:
+
+```python
+print("Hello from Lumina")
+```
+
+are displayed as dedicated code artifacts with:
+
+- language label
+- syntax-preserving formatting
+- Copy button
+- Save button
+- Run button for supported browser-safe languages
+
+The browser Run action is sandboxed and is currently available for HTML, SVG, CSS, and JavaScript. It does not execute Python, shell commands, PowerShell, or server-side code.
+
+### Tables
+
+Standard Markdown tables are converted into responsive table cards with a **Copy table** action. The copied table uses tab-separated values so it can be pasted into spreadsheets and editors.
+
+### Project Structures and Diagrams
+
+Folder structures, ASCII diagrams, Mermaid source, architecture sketches, and other structured text inside fenced code blocks are preserved as copyable artifacts instead of being flattened into normal paragraphs.
+
+### Security
+
+Assistant-generated HTML is not trusted as executable page content. Code artifacts are escaped before rendering. The optional Run action executes only the selected browser-safe artifact inside a sandboxed iframe.
+
+---
+
+## Task-Specific Response Status
+
+Lumina uses separate user-facing progress states based on the type of request rather than using the same generic status for every operation.
+
+| Request type | Example progress states |
+|---|---|
+| Normal chat | Understanding → Forming → Polishing |
+| Coding / project help | Understanding → Structuring → Checking |
+| Tables / diagrams / comparisons | Organizing → Formatting → Polishing |
+| Image editing | Understanding → Processing → Finalizing |
+| Image generation | Planning → Creating → Preparing |
+
+These are interface-level progress indicators. They do not claim to expose hidden model reasoning or private chain-of-thought.
 
 ---
 
@@ -75,26 +136,36 @@ Lumina presents a consistent **Lumina AI** identity throughout the application. 
 - HTML
 - CSS
 - JavaScript
+- Responsive structured-response rendering
 
 ### Deployment
 
 - Render
 - Docker
-- PostgreSQL (production authentication storage)
-- SQLite (local-development fallback)
+- PostgreSQL for production authentication storage
+- SQLite for local-development fallback
 
 ---
 
 ## Project Structure
 
-```
+```text
 Lumina/
 │
 ├── app.py
+├── lumina/
+│   ├── core.py
+│   ├── routes.py
+│   ├── image_processing/
+│   ├── prompts/
+│   ├── services/
+│   └── utils/
 ├── templates/
+│   └── index.html
 ├── static/
-├── uploads/
-├── processed/
+│   ├── logo.jpeg
+│   └── response_enhancements.js
+├── tests/
 ├── Dockerfile
 ├── requirements.txt
 ├── README.md
@@ -118,13 +189,13 @@ cd Lumina
 python -m venv venv
 ```
 
-Windows
+Windows PowerShell:
 
 ```powershell
 venv\Scripts\activate
 ```
 
-Linux/macOS
+Linux/macOS:
 
 ```bash
 source venv/bin/activate
@@ -155,11 +226,9 @@ Never commit real API keys, database connection strings, passwords, or other cre
 
 ### Persistent Authentication Database
 
-**Important:** accounts created in the old Render-hosted SQLite database are not automatically migrated into the new PostgreSQL database. After configuring `DATABASE_URL`, create/test an account in the new database (or perform a deliberate data migration) before testing password reset. The PostgreSQL authentication layer uses a database cursor for each query so result fetching works correctly with both user and OTP operations.
+Accounts created in an older Render-hosted SQLite database are not automatically migrated into PostgreSQL. After configuring `DATABASE_URL`, create/test an account in the new database or perform a deliberate data migration before testing password reset.
 
-Lumina uses **PostgreSQL in production** when the `DATABASE_URL` environment variable is configured. This keeps user accounts, password hashes, and password-reset OTP records persistent across Render deployments and restarts. SQLite remains the local-development fallback when `DATABASE_URL` is not set.
-
-For a hosted deployment, create a PostgreSQL database (for example, through Supabase), copy its PostgreSQL connection string into Render as `DATABASE_URL`, and redeploy. The application automatically creates the required `users` and `otps` tables on startup; no manual SQL setup is required.
+Lumina uses PostgreSQL in production when `DATABASE_URL` is configured. SQLite remains the local-development fallback when it is not set. The application creates the required authentication tables on startup.
 
 Do not commit `DATABASE_URL` or any database password to the repository.
 
@@ -169,10 +238,10 @@ Do not commit `DATABASE_URL` or any database password to the repository.
 python app.py
 ```
 
-The application will be available at
+The application will be available at:
 
-```
-http://localhost:5000
+```text
+http://localhost:7860
 ```
 
 ---
@@ -189,38 +258,63 @@ https://lumina-fbhi.onrender.com
 
 ## How It Works
 
-1. The user uploads an image.
-2. The user provides a prompt or selects an image processing task.
-3. The chatbot interprets the request using Google Gemini.
-4. OpenCV performs the requested image processing operation.
-5. The processed image and AI-generated response are returned to the user.
-6. For password reset, Lumina generates a one-time OTP, stores it in the configured authentication database, and sends it through the Brevo HTTPS API.
-7. In production, PostgreSQL keeps user accounts and OTP records persistent across Render restarts and deployments.
-
-**Forgot-password UI:** The Send OTP control uses an explicit JavaScript click listener instead of relying on the inline `onclick` handler, while keeping the existing `sendOTP()` request flow unchanged.
+1. The user enters a natural-language request and optionally uploads an image.
+2. Lumina determines whether the request is conversational, analytical, an image edit, an image-generation task, or another supported operation.
+3. AI-assisted requests are sent through Lumina's configured AI service, while deterministic image operations are executed through the image-processing layer.
+4. The backend returns the assistant message, optional processed/generated image, conversation history, and current image state.
+5. The frontend converts supported Markdown structures into dedicated response artifacts such as code blocks and tables.
+6. Code artifacts provide copy/save controls and browser-safe Run controls where supported.
+7. Image operations can use local undo/redo history and before/after comparison.
+8. Password-reset requests use one-time OTPs stored in the configured authentication database and delivered through Brevo.
 
 ---
 
-## Applications
+## Advanced Editing
 
-- Image enhancement
-- Educational demonstrations
-- Computer vision experimentation
-- AI-assisted image editing
-- Medical image assistance (non-diagnostic)
-- Image analysis and understanding
+Lumina supports natural-language multi-step image editing. Users can request several supported edits in a single message, and Lumina can preserve the requested order and apply up to eight operations as one workflow.
+
+The web interface provides local undo/redo controls for image-edit states, with up to 20 states retained per active chat, plus an interactive before/after comparison with a draggable split slider.
+
+Lumina also supports **4K desktop wallpaper fitting**. A request such as "make this image into a desktop 4K wallpaper" preserves the complete source image as the foreground and builds the remaining 16:9 canvas from a softly blurred, enlarged version of the same image. This avoids stretching or cutting the original subject while producing a 3840×2160 result. Center, top, and bottom placement are supported.
+
+---
+
+## Response UI Architecture
+
+The existing Flask template remains the primary application interface. A small response-enhancement layer is loaded from `static/response_enhancements.js` through the Flask response pipeline in `app.py`.
+
+This keeps the existing chat implementation intact while adding:
+
+```text
+AI response
+    ↓
+Markdown / structured-content detection
+    ↓
+┌───────────────┬───────────────┬────────────────┐
+│ Code artifact │ Table artifact│ Normal message │
+└───────┬───────┴───────┬───────┴────────────────┘
+        ↓               ↓
+ Copy / Save       Copy table
+        ↓
+ Optional sandbox Run
+```
+
+The response enhancement layer is intentionally client-side for presentation. It does not change the server's image-processing pipeline.
 
 ---
 
 ## Future Enhancements
 
-- Additional authentication hardening
-- Image history management
+- Streaming assistant responses
+- Rich visual graph and chart rendering
+- Mermaid diagram rendering with export support
+- Additional AI image-generation models
+- Specialized vision models for segmentation and super-resolution
+- Model/provider routing and fallback
 - Batch image processing
-- Additional AI image generation models
-- Cloud storage integration
+- Cloud image storage
 - REST API support
-- Mobile-responsive interface
+- Additional authentication hardening
 - Performance optimization
 
 ---
@@ -233,6 +327,8 @@ This project demonstrates practical experience in:
 - Computer vision using OpenCV
 - AI model integration
 - Prompt engineering
+- Structured AI response rendering
+- Frontend JavaScript and responsive UI design
 - Image processing techniques
 - API integration
 - Docker-based deployment
@@ -251,17 +347,3 @@ GitHub: https://github.com/Mohan2618/Lumina
 ## License
 
 This project is intended for educational and research purposes.
-
-
-## Advanced Editing
-
-Lumina supports natural-language multi-step image editing. Users can request several supported edits in a single message, and Lumina can preserve the requested order and apply up to eight operations as one workflow. The web interface also provides local undo/redo controls for image-edit states, with up to 20 states retained per active chat, plus an interactive before/after comparison with a draggable split slider.
-
-Lumina also supports **4K desktop wallpaper fitting**. A request such as "make this image into a desktop 4K wallpaper" preserves the complete source image as the foreground and builds the remaining 16:9 canvas from a softly blurred, enlarged version of the same image. This avoids stretching or cutting the original subject while producing a 3840×2160 result. Center, top, and bottom placement are supported.
-
-The interface displays Lumina activity statuses while work is in progress, such as **Thinking**, **Analyzing**, **Working/Editing**, **Creating**, and **One last touch**. These are user-facing progress indicators and do not expose underlying model or provider implementation details.
-
-Example: "Make it grayscale, sharpen it, and resize it to 1024x1024."
-
-The advanced pipeline keeps provider/model implementation details internal and presents the workflow as a Lumina feature.
-
