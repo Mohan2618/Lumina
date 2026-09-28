@@ -183,10 +183,14 @@ def free_reply(prompt, has_image, img=None):
 
 def is_existing_image_edit_phrase(p):
     edit_action = r'(?:make|keep|leave|adjust|change|modify|edit|enhance|improve|fix|turn|convert|increase|decrease|reduce|raise|lower|brighten|darken|lighten)'
-    image_reference = r'(?:the|this|that|above|uploaded|current|existing)?\\s*image\\b'
+    image_reference = r'(?:the|this|that|above|uploaded|current|existing)?\s*image\b'
     edit_result = r'(?:brighter|darker|lighter|dim|bright|dark|grayscale|grey|gray|black.?and.?white|monochrome|sharper|sharp|crisper|blurred|blurry|contrast|saturated|vibrant|warm|cool|larger|smaller|clearer|enhanced|upscaled|denoised|cropped|rotated|flipped|sepia|vintage|cartoon|sketch|watercolor|oil painting|neon|glitch|hdr)'
-    return bool(re.search(r'\\b' + edit_action + r'\\s+' + image_reference + r'(?:\\s+to|\\s+and|\\s+)?(?:.*\\b' + edit_result + r'\\b)?', p)) or bool(re.search(r'\\b(?:brighten|darken|lighten)\\s+(?:the|this|that|above|uploaded|current|existing)?\\s*image\\b', p))
-
+    direct_edit = r'\b(?:brighten|darken|lighten)\s+(?:the|this|that|above|uploaded|current|existing)?\s*image\b'
+    return bool(
+        re.search(r'\b' + edit_action + r'\s+' + image_reference + r'(?:\s+to|\s+and)?(?:.*?\b' + edit_result + r'\b)?', p)
+        or re.search(direct_edit, p)
+        or re.search(r'\b(?:increase|decrease|reduce|raise|lower)\s+(?:the\s+)?(?:brightness|contrast|saturation|sharpness)\b', p)
+    )
 
 def detect_op(p):
     if not p: return None
