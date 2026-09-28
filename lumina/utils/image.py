@@ -80,8 +80,16 @@ def pil_to_bytes(img, quality=85):
 
 
 def is_rate_limit(err_str):
+    """Only classify genuine quota/rate-limit errors as temporary busy states."""
     s = str(err_str).lower()
-    return "429" in s or "quota" in s or "rate" in s or "resource_exhausted" in s
+    return (
+        "429" in s
+        or "resource_exhausted" in s
+        or "quota exceeded" in s
+        or "rate limit" in s
+        or "rate_limit" in s
+        or "too many requests" in s
+    )
 
 
 def check_guest_limit():
