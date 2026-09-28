@@ -29,41 +29,54 @@ def thumbnail(img, params):
     return r
 
 def wallpaper_4k(img, params):
-    """Fit an image to a 4K desktop canvas with an explicit no-stretch policy."""
+    """Create a 4K desktop wallpaper without cropping the original image.
+
+    The complete source image is preserved. When the source is not 16:9,
+    the missing desktop area is filled using an enlarged, blurred version of
+    the same image rather than cutting away any source pixels.
+    """
     target_w = max(1, int(params.get("width", 3840)))
     target_h = max(1, int(params.get("height", 2160)))
-    mode = str(params.get("mode", "cover")).lower()
     position = str(params.get("position", "center")).lower()
 
     src = ImageOps.exif_transpose(img).convert("RGB")
     src_w, src_h = src.size
 
-    if mode == "contain":
-        scale = min(target_w / src_w, target_h / src_h)
-        fg = src.resize((max(1, round(src_w * scale)), max(1, round(src_h * scale))), Image.Resampling.LANCZOS)
-        canvas = Image.new("RGB", (target_w, target_h), (0, 0, 0))
-        x = (target_w - fg.width) // 2
-        y = 0 if position == "top" else target_h - fg.height if position == "bottom" else (target_h - fg.height) // 2
-        canvas.paste(fg, (x, y))
-        return canvas
+    # Fit the COMPLETE source inside the 16:9 desktop canvas.
+    scale = min(target_w / src_w, target_h / src_h)
+    fg_w = max(1, round(src_w * scale))
+    fg_h = max(1, round(src_h * scale))
+    foreground = src.resize((fg_w, fg_h), Image.Resampling.LANCZOS)
 
-    # Default desktop-wallpaper behavior: cover the screen. This is the same
-    # behavior as a typical desktop "Fill" setting: preserve aspect ratio and
-    # crop only the minimum amount needed to fill 16:9.
-    scale = max(target_w / src_w, target_h / src_h)
-    scaled_w = max(target_w, round(src_w * scale))
-    scaled_h = max(target_h, round(src_h * scale))
-    fg = src.resize((scaled_w, scaled_h), Image.Resampling.LANCZOS)
+    # Create a full-bleed background from the same image. This is intentionally
+    # separate from the foreground: the foreground is never cropped.
+    bg_scale = max(target_w / src_w, target_h / src_h)
+    bg_w = max(target_w, round(src_w * bg_scale))
+    bg_h = max(target_h, round(src_h * bg_scale))
+    background = src.resize((bg_w, bg_h), Image.Resampling.LANCZOS)
 
-    max_x = max(0, scaled_w - target_w)
-    max_y = max(0, scaled_h - target_h)
-    x = max_x // 2
+    left = max(0, (bg_w - target_w) // 2)
+    top = max(0, (bg_h - target_h) // 2)
+    background = background.crop((left, top, left + target_w, top + target_h))
+
+    # Keep the extension subtle so the original image remains the visual focus.
+    blur_radius = max(8, int(min(target_w, target_h) * 0.01))
+    background = background.filter(ImageFilter.GaussianBlur(radius=blur_radius))
+    background = Image.blend(
+        background,
+        Image.new("RGB", (target_w, target_h), (0, 0, 0)),
+        0.22,
+    )
+
     if position == "top":
         y = 0
     elif position == "bottom":
-        y = max_y
+        y = target_h - fg_h
     else:
-        y = max_y // 2
+        y = (target_h - fg_h) // 2
 
-    return fg.crop((x, y, x + target_w, y + target_h))
+    x = (target_w - fg_w) // 2
+    background.paste(foreground, (x, y))
+
+    return background
 
