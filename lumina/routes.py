@@ -5,7 +5,7 @@ import cv2
 from PIL import Image
 from .core import app, GEMINI_MODEL, GEMINI_TIMEOUT, SYSTEM_PROMPT, gemini_client, claude_client
 from .utils.auth import hash_password, verify_password, validate_password_strength, validate_username, validate_email
-from .utils.image import pil_to_base64, file_to_pil, pil_to_bytes, pil_to_cv2, is_rate_limit, check_guest_limit, consume_guest_limit, ImageValidationError
+from .utils.image import pil_to_base64, file_to_pil, bytes_to_pil, pil_to_bytes, pil_to_cv2, is_rate_limit, check_guest_limit, consume_guest_limit, ImageValidationError
 from .services.email_service import send_email_otp
 from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp, update_password, otp_can_send
 from .services.image_generation import generate_image_from_prompt
@@ -210,8 +210,9 @@ def register_routes(app):
             if last_image_data:
                 try:
                     b64=last_image_data.split(",",1)[1] if "," in last_image_data else last_image_data
-                    last_image_pil=Image.open(io.BytesIO(base64.b64decode(b64))).convert("RGB")
-                except: pass
+                    last_image_pil=bytes_to_pil(base64.b64decode(b64, validate=True))
+                except Exception:
+                    last_image_pil=None
     
             if image_pil is None and last_image_pil is not None:
                 image_pil=last_image_pil

@@ -29,22 +29,22 @@ def pil_to_base64(img):
 def file_to_pil(file):
     if not file or not getattr(file, "stream", None):
         raise ImageValidationError("No image file was provided.")
-
     stream = file.stream
     stream.seek(0)
-    raw = stream.read(MAX_IMAGE_BYTES + 1)
+    return bytes_to_pil(stream.read(MAX_IMAGE_BYTES + 1))
 
+
+def bytes_to_pil(raw):
+    if not isinstance(raw, (bytes, bytearray)) or not raw:
+        raise ImageValidationError("The image data is empty.")
     if len(raw) > MAX_IMAGE_BYTES:
         raise ImageValidationError("Image is too large. Maximum size is 25 MB.")
-    if not raw:
-        raise ImageValidationError("The uploaded image is empty.")
 
     try:
         with Image.open(io.BytesIO(raw)) as probe:
             image_format = (probe.format or "").upper()
             if image_format not in ALLOWED_IMAGE_FORMATS:
                 raise ImageValidationError("Unsupported image format.")
-
             width, height = probe.size
             if width <= 0 or height <= 0:
                 raise ImageValidationError("Invalid image dimensions.")
@@ -52,16 +52,17 @@ def file_to_pil(file):
                 raise ImageValidationError(
                     f"Image dimensions are too large. Maximum dimension is {MAX_IMAGE_DIMENSION}px."
                 )
-
+            if width * height > MAX_IMAGE_PIXELS:
+                raise ImageValidationError(
+                    f"Image contains too many pixels. Maximum is {MAX_IMAGE_PIXELS:,} pixels."
+                )
             probe.verify()
-
         with Image.open(io.BytesIO(raw)) as image:
             return image.convert("RGB")
-
     except ImageValidationError:
         raise
-    except (UnidentifiedImageError, OSError, Image.DecompressionBombError, Image.DecompressionBombWarning) as exc:
-        raise ImageValidationError("The uploaded file is not a valid or safe image.") from exc
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as exc:
+        raise ImageValidationError("The image data is not a valid or safe image.") from exc
 
 
 def pil_to_cv2(img):

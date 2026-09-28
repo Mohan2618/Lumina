@@ -11,7 +11,7 @@ from .config import (
 
 from .image_processing.processor import process_image
 from .services.email_service import send_email_otp
-from .services.image_generation import create_placeholder, generate_image_from_prompt
+from .services.image_generation import generate_image_from_prompt
 from .utils.auth import (
     hash_password,
     validate_email,

@@ -303,6 +303,12 @@ The response enhancement layer is intentionally client-side for presentation. It
 
 ---
 
+## v1.1 Stability & Reliability
+
+The v1.1 stability work hardens the existing application without removing its current image-processing or response features. It includes safer image upload validation, explicit upload size limits, session-cookie security defaults, removal of the obsolete client-side password-hashing endpoint, and clearer image-generation failure handling. Images are validated by their decoded format and dimensions rather than trusting the uploaded filename or MIME type.
+
+The backend rejects oversized image payloads, malformed/truncated files, unsupported formats, and images exceeding the configured pixel/dimension limits before normal processing. Image-generation failures now return an explicit service-unavailable response instead of pretending that a result was produced.
+
 ## Future Enhancements
 
 - Streaming assistant responses
