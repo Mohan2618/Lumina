@@ -141,4 +141,3 @@ def generate_desktop_outpaint(img, target_size=(3840, 2160)):
     except Exception as exc:
         print(f"[OUTPAINT ERROR] {type(exc).__name__}: {exc}")
         raise
-\n
