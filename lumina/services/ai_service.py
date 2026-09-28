@@ -181,17 +181,22 @@ def free_reply(prompt, has_image, img=None):
     if p: return f"I'm Lumina, your AI image assistant. *Add GEMINI_API_KEY* for full answers!\n\n**I can:** 🖼️ Apply filters | 🤖 Generate images | 🏥 Medical analysis"
     return "Upload an image or ask me anything!"
 
+def is_existing_image_edit_phrase(p):
+    edit_action = r'(?:make|keep|leave|adjust|change|modify|edit|enhance|improve|fix|turn|convert|increase|decrease|reduce|raise|lower|brighten|darken|lighten)'
+    image_reference = r'(?:the|this|that|above|uploaded|current|existing)?\\s*image\\b'
+    edit_result = r'(?:brighter|darker|lighter|dim|bright|dark|grayscale|grey|gray|black.?and.?white|monochrome|sharper|sharp|crisper|blurred|blurry|contrast|saturated|vibrant|warm|cool|larger|smaller|clearer|enhanced|upscaled|denoised|cropped|rotated|flipped|sepia|vintage|cartoon|sketch|watercolor|oil painting|neon|glitch|hdr)'
+    return bool(re.search(r'\\b' + edit_action + r'\\s+' + image_reference + r'(?:\\s+to|\\s+and|\\s+)?(?:.*\\b' + edit_result + r'\\b)?', p)) or bool(re.search(r'\\b(?:brighten|darken|lighten)\\s+(?:the|this|that|above|uploaded|current|existing)?\\s*image\\b', p))
+
+
 def detect_op(p):
     if not p: return None
 
-    # Desktop wallpaper requests must be handled as an edit when an image is supplied.
-    # Keep this ahead of the generic image-generation matcher because phrases such as
-    # "make this image into a 4K wallpaper" also contain "make" + "image".
     if re.search(r'\bwallpaper\b|\bdesktop background\b|\bdesktop wallpaper\b', p) and re.search(r'\b4k\b|3840\s*[x×]\s*2160|2160p|uhd', p):
         position = 'top' if re.search(r'\btop\b|\btop[- ]aligned\b', p) else 'bottom' if re.search(r'\bbottom\b', p) else 'center'
         return f"Fitting your image to a 4K desktop wallpaper (3840×2160)!\n<OP>{{\"intent\":\"wallpaper_4k\",\"params\":{{\"width\":3840,\"height\":2160,\"position\":\"{position}\"}}}}</OP>"
 
-    if re.search(r'\bgenerat\w*\b|\bgive\b.*\bimage\b|\bcreate\b.*\bimage\b|\bmake\b.*\bimage\b|\bdraw\b|\bshow me a\b|\bpicture of\b', p):
+    generation_request = re.search(r'\bgenerat\w*\b|\bgive\b.*\bimage\b|\bcreate\b.*\bimage\b|\bmake\b.*\bimage\b|\bdraw\b|\bshow me a\b|\bpicture of\b', p)
+    if generation_request and not is_existing_image_edit_phrase(p):
         clean = re.sub(r'^(generate|create|make|draw|give|show\s+me|get)\s+(a|an|me|the)?\s*(image|picture|photo|of)?\s*', '', p, flags=re.I).strip()
         if not clean or len(clean)<3: clean=p
         return f"✨ Generating your image...\n<OP>{{\"intent\":\"generate_image\",\"params\":{{\"prompt\":\"{clean}, high quality, detailed\"}}}}</OP>"
