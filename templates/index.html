@@ -1622,9 +1622,6 @@ window.submitAuth = async function(){
     if(pw!==document.getElementById('confirmPassword').value){showAuthAlert('Passwords do not match.');return;}
     if(localStorage.getItem(LS_USER+'_'+un)){showAuthAlert('Username already taken.');return;}
     try{
-      const r=await fetch('/api/auth/hash-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
-      const d=await r.json();
-      if(!r.ok){showAuthAlert(d.error+(d.details?'\n'+d.details.join(', '):''));return;}
       const sr=await fetch('/api/auth/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({firstName:fn,lastName:ln,email:em,username:un,password:pw})});
       const sd=await sr.json();
       if(!sr.ok){showAuthAlert(sd.error||'Unable to create account.');return;}
