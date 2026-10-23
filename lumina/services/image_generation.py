@@ -124,7 +124,18 @@ def generate_image_variations(
                 # Keep the entire generated subject and adapt the canvas without stretching.
                 images.append(_fit_image_to_canvas(image, width, height))
             except Exception as exc:
-                logger.exception("Cloudflare image candidate %s failed", index + 1)
+                if isinstance(exc, urllib.error.HTTPError):
+                    error_body = exc.read().decode("utf-8", errors="replace")
+                    logger.error(
+                        "Cloudflare API error: HTTP %s; response: %s",
+                        exc.code,
+                        error_body[:2000],
+                    )
+                else:
+                    logger.exception(
+                        "Cloudflare image candidate %s failed",
+                        index + 1,
+                    )
                 message = str(exc).lower()
                 if "429" in message or "3036" in message or "daily free allocation" in message:
                     detail = "Cloudflare's free daily AI allowance or rate limit was reached."
