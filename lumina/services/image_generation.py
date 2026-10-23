@@ -67,52 +67,114 @@ def generate_image_variations(
     if quality not in {"fast", "balanced", "high"}:
         raise ValueError("Unsupported quality preset.")
 
-    token = os.getenv("HF_TOKEN", "").strip()
-    if not token:
-        raise RuntimeError("Image provider is not configured: HF_TOKEN is missing.")
-    model = os.getenv("IMAGE_GENERATION_MODEL", DEFAULT_MODEL).strip()
+    provider = os.getenv("IMAGE_PROVIDER", "cloudflare").strip().lower()
     width, height = ASPECT_RATIOS[aspect_ratio]
-    if model == DEFAULT_MODEL:
-        defaults = {"fast": (2, 0.0), "balanced": (4, 0.0), "high": (4, 0.0)}
-    else:
-        # Model-specific values should be checked against that provider's docs.
-        defaults = {"fast": (12, 3.5), "balanced": (20, 3.5), "high": (28, 3.5)}
-    default_steps, default_guidance = defaults[quality]
-    try:
-        steps = int(os.getenv("IMAGE_GENERATION_STEPS", str(default_steps)))
-        guidance = float(os.getenv("IMAGE_GENERATION_GUIDANCE", str(default_guidance)))
-    except ValueError as exc:
-        raise RuntimeError("Image generation steps/guidance environment settings are invalid.") from exc
-    if not 1 <= steps <= 50:
-        raise RuntimeError("IMAGE_GENERATION_STEPS must be between 1 and 50.")
-
     enhanced = enhance_image_prompt(prompt, gemini_client, gemini_model, style)
-    try:
-        from huggingface_hub import InferenceClient
-        client = InferenceClient(token=token, timeout=120)
-    except Exception as exc:
-        raise RuntimeError("Could not initialize the image provider.") from exc
-
     images = []
-    for index in range(count):
-        try:
-            image = client.text_to_image(
-                prompt=enhanced,
-                model=model,
-                width=width,
-                height=height,
-                num_inference_steps=steps,
-                guidance_scale=guidance,
+
+    if provider == "cloudflare":
+        account_id = os.getenv("CLOUDFLARE_ACCOUNT_ID", "").strip()
+        api_token = os.getenv("CLOUDFLARE_API_TOKEN", "").strip()
+        if not account_id or not api_token:
+            raise RuntimeError(
+                "Cloudflare image generation is not configured. Set CLOUDFLARE_ACCOUNT_ID "
+                "and CLOUDFLARE_API_TOKEN in Render."
             )
-            if not isinstance(image, Image.Image):
-                raise RuntimeError("Image provider returned an invalid image.")
-            image = ImageOps.exif_transpose(image).convert("RGB")
-            if image.width < 256 or image.height < 256:
-                raise RuntimeError("Image provider returned an unexpectedly small image.")
-            images.append(image)
+        step_defaults = {"fast": 2, "balanced": 4, "high": 8}
+        try:
+            steps = int(os.getenv("IMAGE_GENERATION_STEPS", str(step_defaults[quality])))
+        except ValueError as exc:
+            raise RuntimeError("IMAGE_GENERATION_STEPS must be a number.") from exc
+        if not 1 <= steps <= 8:
+            raise RuntimeError("Cloudflare FLUX.1-schnell supports 1 to 8 steps.")
+        endpoint = (
+            "https://api.cloudflare.com/client/v4/accounts/"
+            f"{account_id}/ai/run/@cf/black-forest-labs/flux-1-schnell"
+        )
+        for index in range(count):
+            try:
+                import json
+                import base64
+                import urllib.request
+                import urllib.error
+                from io import BytesIO
+                payload = json.dumps({
+                    "prompt": enhanced[:2048],
+                    "steps": steps,
+                    "seed": random_seed(),
+                }).encode("utf-8")
+                request = urllib.request.Request(
+                    endpoint,
+                    data=payload,
+                    headers={
+                        "Authorization": f"Bearer {api_token}",
+                        "Content-Type": "application/json",
+                    },
+                    method="POST",
+                )
+                with urllib.request.urlopen(request, timeout=120) as response:
+                    body = json.loads(response.read().decode("utf-8"))
+                encoded = body.get("result", {}).get("image")
+                if not encoded:
+                    raise RuntimeError("Cloudflare returned no image data.")
+                image = Image.open(BytesIO(base64.b64decode(encoded)))
+                image = ImageOps.exif_transpose(image).convert("RGB")
+                if image.width < 256 or image.height < 256:
+                    raise RuntimeError("Image provider returned an unexpectedly small image.")
+                # Keep the entire generated subject and adapt the canvas without stretching.
+                images.append(_fit_image_to_canvas(image, width, height))
+            except Exception as exc:
+                logger.exception("Cloudflare image candidate %s failed", index + 1)
+                message = str(exc).lower()
+                if "429" in message or "3036" in message or "daily free allocation" in message:
+                    detail = "Cloudflare's free daily AI allowance or rate limit was reached."
+                elif "401" in message or "403" in message or "unauthorized" in message:
+                    detail = "Cloudflare rejected the API token or it lacks Workers AI permissions."
+                elif "timeout" in message or "timed out" in message:
+                    detail = "Cloudflare image generation timed out."
+                elif isinstance(exc, urllib.error.HTTPError):
+                    detail = f"Cloudflare image API returned HTTP {exc.code}."
+                else:
+                    detail = f"Cloudflare image generation failed ({type(exc).__name__})."
+                if not images:
+                    raise RuntimeError(detail) from exc
+                break
+    elif provider == "huggingface":
+        token = os.getenv("HF_TOKEN", "").strip()
+        if not token:
+            raise RuntimeError("Image provider is not configured: HF_TOKEN is missing.")
+        model = os.getenv("IMAGE_GENERATION_MODEL", DEFAULT_MODEL).strip()
+        if model == DEFAULT_MODEL:
+            defaults = {"fast": (2, 0.0), "balanced": (4, 0.0), "high": (4, 0.0)}
+        else:
+            defaults = {"fast": (12, 3.5), "balanced": (20, 3.5), "high": (28, 3.5)}
+        default_steps, default_guidance = defaults[quality]
+        try:
+            steps = int(os.getenv("IMAGE_GENERATION_STEPS", str(default_steps)))
+            guidance = float(os.getenv("IMAGE_GENERATION_GUIDANCE", str(default_guidance)))
+        except ValueError as exc:
+            raise RuntimeError("Image generation steps/guidance environment settings are invalid.") from exc
+        if not 1 <= steps <= 50:
+            raise RuntimeError("IMAGE_GENERATION_STEPS must be between 1 and 50.")
+        try:
+            from huggingface_hub import InferenceClient
+            client = InferenceClient(token=token, timeout=120)
         except Exception as exc:
-            logger.exception("Image generation candidate %s failed (model=%s)", index + 1, model)
-            if not images:
+            raise RuntimeError("Could not initialize the image provider.") from exc
+        for index in range(count):
+            try:
+                image = client.text_to_image(
+                    prompt=enhanced, model=model, width=width, height=height,
+                    num_inference_steps=steps, guidance_scale=guidance,
+                )
+                if not isinstance(image, Image.Image):
+                    raise RuntimeError("Image provider returned an invalid image.")
+                image = ImageOps.exif_transpose(image).convert("RGB")
+                if image.width < 256 or image.height < 256:
+                    raise RuntimeError("Image provider returned an unexpectedly small image.")
+                images.append(image)
+            except Exception as exc:
+                logger.exception("Hugging Face image candidate %s failed (model=%s)", index + 1, model)
                 error_text = str(exc).lower()
                 if "402" in error_text or "payment required" in error_text or "no remaining credits" in error_text:
                     detail = "The image provider has no remaining credits."
@@ -124,12 +186,31 @@ def generate_image_variations(
                     detail = "The image provider timed out."
                 else:
                     detail = f"The image provider failed ({type(exc).__name__})."
-                raise RuntimeError(detail) from exc
-            break
+                if not images:
+                    raise RuntimeError(detail) from exc
+                break
+    else:
+        raise RuntimeError("Unsupported IMAGE_PROVIDER. Use 'cloudflare' or 'huggingface'.")
 
     if not images:
         raise RuntimeError("The image provider did not return any images.")
     return images
+
+
+def random_seed():
+    """Return a distinct seed for each independent image variation."""
+    import secrets
+    return secrets.randbelow(2_147_483_647)
+
+
+def _fit_image_to_canvas(image, width, height):
+    """Fit without cropping, using a blurred copy as a background for the canvas."""
+    from PIL import ImageFilter
+    fitted = ImageOps.contain(image, (width, height), method=Image.Resampling.LANCZOS)
+    background = ImageOps.fit(image, (width, height), method=Image.Resampling.LANCZOS)
+    background = background.filter(ImageFilter.GaussianBlur(radius=max(12, min(width, height) // 24)))
+    background.paste(fitted, ((width - fitted.width) // 2, (height - fitted.height) // 2))
+    return background
 
 
 def generate_image_from_prompt(prompt: str):
