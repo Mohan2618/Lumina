@@ -1105,6 +1105,7 @@ window.sendMessage = async function(){
     if(data.last_image){ lastImageB64=data.last_image; }
     else if(filesToSend.length>0 && !lastImageB64){ lastImageB64=filesToSend[0]; }
     const resultImg=data.image||null;
+    const resultImages=Array.isArray(data.images)&&data.images.length?data.images:(resultImg?[resultImg]:[]);
     const modelUsed=data.model||'';
     if(resultImg){
       if(imageEditIndex<0){
@@ -1112,10 +1113,13 @@ window.sendMessage = async function(){
       } else if(imageEditHistory[imageEditIndex]!==lastImageB64 && lastImageB64){
         pushImageHistory(lastImageB64);
       }
-      pushImageHistory(resultImg);
+      resultImages.forEach(img=>pushImageHistory(img));
     }
     if(data.message) addBotMsg(formatReply(data.message),true,resultImg,modelUsed);
     else if(resultImg) addBotMsg('Here is your processed image:',false,resultImg,modelUsed);
+    resultImages.slice(1).forEach((img,index)=>{
+      addBotMsg('Image variation '+(index+2)+':',false,img,modelUsed);
+    });
     if(!currentChatTitle&&promptText){
       currentChatTitle=truncate(promptText,40);
       currentChatKey=userKey('chat_'+Date.now());
