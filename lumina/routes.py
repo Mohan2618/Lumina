@@ -8,7 +8,7 @@ from .utils.auth import hash_password, verify_password, validate_password_streng
 from .utils.image import pil_to_base64, file_to_pil, bytes_to_pil, pil_to_bytes, pil_to_cv2, is_rate_limit, check_guest_limit, consume_guest_limit, ImageValidationError
 from .services.email_service import send_email_otp
 from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp, update_password, otp_can_send
-from .services.image_generation import generate_image_from_prompt
+from .services.image_generation import generate_image_variations
 from .services.ai_service import call_ai, extract_op
 from .image_processing.processor import process_image
 
@@ -223,6 +223,7 @@ def register_routes(app):
             raw_reply,model_used=call_ai(history,prompt,ai_image,gemini_client,GEMINI_MODEL,SYSTEM_PROMPT,GEMINI_TIMEOUT)
             clean_reply,intent,params=extract_op(raw_reply)
             result_b64=None
+            result_images=[]
     
             if intent=='info' and image_pil:
                 w,h=image_pil.size; arr=np.array(image_pil)
@@ -236,15 +237,39 @@ def register_routes(app):
                 hsv=cv2.cvtColor(pil_to_cv2(image_pil),cv2.COLOR_BGR2HSV)
                 clean_reply+=(f"\n\n**🎨 Color Analysis:**\n**Avg RGB:** ({mr:.0f},{mg:.0f},{mb:.0f})\n"
                               f"**Dominant:** {'Red' if mr>mg and mr>mb else 'Green' if mg>mr and mg>mb else 'Blue'}")
-            elif intent=='generate_image':
-                gen_prompt=params.get('prompt','beautiful artwork, high quality, detailed')
-                result_img=generate_image_from_prompt(gen_prompt)
-                if result_img:
-                    result_b64=pil_to_base64(result_img)
-                    if not clean_reply:
-                        clean_reply=f"✨ Here's your generated image for: *\"{gen_prompt[:60]}\"*"
-                else:
-                    return jsonify({"message":"⚠️ Lumina could not generate the image right now. Please try again shortly."}),503
+            elif intent == 'generate_image':
+                gen_prompt = str(params.get('prompt') or prompt or '').strip()
+                if not gen_prompt:
+                    return jsonify({"message": "Please describe the image you want to generate."}), 400
+                style = str(params.get('style', 'Photorealistic'))
+                aspect_ratio = str(params.get('aspect_ratio', '1:1'))
+                quality = str(params.get('quality', 'high')).lower()
+                try:
+                    count = int(params.get('count', 2))
+                except (TypeError, ValueError):
+                    return jsonify({"message": "Image count must be a number."}), 400
+                try:
+                    generated = generate_image_variations(
+                        prompt=gen_prompt, count=count, style=style,
+                        aspect_ratio=aspect_ratio, quality=quality,
+                        gemini_client=gemini_client, gemini_model=GEMINI_MODEL,
+                    )
+                    result_images = [pil_to_base64(img) for img in generated]
+                    result_b64 = result_images[0]
+                    clean_reply = (
+                        f"✨ Generated {len(result_images)} image variation(s) "
+                        f"for: *{gen_prompt[:100]}*"
+                    )
+                except ValueError as exc:
+                    return jsonify({"message": str(exc)}), 400
+                except RuntimeError as exc:
+                    print(f"[IMAGE GENERATION] {type(exc).__name__}: {exc}")
+                    return jsonify({
+                        "message": (
+                            "⚠️ Lumina couldn't generate the image right now. "
+                            "Please check image-provider credits/settings or try again later."
+                        )
+                    }), 503
             elif intent=='pipeline' and image_pil:
                 steps=params.get('steps',[])
                 if not isinstance(steps,list) or not steps or len(steps)>8:
@@ -289,7 +314,7 @@ def register_routes(app):
             new_last_image=result_b64 or (pil_to_base64(image_pil) if new_file_uploaded and image_pil else last_image_data or None)
     
             consume_guest_limit()
-            return jsonify({"message":clean_reply,"image":result_b64,"history":updated_history,"last_image":new_last_image,"model":"lumina"})
+            return jsonify({"message":clean_reply,"image":result_b64,"images":result_images,"history":updated_history,"last_image":new_last_image,"model":"lumina"})
     
         except Exception as e:
             err=str(e); print(f"[ERROR] {err}")
