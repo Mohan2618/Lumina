@@ -101,7 +101,6 @@ def generate_image_variations(
                 payload = json.dumps({
                     "prompt": enhanced[:2048],
                     "steps": steps,
-                    "seed": random_seed(),
                 }).encode("utf-8")
                 request = urllib.request.Request(
                     endpoint,
