@@ -27,12 +27,15 @@ Vite forwards `/api`, `/process`, and `/health` requests to Flask on port 7860.
 - [x] Preserve Flask's `history`, `last_image`, `image`, and `images` response fields in the React chat flow.
 - [x] Add React sign-in/sign-up UI using the existing `/api/auth/me`, `/api/auth/verify-password`, `/api/auth/signup`, and `/api/auth/logout` endpoints.
 - [ ] Map the exact response schema for every image-generation/editing operation.
-- [ ] Migrate sign-in, sign-up, password reset, profile and session UI to React.
-- [ ] Migrate history, gallery, image variations, compare/lightbox, attachments,
-      undo/redo, and share flows.
+- [x] Add React sign-in/sign-up and OTP password-reset screens using existing Flask auth endpoints.
+- [x] Add session-aware account controls.
+- [x] Add browser-local saved conversation text and saved-image gallery with delete/download controls.
+- [ ] Migrate the original app's full history restore, image variations, compare/lightbox, attachments, undo/redo, and share flows.
 - [ ] Configure the production build to be served by Flask/Render.
 - [ ] Run end-to-end regression checks against the existing backend.
 - [ ] Switch the production route only after parity checks pass.
+
+Saved conversations and gallery entries in this first React phase are stored in the current browser's local storage; they are not synced to the Flask database. Restoring a saved conversation restores text only, not the backend image-edit context. Password-reset email delivery depends on the existing Flask email configuration.
 
 The React app is deliberately not wired into the production Flask route yet.
 This avoids replacing a working interface before the remaining features and
