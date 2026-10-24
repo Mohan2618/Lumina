@@ -492,7 +492,7 @@ export default function App() {
         <div className="composer-area">
           {error && <div className="error-banner" role="alert">{error}</div>}
           <form className="composer" onSubmit={submitPrompt}>
-            {attachments.length > 0 && <div className="attachment-strip" aria-label="Selected image attachments">{attachments.map((item, index) => <div className="attachment" key={item.id}><img src={item.preview} alt={"Selected upload preview " + (index + 1)} /><span>{index + 1}</span><button type="button" aria-label={"Remove image " + (index + 1)} onClick={() => removeAttachment(item.id)}><X size={15} /></button></div>)}</div>}
+            {attachments.length > 0 && <div className="attachment-strip" aria-label="Selected image attachments">{attachments.map((item, index) => <div className="attachment" key={item.id}><img src={item.preview} alt={"Selected upload preview " + (index + 1)} onError={(event) => { event.currentTarget.style.display = "none"; event.currentTarget.parentElement.classList.add("attachment-preview-error"); }} /><span>{index + 1}</span><button type="button" aria-label={"Remove image " + (index + 1)} onClick={() => removeAttachment(item.id)}><X size={15} /></button></div>)}</div>}
             <textarea
               value={prompt}
               onPaste={(event) => {
