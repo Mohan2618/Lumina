@@ -222,3 +222,15 @@ button:focus-visible,textarea:focus-visible{outline:2px solid #78e4c2;outline-of
 .composer .attachment-strip .attachment .attachment-preview-trigger img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .composer .attachment-strip .attachment .attachment-remove{position:absolute;top:4px;right:4px;z-index:4;display:grid;place-items:center;width:24px;height:24px;margin:0;padding:0;border:1px solid #ffffff30;border-radius:50%;background:#111722e8;color:#fff;cursor:pointer}
 .composer .attachment-strip .attachment>span{z-index:3;pointer-events:none}
+
+/* Image edit history and before/after comparison */
+.image-action-row .image-download-link:disabled{opacity:.38;cursor:not-allowed;pointer-events:none}
+.compare-backdrop{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:24px;background:#03050bed;backdrop-filter:blur(10px)}
+.compare-dialog{width:min(1100px,100%);max-height:calc(100vh - 48px);overflow:auto;border:1px solid #ffffff20;border-radius:18px;background:#141923;box-shadow:0 24px 100px #000b}
+.compare-header{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #ffffff15;background:#141923;color:#f2f4f8}
+.compare-header button{display:grid;place-items:center;width:34px;height:34px;border:1px solid #ffffff20;border-radius:10px;background:#ffffff08;color:#f2f4f8;cursor:pointer}
+.compare-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding:16px}
+.compare-grid figure{min-width:0;margin:0}
+.compare-grid figcaption{margin:0 0 9px;color:#aab4c7;font-size:12px;font-weight:600}
+.compare-grid img{display:block;width:100%;max-height:65vh;object-fit:contain;border:1px solid #ffffff15;border-radius:10px;background:#090c12}
+@media(max-width:680px){.compare-backdrop{padding:10px}.compare-grid{grid-template-columns:1fr;gap:12px;padding:12px}.compare-grid img{max-height:38vh}}
