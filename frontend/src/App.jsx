@@ -99,6 +99,7 @@ function MarkdownText({ text, onCopyTable }) {
   const isDivider = (line) => parseCells(line).every((cell) => /^:?-{3,}:?$/.test(cell));
   lines.forEach((raw, index) => {
     const line = raw.trim(), bullet = line.match(/^[-*+]\s+(.+)$/), numbered = line.match(/^\d+[.)]\s+(.+)$/);
+    if (isTableRow(line) && index > 0 && isTableRow(lines[index - 1].trim())) return;
     if (isTableRow(line)) {
       flushParagraph(); flushList();
       const tableLines = [];
