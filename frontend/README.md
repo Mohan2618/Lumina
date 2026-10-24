@@ -24,6 +24,8 @@ Vite forwards `/api`, `/process`, and `/health` requests to Flask on port 7860.
 
 - [x] Add a React + Vite entry point and isolated workspace.
 - [x] Add the first React conversation workspace and image-upload interaction.
+- [x] Preserve Flask's `history`, `last_image`, `image`, and `images` response fields in the React chat flow.
+- [x] Add React sign-in/sign-up UI using the existing `/api/auth/me`, `/api/auth/verify-password`, `/api/auth/signup`, and `/api/auth/logout` endpoints.
 - [ ] Map the exact response schema for every image-generation/editing operation.
 - [ ] Migrate sign-in, sign-up, password reset, profile and session UI to React.
 - [ ] Migrate history, gallery, image variations, compare/lightbox, attachments,
