@@ -7,7 +7,7 @@ from .core import app, GEMINI_MODEL, GEMINI_TIMEOUT, SYSTEM_PROMPT, gemini_clien
 from .utils.auth import hash_password, verify_password, validate_password_strength, validate_username, validate_email
 from .utils.image import pil_to_base64, file_to_pil, bytes_to_pil, pil_to_bytes, pil_to_cv2, is_rate_limit, check_guest_limit, consume_guest_limit, ImageValidationError
 from .services.email_service import send_email_otp
-from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp, update_password, otp_can_send
+from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp, update_password, otp_can_send, list_conversations, upsert_conversation, delete_conversation
 from .services.image_generation import generate_image_variations
 from .services.ai_service import call_ai, extract_op
 from .image_processing.processor import process_image
@@ -66,6 +66,54 @@ def register_routes(app):
     @app.route("/api/auth/me", methods=["GET"])
     def auth_me():
         return jsonify({"authenticated": "user" in session, "user": session.get("user")})
+
+    @app.route("/api/conversations", methods=["GET", "POST"])
+    def api_conversations():
+        user = session.get("user")
+        if not user:
+            return jsonify({"error": "Sign in to sync your conversations."}), 401
+        user_id = user.get("id")
+        if request.method == "GET":
+            try:
+                rows = list_conversations(user_id)
+                return jsonify({"conversations": [{
+                    "id": row["id"], "title": row["title"],
+                    "savedAt": row["updated_at"],
+                    **(row["payload"] if isinstance(row.get("payload"), dict) else {})
+                } for row in rows]})
+            except Exception as exc:
+                print(f"[CONVERSATIONS] list failed: {exc}")
+                return jsonify({"error": "Could not load saved conversations."}), 500
+        data = request.get_json(silent=True) or {}
+        conversation_id = str(data.get("id") or "").strip()
+        title = str(data.get("title") or "Lumina conversation").strip()[:120]
+        if not conversation_id or len(conversation_id) > 100:
+            return jsonify({"error": "A valid conversation id is required."}), 400
+        payload = data.get("payload")
+        if not isinstance(payload, dict):
+            return jsonify({"error": "Conversation payload must be an object."}), 400
+        if len(request.get_data(cache=True)) > 12 * 1024 * 1024:
+            return jsonify({"error": "Conversation is too large to save (12 MB limit)."}), 413
+        try:
+            upsert_conversation(user_id, conversation_id, title, payload)
+            return jsonify({"success": True, "id": conversation_id})
+        except Exception as exc:
+            print(f"[CONVERSATIONS] save failed: {exc}")
+            return jsonify({"error": "Could not save conversation."}), 500
+
+    @app.route("/api/conversations/<conversation_id>", methods=["DELETE"])
+    def api_delete_conversation(conversation_id):
+        user = session.get("user")
+        if not user:
+            return jsonify({"error": "Sign in to delete saved conversations."}), 401
+        try:
+            deleted = delete_conversation(user.get("id"), conversation_id)
+            if deleted:
+                return jsonify({"success": True})
+            return jsonify({"error": "Conversation not found."}), 404
+        except Exception as exc:
+            print(f"[CONVERSATIONS] delete failed: {exc}")
+            return jsonify({"error": "Could not delete conversation."}), 500
 
     @app.route("/api/auth/logout", methods=["POST"])
     def auth_logout():
