@@ -33,7 +33,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
     event.preventDefault();
     setError("");
     setNotice("");
-    if (mode === "signup" && form.password !== form.confirm) {
+    if ((mode === "signup" || mode === "reset") && form.password !== form.confirm) {
       setError("Passwords do not match.");
       return;
     }
