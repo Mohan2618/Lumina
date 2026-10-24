@@ -213,7 +213,22 @@ export default function App() {
     let active = true;
     fetch("/api/auth/me", { credentials: "same-origin" })
       .then((response) => response.ok ? response.json() : null)
-      .then((data) => { if (active && data?.authenticated) setUser(data.user); })
+      .then(async (data) => {
+        if (!active || !data?.authenticated) return;
+        setUser(data.user);
+        try {
+          const response = await fetch("/api/conversations", { credentials: "same-origin" });
+          if (!response.ok) return;
+          const result = await response.json();
+          if (active && Array.isArray(result.conversations) && result.conversations.length) {
+            setSavedChats((current) => {
+              const merged = new Map(current.map((chat) => [chat.id, chat]));
+              result.conversations.forEach((chat) => merged.set(chat.id, chat));
+              return [...merged.values()].sort((a, b) => new Date(b.savedAt || 0) - new Date(a.savedAt || 0)).slice(0, 100);
+            });
+          }
+        } catch { /* Keep the browser cache available when sync is offline. */ }
+      })
       .catch(() => {});
     return () => { active = false; };
   }, []);
@@ -295,9 +310,31 @@ export default function App() {
       editVersions,
       editVersionIndex,
     };
+    const payload = {
+      messages: chat.messages,
+      apiHistory: chat.apiHistory,
+      lastImage: chat.lastImage,
+      editVersions: chat.editVersions,
+      editVersionIndex: chat.editVersionIndex,
+    };
     setSavedChats((current) => [chat, ...current.filter((item) => item.title !== chat.title)].slice(0, 20));
     setPanel("history");
     setError("");
+    if (user) {
+      fetch("/api/conversations", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: chat.id, title: chat.title, payload }),
+      }).then(async (response) => {
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          setError(result.error || "Conversation saved in this browser, but cloud sync failed.");
+        }
+      }).catch(() => setError("Conversation saved in this browser, but cloud sync is unavailable."));
+    } else {
+      setError("Saved in this browser. Sign in to sync conversations with Supabase.");
+    }
   }
 
   function restoreChat(chat) {
