@@ -188,8 +188,7 @@ function MarkdownText({ text, onCopyTable }) {
 
 export default function App() {
   const [prompt, setPrompt] = useState("");
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState("");
+  const [attachments, setAttachments] = useState([]);
   const [messages, setMessages] = useState([]);
   const [apiHistory, setApiHistory] = useState([]);
   const [lastImage, setLastImage] = useState("");
@@ -311,27 +310,37 @@ export default function App() {
     }
   }
 
-  function chooseFile(nextFile) {
-    if (!nextFile) return;
+  function chooseFiles(fileList) {
+    const incoming = Array.from(fileList || []);
+    if (!incoming.length) return;
     const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp"];
-    if (!allowedTypes.includes(nextFile.type)) {
-      setError("Use a JPG, PNG, WEBP, GIF, or BMP image.");
-      return;
+    const accepted = [];
+    for (const nextFile of incoming) {
+      if (!allowedTypes.includes(nextFile.type)) { setError(nextFile.name + ": use a JPG, PNG, WEBP, GIF, or BMP image."); continue; }
+      if (nextFile.size > 10 * 1024 * 1024) { setError(nextFile.name + ": images must be 10 MB or smaller."); continue; }
+      accepted.push({ id: crypto.randomUUID(), file: nextFile, preview: URL.createObjectURL(nextFile) });
     }
-    if (nextFile.size > 10 * 1024 * 1024) {
-      setError("Images must be 10 MB or smaller.");
-      return;
-    }
-    if (preview.startsWith("blob:")) URL.revokeObjectURL(preview);
-    setError("");
-    setFile(nextFile);
-    setPreview(URL.createObjectURL(nextFile));
+    setAttachments((current) => {
+      const combined = [...current, ...accepted];
+      const allowed = combined.slice(0, 5);
+      combined.slice(5).forEach((item) => URL.revokeObjectURL(item.preview));
+      if (combined.length > 5) setError("You can attach up to 5 images per message.");
+      return allowed;
+    });
+    if (fileInput.current) fileInput.current.value = "";
   }
 
-  function clearFile(revoke = true) {
-    if (preview && revoke) URL.revokeObjectURL(preview);
-    setFile(null);
-    setPreview("");
+  function removeAttachment(id) {
+    setAttachments((current) => {
+      const item = current.find((attachment) => attachment.id === id);
+      if (item) URL.revokeObjectURL(item.preview);
+      return current.filter((attachment) => attachment.id !== id);
+    });
+  }
+
+  function clearAttachments() {
+    attachments.forEach((item) => URL.revokeObjectURL(item.preview));
+    setAttachments([]);
     if (fileInput.current) fileInput.current.value = "";
   }
 
@@ -345,13 +354,13 @@ export default function App() {
   async function submitPrompt(event) {
     event.preventDefault();
     const text = prompt.trim();
-    if ((!text && !file) || busy) return;
+    if ((!text && !attachments.length) || busy) return;
 
     const userMessage = {
       id: crypto.randomUUID(),
       role: "user",
       text,
-      image: preview || "",
+      images: attachments.map((attachment) => attachment.preview),
     };
     setMessages((current) => [...current, userMessage]);
     setPrompt("");
@@ -361,30 +370,31 @@ export default function App() {
     requestController.current = controller;
 
     try {
-      const body = new FormData();
-      body.append("prompt", text);
-      body.append("history", JSON.stringify(apiHistory));
-      if (lastImage) body.append("last_image", lastImage);
-      if (file) body.append("image", file);
-
-      const response = await fetch("/process", { method: "POST", body, signal: controller.signal });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(data.message || data.error || "Lumina couldn't complete that request.");
+      const batch = attachments.length ? attachments : [null];
+      const answers = [];
+      const resultImages = [];
+      let currentHistory = apiHistory;
+      let currentLastImage = lastImage;
+      for (let index = 0; index < batch.length; index++) {
+        if (controller.signal.aborted) throw new DOMException("Request cancelled", "AbortError");
+        const body = new FormData();
+        body.append("prompt", text || (batch.length > 1 ? "Analyze this image (" + (index + 1) + " of " + batch.length + ")." : "Analyze this image."));
+        body.append("history", JSON.stringify(currentHistory));
+        if (currentLastImage) body.append("last_image", currentLastImage);
+        if (batch[index]?.file) body.append("image", batch[index].file);
+        const response = await fetch("/process", { method: "POST", body, signal: controller.signal });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || data.error || "Lumina couldn't process image " + (index + 1) + ".");
+        answers.push(data.message || data.reply || data.response || data.text || "Lumina completed the request.");
+        const images = Array.isArray(data.images) ? data.images : Array.isArray(data.result_images) ? data.result_images : [];
+        resultImages.push(...images, ...(data.image ? [data.image] : []));
+        if (Array.isArray(data.history)) currentHistory = data.history;
+        if (typeof data.last_image === "string") currentLastImage = data.last_image;
       }
-
-      const answer = data.message || data.reply || data.response || data.text ||
-        "Lumina completed the request.";
-      const images = Array.isArray(data.images) ? data.images :
-        Array.isArray(data.result_images) ? data.result_images : [];
-      setApiHistory(Array.isArray(data.history) ? data.history : apiHistory);
-      setLastImage(typeof data.last_image === "string" ? data.last_image : lastImage);
-      const singleImage = data.image || "";
-      setMessages((current) => [
-        ...current,
-        { id: crypto.randomUUID(), role: "assistant", text: answer, images: images.length ? images : (singleImage ? [singleImage] : []) },
-      ]);
-      clearFile(false);
+      setApiHistory(currentHistory);
+      setLastImage(currentLastImage);
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "assistant", text: answers.join("\n\n"), images: resultImages }]);
+      clearAttachments();
     } catch (err) {
       if (err?.name === "AbortError") return;
       const message = err instanceof Error ? err.message : "Something went wrong.";
@@ -463,6 +473,7 @@ export default function App() {
                     <strong>{message.role === "user" ? "You" : "Lumina"}</strong>
                     {message.text && (message.role === "assistant" ? <StructuredResponse text={message.text} onCopy={(value) => navigator.clipboard.writeText(value).catch(() => setError("Clipboard access failed. Please copy manually."))} /> : <p>{message.text}</p>)}
                     {message.image && <img className="message-image" src={message.image} alt="Uploaded input" />}
+                    {message.images?.map((src, index) => <img className="message-image attachment-message-image" key={index} src={src} alt={"Attached image " + (index + 1)} />)}
                     {message.images?.map((src, index) => {
                       const imageSrc = src.startsWith("data:") || src.startsWith("http") ? src : "data:image/png;base64," + src;
                       return <div className="result-image-wrap" key={index}>
@@ -481,12 +492,7 @@ export default function App() {
         <div className="composer-area">
           {error && <div className="error-banner" role="alert">{error}</div>}
           <form className="composer" onSubmit={submitPrompt}>
-            {preview && (
-              <div className="attachment">
-                <img src={preview} alt="Selected upload preview" />
-                <button type="button" aria-label="Remove image" onClick={clearFile}><X size={15} /></button>
-              </div>
-            )}
+            {attachments.length > 0 && <div className="attachment-strip" aria-label="Selected image attachments">{attachments.map((item, index) => <div className="attachment" key={item.id}><img src={item.preview} alt={"Selected upload preview " + (index + 1)} /><span>{index + 1}</span><button type="button" aria-label={"Remove image " + (index + 1)} onClick={() => removeAttachment(item.id)}><X size={15} /></button></div>)}</div>}
             <textarea
               value={prompt}
               onPaste={(event) => {
@@ -494,7 +500,7 @@ export default function App() {
                 const pastedImage = imageItem?.getAsFile();
                 if (pastedImage) {
                   event.preventDefault();
-                  chooseFile(new File([pastedImage], "pasted-image.png", { type: pastedImage.type || "image/png" }));
+                  chooseFiles([new File([pastedImage], "pasted-image.png", { type: pastedImage.type || "image/png" })]);
                 }
               }}
               onChange={(event) => setPrompt(event.target.value)}
@@ -514,8 +520,9 @@ export default function App() {
                   ref={fileInput}
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif,image/bmp"
+                  multiple
                   hidden
-                  onChange={(event) => chooseFile(event.target.files?.[0])}
+                  onChange={(event) => chooseFiles(event.target.files)}
                 />
                 <button className="tool-button" type="button" onClick={() => fileInput.current?.click()}>
                   <ImagePlus size={17} /><span>Add image</span>
@@ -525,7 +532,7 @@ export default function App() {
                 </button>
                 <span className="hint">Shift + Enter for a new line</span>
               </div>
-              <button className={`send-button${busy ? " stop-button" : ""}`} type={busy ? "button" : "submit"} onClick={busy ? stopGeneration : undefined} disabled={!busy && (!prompt.trim() && !file)} aria-label={busy ? "Stop generation" : "Send message"} title={busy ? "Stop generation" : "Send message"}>
+              <button className={`send-button${busy ? " stop-button" : ""}`} type={busy ? "button" : "submit"} onClick={busy ? stopGeneration : undefined} disabled={!busy && (!prompt.trim() && !attachments.length)} aria-label={busy ? "Stop generation" : "Send message"} title={busy ? "Stop generation" : "Send message"}>
                 {busy ? <X size={17} /> : <ArrowUp size={18} />}
               </button>
             </div>
