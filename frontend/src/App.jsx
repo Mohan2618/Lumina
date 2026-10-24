@@ -86,18 +86,33 @@ function StructuredResponse({ text, onCopy }) {
   function copyCode(code) {
     navigator.clipboard.writeText(code).then(() => { setCopiedCode(code); window.setTimeout(() => setCopiedCode(""), 1800); }).catch(() => {});
   }
-  return <div className="structured-response">{blocks.map((block, index) => block.type === "code" ? <CodeSnippet key={index} code={block.code} language={block.language} onCopy={copyCode} copied={copiedCode === block.code} /> : <MarkdownText key={index} text={block.text} />)}<div className="response-actions"><button type="button" onClick={() => onCopy(text)}><Copy size={14} /> Copy response</button></div></div>;
+  return <div className="structured-response">{blocks.map((block, index) => block.type === "code" ? <CodeSnippet key={index} code={block.code} language={block.language} onCopy={copyCode} copied={copiedCode === block.code} /> : <MarkdownText key={index} text={block.text} onCopyTable={(csv) => navigator.clipboard.writeText(csv).catch(() => {})} />)}<div className="response-actions"><button type="button" onClick={() => onCopy(text)}><Copy size={14} /> Copy response</button></div></div>;
 }
-function MarkdownText({ text }) {
+function MarkdownText({ text, onCopyTable }) {
   const lines = text.split("\n");
   const output = [];
   let paragraph = [], listItems = [], listType = "";
   const flushParagraph = () => { if (paragraph.length) { output.push(<p key={"p" + output.length}><InlineMarkdown text={paragraph.join(" ")} /></p>); paragraph = []; } };
   const flushList = () => { if (listItems.length) { const Tag = listType === "ol" ? "ol" : "ul"; output.push(<Tag key={"l" + output.length}>{listItems.map((item, i) => <li key={i}><InlineMarkdown text={item} /></li>)}</Tag>); listItems = []; listType = ""; } };
-  lines.forEach((raw) => {
+  const isTableRow = (line) => line.trim().startsWith("|") && line.trim().endsWith("|");
+  const parseCells = (line) => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+  const isDivider = (line) => parseCells(line).every((cell) => /^:?-{3,}:?$/.test(cell));
+  lines.forEach((raw, index) => {
     const line = raw.trim(), bullet = line.match(/^[-*+]\s+(.+)$/), numbered = line.match(/^\d+[.)]\s+(.+)$/);
-    if (!line) { flushParagraph(); flushList(); return; }
-    if (/^#{1,4}\s/.test(line)) { flushParagraph(); flushList(); const level = line.match(/^#+/)[0].length, Tag = "h" + Math.min(level + 2, 6); output.push(<Tag key={"h" + output.length}><InlineMarkdown text={line.replace(/^#{1,4}\s+/, "")} /></Tag>); }
+    if (isTableRow(line)) {
+      flushParagraph(); flushList();
+      const tableLines = [];
+      let cursor = index;
+      while (cursor < lines.length && isTableRow(lines[cursor].trim())) { tableLines.push(lines[cursor].trim()); cursor++; }
+      if (tableLines.length >= 2 && isDivider(tableLines[1])) {
+        const headers = parseCells(tableLines[0]);
+        const rows = tableLines.slice(2).map(parseCells);
+        const csv = [headers, ...rows].map((row) => row.map((cell) => '"' + cell.replace(/"/g, '""') + '"').join(",")).join("\n");
+        output.push(<div className="response-table-wrap" key={"t" + output.length}><div className="response-table-toolbar"><span>Table</span><button type="button" onClick={() => onCopyTable(csv)}><Copy size={13} /> Copy table</button></div><div className="response-table-scroll"><table className="response-table"><thead><tr>{headers.map((cell, i) => <th key={i}><InlineMarkdown text={cell} /></th>)}</tr></thead><tbody>{rows.map((row, ri) => <tr key={ri}>{headers.map((_, ci) => <td key={ci}><InlineMarkdown text={row[ci] || ""} /></td>)}</tr>)}</tbody></table></div></div>);
+        index = cursor - 1;
+      } else paragraph.push(line);
+    } else if (!line) { flushParagraph(); flushList(); }
+    else if (/^#{1,4}\s/.test(line)) { flushParagraph(); flushList(); const level = line.match(/^#+/)[0].length, Tag = "h" + Math.min(level + 2, 6); output.push(<Tag key={"h" + output.length}><InlineMarkdown text={line.replace(/^#{1,4}\s+/, "")} /></Tag>); }
     else if (bullet || numbered) { flushParagraph(); const nextType = numbered ? "ol" : "ul"; if (listType && listType !== nextType) flushList(); listType = nextType; listItems.push((bullet || numbered)[1]); }
     else { flushList(); paragraph.push(line); }
   });
