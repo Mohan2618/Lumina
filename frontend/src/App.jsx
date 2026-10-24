@@ -64,59 +64,104 @@ const OPERATION_GROUPS = [
 ];
 
 function InlineMarkdown({ text }) {
-  const parts = String(text).split(/(\x60[^\x60]+\x60|\*\*[^*]+\*\*|\*[^*]+\*)/g);
-  return parts.map((part, index) => {
-    if (part.charCodeAt(0) === 96 && part.endsWith(String.fromCharCode(96))) return <code className="inline-code" key={index}>{part.slice(1, -1)}</code>;
-    if (part.startsWith("**") && part.endsWith("**")) return <strong key={index}>{part.slice(2, -2)}</strong>;
-    if (part.startsWith("*") && part.endsWith("*")) return <em key={index}>{part.slice(1, -1)}</em>;
-    return part;
+  const source = String(text ?? "");
+  const tokens = source.split(/(\x60{1,2}[^\\n\x60]+\x60{1,2}|\*\*[^*]+\*\*|__[^_]+__|\*[^*\n]+\*|_[^_\n]+_|\[[^\]]+\]\([^)]+\))/g);
+  return tokens.map((token, index) => {
+    if (/^\x60{1,2}[^\\n]+\x60{1,2}$/.test(token)) return <code className="inline-code" key={index}>{token.replace(/^\x60{1,2}|\x60{1,2}$/g, "")}</code>;
+    if (token.startsWith("**") && token.endsWith("**")) return <strong key={index}>{token.slice(2, -2)}</strong>;
+    if (token.startsWith("__") && token.endsWith("__")) return <strong key={index}>{token.slice(2, -2)}</strong>;
+    if ((token.startsWith("*") && token.endsWith("*")) || (token.startsWith("_") && token.endsWith("_"))) return <em key={index}>{token.slice(1, -1)}</em>;
+    const link = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    if (link) return <a key={index} href={link[2]} target="_blank" rel="noreferrer">{link[1]}</a>;
+    return token;
   });
 }
 function CodeSnippet({ code, language, onCopy, copied }) {
-  return <section className="response-code"><header className="response-code-header"><span>{language || "Code"}</span><button type="button" onClick={() => onCopy(code)} aria-label="Copy code snippet"><Copy size={14} />{copied ? "Copied" : "Copy code"}</button></header><pre><code>{code}</code></pre></section>;
+  return <section className="response-code">
+    <header className="response-code-header"><span>{language || "Code"}</span><button type="button" onClick={() => onCopy(code)} aria-label="Copy code snippet"><Copy size={14} />{copied ? "Copied" : "Copy code"}</button></header>
+    <pre><code>{code}</code></pre>
+  </section>;
 }
 function StructuredResponse({ text, onCopy }) {
   const [copiedCode, setCopiedCode] = useState("");
-  const chunks = String(text || "").split(/\x60{3}([^\n\x60]*)\n([\s\S]*?)\x60{3}/g);
+  const source = String(text || "").replace(/\r\n?/g, "\n");
+  const fence = /\x60{3,}([^\n\x60]*)\n([\s\S]*?)(?:\n?\x60{3,}(?=\n|$)|$)/g;
   const blocks = [];
-  for (let i = 0; i < chunks.length;) {
-    if (i % 3 === 1) { blocks.push({ type: "code", language: chunks[i].trim(), code: chunks[i + 1].replace(/\n$/, "") }); i += 3; }
-    else { if (chunks[i]) blocks.push({ type: "text", text: chunks[i] }); i++; }
+  let cursor = 0, match;
+  while ((match = fence.exec(source)) !== null) {
+    if (match.index > cursor) blocks.push({ type: "text", text: source.slice(cursor, match.index) });
+    blocks.push({ type: "code", language: match[1].trim().replace(/^(python|py)$/i, "python"), code: match[2].replace(/\n$/, "") });
+    cursor = fence.lastIndex;
+    if (match[0].length === 0) fence.lastIndex++;
   }
+  if (cursor < source.length) blocks.push({ type: "text", text: source.slice(cursor) });
   function copyCode(code) {
     navigator.clipboard.writeText(code).then(() => { setCopiedCode(code); window.setTimeout(() => setCopiedCode(""), 1800); }).catch(() => {});
   }
-  return <div className="structured-response">{blocks.map((block, index) => block.type === "code" ? <CodeSnippet key={index} code={block.code} language={block.language} onCopy={copyCode} copied={copiedCode === block.code} /> : <MarkdownText key={index} text={block.text} onCopyTable={(csv) => navigator.clipboard.writeText(csv).catch(() => {})} />)}<div className="response-actions"><button type="button" onClick={() => onCopy(text)}><Copy size={14} /> Copy response</button></div></div>;
+  return <div className="structured-response">
+    {blocks.map((block, index) => block.type === "code"
+      ? <CodeSnippet key={index} code={block.code} language={block.language} onCopy={copyCode} copied={copiedCode === block.code} />
+      : <MarkdownText key={index} text={block.text} onCopyTable={(csv) => navigator.clipboard.writeText(csv).catch(() => {})} />)}
+    <div className="response-actions"><button type="button" onClick={() => onCopy(text)}><Copy size={14} /> Copy response</button></div>
+  </div>;
 }
 function MarkdownText({ text, onCopyTable }) {
-  const lines = text.split("\n");
+  const lines = String(text || "").replace(/\r\n?/g, "\n").split("\n");
   const output = [];
-  let paragraph = [], listItems = [], listType = "";
-  const flushParagraph = () => { if (paragraph.length) { output.push(<p key={"p" + output.length}><InlineMarkdown text={paragraph.join(" ")} /></p>); paragraph = []; } };
-  const flushList = () => { if (listItems.length) { const Tag = listType === "ol" ? "ol" : "ul"; output.push(<Tag key={"l" + output.length}>{listItems.map((item, i) => <li key={i}><InlineMarkdown text={item} /></li>)}</Tag>); listItems = []; listType = ""; } };
+  let paragraph = [], listItems = [], listType = "", listIndent = 0;
+  const flushParagraph = () => {
+    if (paragraph.length) {
+      output.push(<p key={"p" + output.length}><InlineMarkdown text={paragraph.join(" ").trim()} /></p>);
+      paragraph = [];
+    }
+  };
+  const flushList = () => {
+    if (listItems.length) {
+      const Tag = listType === "ol" ? "ol" : "ul";
+      output.push(<Tag key={"l" + output.length}>{listItems.map((item, i) => <li key={i}><InlineMarkdown text={item} /></li>)}</Tag>);
+      listItems = []; listType = ""; listIndent = 0;
+    }
+  };
   const isTableRow = (line) => line.trim().startsWith("|") && line.trim().endsWith("|");
-  const parseCells = (line) => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+  const parseCells = (line) => line.trim().replace(/^\|/, "").replace(/\|$/, "").split(/(?<!\\)\|/).map((cell) => cell.trim().replace(/\\\|/g, "|"));
   const isDivider = (line) => parseCells(line).every((cell) => /^:?-{3,}:?$/.test(cell));
-  lines.forEach((raw, index) => {
-    const line = raw.trim(), bullet = line.match(/^[-*+]\s+(.+)$/), numbered = line.match(/^\d+[.)]\s+(.+)$/);
-    if (isTableRow(line) && index > 0 && isTableRow(lines[index - 1].trim())) return;
+  for (let index = 0; index < lines.length; index++) {
+    const raw = lines[index], line = raw.trim();
+    const bullet = raw.match(/^(\s*)[-*+]\s+(.+)$/), numbered = raw.match(/^(\s*)\d+[.)]\s+(.+)$/);
     if (isTableRow(line)) {
       flushParagraph(); flushList();
       const tableLines = [];
       let cursor = index;
       while (cursor < lines.length && isTableRow(lines[cursor].trim())) { tableLines.push(lines[cursor].trim()); cursor++; }
       if (tableLines.length >= 2 && isDivider(tableLines[1])) {
-        const headers = parseCells(tableLines[0]);
-        const rows = tableLines.slice(2).map(parseCells);
+        const headers = parseCells(tableLines[0]), rows = tableLines.slice(2).map(parseCells);
         const csv = [headers, ...rows].map((row) => row.map((cell) => '"' + cell.replace(/"/g, '""') + '"').join(",")).join("\n");
         output.push(<div className="response-table-wrap" key={"t" + output.length}><div className="response-table-toolbar"><span>Table</span><button type="button" onClick={() => onCopyTable(csv)}><Copy size={13} /> Copy table</button></div><div className="response-table-scroll"><table className="response-table"><thead><tr>{headers.map((cell, i) => <th key={i}><InlineMarkdown text={cell} /></th>)}</tr></thead><tbody>{rows.map((row, ri) => <tr key={ri}>{headers.map((_, ci) => <td key={ci}><InlineMarkdown text={row[ci] || ""} /></td>)}</tr>)}</tbody></table></div></div>);
-        index = cursor - 1;
-      } else paragraph.push(line);
-    } else if (!line) { flushParagraph(); flushList(); }
-    else if (/^#{1,4}\s/.test(line)) { flushParagraph(); flushList(); const level = line.match(/^#+/)[0].length, Tag = "h" + Math.min(level + 2, 6); output.push(<Tag key={"h" + output.length}><InlineMarkdown text={line.replace(/^#{1,4}\s+/, "")} /></Tag>); }
-    else if (bullet || numbered) { flushParagraph(); const nextType = numbered ? "ol" : "ul"; if (listType && listType !== nextType) flushList(); listType = nextType; listItems.push((bullet || numbered)[1]); }
-    else { flushList(); paragraph.push(line); }
-  });
+        index = cursor - 1; continue;
+      }
+    }
+    if (!line) { flushParagraph(); flushList(); continue; }
+    const heading = line.match(/^(#{1,6})\s+(.+)$/);
+    const boldHeading = line.match(/^\*\*(.+?)\*\*:?\s*$/);
+    if (heading || boldHeading) {
+      flushParagraph(); flushList();
+      const level = heading ? Math.min(heading[1].length + 2, 6) : 4;
+      const Tag = "h" + level;
+      output.push(<Tag key={"h" + output.length}><InlineMarkdown text={heading ? heading[2] : boldHeading[1].replace(/:$/, "")} /></Tag>);
+      continue;
+    }
+    if (bullet || numbered) {
+      flushParagraph();
+      const nextType = numbered ? "ol" : "ul";
+      const indent = (numbered || bullet)[1].length;
+      if (listType && (listType !== nextType || indent !== listIndent)) flushList();
+      listType = nextType; listIndent = indent;
+      listItems.push((numbered || bullet)[2]);
+      continue;
+    }
+    flushList();
+    paragraph.push(line.replace(/ {2,}/g, " "));
+  }
   flushParagraph(); flushList();
   return <div className="markdown-text">{output}</div>;
 }
