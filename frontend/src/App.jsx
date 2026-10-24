@@ -473,7 +473,7 @@ export default function App() {
                     <strong>{message.role === "user" ? "You" : "Lumina"}</strong>
                     {message.text && (message.role === "assistant" ? <StructuredResponse text={message.text} onCopy={(value) => navigator.clipboard.writeText(value).catch(() => setError("Clipboard access failed. Please copy manually."))} /> : <p>{message.text}</p>)}
                     {message.image && <img className="message-image" src={message.image} alt="Uploaded input" />}
-                    {message.images?.map((src, index) => <img className="message-image attachment-message-image" key={index} src={src} alt={"Attached image " + (index + 1)} />)}
+                    {message.role === "user" && message.images?.map((src, index) => <img className="message-image attachment-message-image" key={index} src={src} alt={"Attached image " + (index + 1)} />)}
                     {message.images?.map((src, index) => {
                       const imageSrc = src.startsWith("data:") || src.startsWith("http") ? src : "data:image/png;base64," + src;
                       return <div className="result-image-wrap" key={index}>
