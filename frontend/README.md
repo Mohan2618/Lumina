@@ -30,6 +30,8 @@ Vite forwards `/api`, `/process`, and `/health` requests to Flask on port 7860.
 - [x] Add React sign-in/sign-up and OTP password-reset screens using existing Flask auth endpoints.
 - [x] Add session-aware account controls.
 - [x] Add browser-local saved conversation text and saved-image gallery with delete/download controls.
+- [x] Add generated-image download and clipboard-copy actions.
+- [x] Validate supported image formats and 10 MB upload size; support pasting an image from the clipboard.
 - [ ] Migrate the original app's full history restore, image variations, compare/lightbox, attachments, undo/redo, and share flows.
 - [ ] Configure the production build to be served by Flask/Render.
 - [ ] Run end-to-end regression checks against the existing backend.
