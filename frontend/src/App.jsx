@@ -406,6 +406,7 @@ export default function App() {
       const answers = [];
       const resultImages = [];
       let currentHistory = apiHistory;
+      const originalAttachmentPreview = attachments[0]?.preview || "";
       let currentLastImage = lastImage;
       for (let index = 0; index < batch.length; index++) {
         if (controller.signal.aborted) throw new DOMException("Request cancelled", "AbortError");
@@ -419,13 +420,24 @@ export default function App() {
         if (!response.ok) throw new Error(data.message || data.error || "Lumina couldn't process image " + (index + 1) + ".");
         answers.push(data.message || data.reply || data.response || data.text || "Lumina completed the request.");
         const images = Array.isArray(data.images) ? data.images : Array.isArray(data.result_images) ? data.result_images : [];
-        resultImages.push(...images, ...(data.image ? [data.image] : []));
+        const validImages = [...images, ...(data.image ? [data.image] : [])].filter((src) => typeof src === "string" && src.trim().length > 0);
+        for (const src of validImages) if (!resultImages.includes(src)) resultImages.push(src);
         if (Array.isArray(data.history)) currentHistory = data.history;
         if (typeof data.last_image === "string") currentLastImage = data.last_image;
       }
       setApiHistory(currentHistory);
       setLastImage(currentLastImage);
-      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "assistant", text: answers.join("\n\n"), images: resultImages }]);
+      if (resultImages.length) {
+        setEditVersions((current) => {
+          let next = editVersionIndex >= 0 ? current.slice(0, editVersionIndex + 1) : current;
+          if (!next.length && originalAttachmentPreview) next = [{ src: originalAttachmentPreview, createdAt: Date.now(), label: "Original" }];
+          const normalized = resultImages.map((src) => ({ src: src.startsWith("data:") || src.startsWith("http") ? src : "data:image/png;base64," + src, createdAt: Date.now(), label: "Edit" }));
+          next = [...next, ...normalized].slice(-20);
+          setEditVersionIndex(next.length - 1);
+          return next;
+        });
+      }
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "assistant", text: answers.join("\\n\\n"), images: resultImages }]);
       clearAttachments();
     } catch (err) {
       if (err?.name === "AbortError") return;
