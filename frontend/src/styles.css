@@ -147,3 +147,6 @@ button:focus-visible,textarea:focus-visible{outline:2px solid #78e4c2;outline-of
 .operation-generate { border-color: rgba(65,225,174,.5); margin: 4px 0 16px; }
 .status-content p { margin: 0 0 14px; line-height: 1.6; }
 @media (max-width: 640px) { .operation-chip { padding: 8px 10px; } .operations-content, .status-content { padding: 14px; } }
+
+.send-button.stop-button{background:#ff626d;color:#fff}
+.send-button.stop-button:hover{filter:brightness(1.08)}
