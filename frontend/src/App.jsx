@@ -83,6 +83,18 @@ export default function App() {
     setError("");
   }
 
+  async function copyImage(src) {
+    try {
+      const normalized = src.startsWith("data:") || src.startsWith("http") ? src : "data:image/png;base64," + src;
+      const response = await fetch(normalized);
+      const blob = await response.blob();
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type || "image/png"]: blob })]);
+      setError("Image copied to clipboard.");
+    } catch {
+      setError("Copying images isn't supported by this browser. Use Download instead.");
+    }
+  }
+
   function chooseFile(nextFile) {
     if (!nextFile) return;
     if (!nextFile.type.startsWith("image/")) {
@@ -220,7 +232,7 @@ export default function App() {
                       const imageSrc = src.startsWith("data:") || src.startsWith("http") ? src : "data:image/png;base64," + src;
                       return <div className="result-image-wrap" key={index}>
                         <button className="image-open-button" onClick={() => setLightbox(imageSrc)} aria-label="Open image preview"><img className="message-image" src={imageSrc} alt={"Generated or edited result " + (index + 1)} /></button>
-                        <button className="save-image-button" onClick={() => saveImage(src)}><BookmarkPlus size={14} /> Save image</button>
+                        <div className="image-action-row"><button className="save-image-button" onClick={() => saveImage(src)}><BookmarkPlus size={14} /> Save image</button><a className="image-download-link" href={imageSrc} download="lumina-image.png">Download</a><button className="image-download-link" onClick={() => copyImage(src)}>Copy image</button></div>
                       </div>;
                     })}
                   </div>
