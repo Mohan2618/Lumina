@@ -192,6 +192,9 @@ export default function App() {
   const [messages, setMessages] = useState([]);
   const [apiHistory, setApiHistory] = useState([]);
   const [lastImage, setLastImage] = useState("");
+  const [editVersions, setEditVersions] = useState([]);
+  const [editVersionIndex, setEditVersionIndex] = useState(-1);
+  const [compareImages, setCompareImages] = useState(null);
   const [busy, setBusy] = useState(false);
   const requestController = useRef(null);
   const [error, setError] = useState("");
@@ -289,6 +292,35 @@ export default function App() {
     setLastImage("");
     setPanel("");
     setError("Saved text restored. Image-edit context starts fresh.");
+  }
+
+  function recordEditVersion(src) {
+    if (!src) return;
+    const normalized = src.startsWith("data:") || src.startsWith("http") ? src : "data:image/png;base64," + src;
+    setEditVersions((current) => {
+      const base = editVersionIndex >= 0 ? current.slice(0, editVersionIndex + 1) : current;
+      const next = [...base, { src: normalized, createdAt: Date.now() }];
+      const trimmed = next.slice(-20);
+      setEditVersionIndex(trimmed.length - 1);
+      return trimmed;
+    });
+    setLastImage(src.startsWith("data:") ? src.split(",", 2)[1] : src);
+  }
+
+  function undoImageEdit() {
+    if (editVersionIndex <= 0) return;
+    const nextIndex = editVersionIndex - 1;
+    setEditVersionIndex(nextIndex);
+    const src = editVersions[nextIndex]?.src || "";
+    setLastImage(src.startsWith("data:") ? src.split(",", 2)[1] : src);
+  }
+
+  function redoImageEdit() {
+    if (editVersionIndex < 0 || editVersionIndex >= editVersions.length - 1) return;
+    const nextIndex = editVersionIndex + 1;
+    setEditVersionIndex(nextIndex);
+    const src = editVersions[nextIndex]?.src || "";
+    setLastImage(src.startsWith("data:") ? src.split(",", 2)[1] : src);
   }
 
   function saveImage(src) {
@@ -478,7 +510,7 @@ export default function App() {
                       const imageSrc = src.startsWith("data:") || src.startsWith("http") ? src : "data:image/png;base64," + src;
                       return <div className="result-image-wrap" key={index}>
                         <button className="image-open-button" onClick={() => setLightbox(imageSrc)} aria-label="Open image preview"><img className="message-image" src={imageSrc} alt={"Generated or edited result " + (index + 1)} /></button>
-                        <div className="image-action-row"><button className="save-image-button" onClick={() => saveImage(src)}><BookmarkPlus size={14} /> Save image</button><a className="image-download-link" href={imageSrc} download="lumina-image.png">Download</a><button className="image-download-link" onClick={() => copyImage(src)}>Copy image</button><button className="image-download-link" onClick={() => { setLastImage(src.startsWith("data:") ? src.split(",", 2)[1] : src); setPrompt("Edit this image: "); }}>Use for edit</button></div>
+                        <div className="image-action-row"><button className="save-image-button" onClick={() => saveImage(src)}><BookmarkPlus size={14} /> Save image</button><a className="image-download-link" href={imageSrc} download="lumina-image.png">Download</a><button className="image-download-link" onClick={() => copyImage(src)}>Copy image</button><button className="image-download-link" onClick={() => { setLastImage(src.startsWith("data:") ? src.split(",", 2)[1] : src); setPrompt("Edit this image: "); }}>Use for edit</button><button className="image-download-link" disabled={editVersionIndex <= 0} onClick={undoImageEdit}>Undo edit</button><button className="image-download-link" disabled={editVersionIndex < 0 || editVersionIndex >= editVersions.length - 1} onClick={redoImageEdit}>Redo edit</button><button className="image-download-link" disabled={editVersionIndex <= 0} onClick={() => setCompareImages({ before: editVersions[editVersionIndex - 1]?.src, after: editVersions[editVersionIndex]?.src })}>Compare</button></div>
                       </div>;
                     })}
                   </div>
@@ -540,6 +572,12 @@ export default function App() {
           <p className="disclaimer">Lumina can make mistakes. Review generated results before using them.</p>
         </div>
       </section>
+      {compareImages && <div className="compare-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCompareImages(null); }}>
+        <section className="compare-dialog" role="dialog" aria-modal="true" aria-label="Compare image edits">
+          <header className="compare-header"><strong>Before and after</strong><button type="button" onClick={() => setCompareImages(null)} aria-label="Close comparison"><X size={18} /></button></header>
+          <div className="compare-grid"><figure><figcaption>Previous version</figcaption><img src={compareImages.before} alt="Previous image version" /></figure><figure><figcaption>Current version</figcaption><img src={compareImages.after} alt="Current image version" /></figure></div>
+        </section>
+      </div>}
       {lightbox && <div className="lightbox-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setLightbox(""); }} role="presentation">
         <button className="lightbox-close" onClick={() => setLightbox("")} aria-label="Close image preview"><X size={20} /></button>
         <img src={lightbox} alt="Expanded Lumina result" />
