@@ -135,3 +135,15 @@ button:focus-visible,textarea:focus-visible{outline:2px solid #78e4c2;outline-of
 .image-action-row .save-image-button{margin-top:0}
 .image-download-link{display:inline-flex;align-items:center;padding:7px 9px;border:1px solid #ffffff1a;border-radius:8px;background:#ffffff08;color:#cbd4df;font-size:10px;text-decoration:none}
 .image-download-link:hover{background:#ffffff12;color:#fff}
+
+
+/* Legacy feature-parity: operations panel, voice and API health */
+.operations-content, .status-content { padding: 18px; overflow-y: auto; }
+.operation-group { margin: 0 0 22px; }
+.operation-group h3 { margin: 0 0 10px; font-size: 13px; color: var(--muted, #9ca9bd); font-weight: 650; }
+.operation-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.operation-chip { border: 1px solid rgba(148,163,184,.24); background: rgba(255,255,255,.045); color: inherit; border-radius: 999px; padding: 8px 12px; cursor: pointer; font: inherit; font-size: 12px; transition: background .15s ease, border-color .15s ease; }
+.operation-chip:hover, .operation-chip:focus-visible { background: rgba(65,225,174,.12); border-color: rgba(65,225,174,.6); outline: none; }
+.operation-generate { border-color: rgba(65,225,174,.5); margin: 4px 0 16px; }
+.status-content p { margin: 0 0 14px; line-height: 1.6; }
+@media (max-width: 640px) { .operation-chip { padding: 8px 10px; } .operations-content, .status-content { padding: 14px; } }
