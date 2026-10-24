@@ -76,10 +76,30 @@ function InlineMarkdown({ text }) {
     return token;
   });
 }
+function HighlightedCode({ code, language }) {
+  const lang = String(language || "").toLowerCase();
+  if (!["python", "py", "javascript", "js", "typescript", "ts", "jsx", "tsx", "json", "bash", "sh"].includes(lang)) return <code>{code}</code>;
+  const tokenPattern = /(#[^\n]*|\/\/[^\n]*|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|\b(?:def|return|if|elif|else|for|while|in|not|and|or|is|class|import|from|as|try|except|finally|with|lambda|yield|async|await|pass|break|continue|raise|True|False|None|const|let|var|function|new|throw|catch|typeof|export|default|interface|type|public|private|static)\b|\b\d+(?:\.\d+)?\b|\b(?:print|len|range|enumerate|int|str|list|dict|set|sum|min|max|abs|map|filter|input|JSON|console|Math)\b|[=+\-*/%<>!]+|[{}()[\].,:])/g;
+  const parts = []; let cursor = 0, match;
+  while ((match = tokenPattern.exec(code)) !== null) {
+    if (match.index > cursor) parts.push({ text: code.slice(cursor, match.index), type: "" });
+    const token = match[0]; let type = "punctuation";
+    if (/^(#|\/\/)/.test(token)) type = "comment";
+    else if (/^["\']/.test(token)) type = "string";
+    else if (/^\d/.test(token)) type = "number";
+    else if (/^(def|return|if|elif|else|for|while|in|not|and|or|is|class|import|from|as|try|except|finally|with|lambda|yield|async|await|pass|break|continue|raise|True|False|None|const|let|var|function|new|throw|catch|typeof|export|default|interface|type|public|private|static)$/.test(token)) type = "keyword";
+    else if (/^(print|len|range|enumerate|int|str|list|dict|set|sum|min|max|abs|map|filter|input|JSON|console|Math)$/.test(token)) type = "builtin";
+    else if (/^[=+\-*/%<>!]+$/.test(token)) type = "operator";
+    parts.push({ text: token, type }); cursor = tokenPattern.lastIndex;
+  }
+  if (cursor < code.length) parts.push({ text: code.slice(cursor), type: "" });
+  return <code>{parts.map((part, i) => <span key={i} className={part.type ? "syntax-" + part.type : undefined}>{part.text}</span>)}</code>;
+}
 function CodeSnippet({ code, language, onCopy, copied }) {
+  const [wrapped, setWrapped] = useState(false);
   return <section className="response-code">
-    <header className="response-code-header"><span>{language || "Code"}</span><button type="button" onClick={() => onCopy(code)} aria-label="Copy code snippet"><Copy size={14} />{copied ? "Copied" : "Copy code"}</button></header>
-    <pre><code>{code}</code></pre>
+    <header className="response-code-header"><span className="code-language"><span className="code-language-dot" />{language || "Code"}</span><div className="code-header-actions"><button type="button" onClick={() => setWrapped(!wrapped)}>{wrapped ? "No wrap" : "Wrap"}</button><button type="button" onClick={() => onCopy(code)} aria-label="Copy code snippet"><Copy size={14} />{copied ? "Copied" : "Copy code"}</button></div></header>
+    <pre className={wrapped ? "code-pre wrapped" : "code-pre"}><HighlightedCode code={code} language={language} /></pre>
   </section>;
 }
 function StructuredResponse({ text, onCopy }) {
