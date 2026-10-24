@@ -522,7 +522,7 @@ export default function App() {
                     {message.text && (message.role === "assistant" ? <StructuredResponse text={message.text} onCopy={(value) => navigator.clipboard.writeText(value).catch(() => setError("Clipboard access failed. Please copy manually."))} /> : <p>{message.text}</p>)}
                     {message.image && <img className="message-image" src={message.image} alt="Uploaded input" />}
                     {message.role === "user" && message.images?.map((src, index) => <img className="message-image attachment-message-image" key={index} src={src} alt={"Attached image " + (index + 1)} />)}
-                    {message.images?.map((src, index) => {
+                    {message.role !== "user" && message.images?.map((src, index) => {
                       const isCurrentHistoryImage = message.role === "assistant" && messageIndex === messages.length - 1 && index === 0 && editVersionIndex >= 0 && editVersions[editVersionIndex];
                       const displaySrc = isCurrentHistoryImage ? editVersions[editVersionIndex].src : src;
                       const imageSrc = displaySrc.startsWith("data:") || displaySrc.startsWith("blob:") || displaySrc.startsWith("http") ? displaySrc : "data:image/png;base64," + displaySrc;
