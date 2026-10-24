@@ -93,3 +93,33 @@ button:focus-visible,textarea:focus-visible{outline:2px solid #78e4c2;outline-of
 .auth-switch{margin:19px 0 0;text-align:center;color:#9aa3b4;font-size:11px}
 .auth-switch button{padding:0;border:0;background:none;color:#8ce8cd;font-weight:700;font-size:11px}
 @media(max-width:760px){.topbar-actions{gap:8px}.topbar-caption{display:none}.signed-in-label{display:none}.auth-card{padding:25px 20px}}
+
+.side-action{display:flex;align-items:center;gap:10px;width:100%;padding:11px 10px;border:0;border-radius:10px;background:transparent;color:#aeb6c6;text-align:left;font-size:12px}
+.side-action:hover{background:#ffffff0a;color:#e9edf5}
+.side-action span{margin-left:auto;color:#788396;font-size:10px}
+.result-image-wrap{width:max-content;max-width:100%}
+.save-image-button{display:flex;align-items:center;gap:6px;margin-top:7px;padding:7px 9px;border:1px solid #ffffff1a;border-radius:8px;background:#ffffff08;color:#cbd4df;font-size:10px}
+.save-image-button:hover{background:#ffffff12}
+.drawer-backdrop{position:fixed;inset:0;z-index:40;display:flex;justify-content:flex-end;background:#05070b80;backdrop-filter:blur(3px)}
+.drawer{width:min(440px,100%);height:100%;overflow:auto;padding:24px;border-left:1px solid #ffffff19;background:#111620;box-shadow:-20px 0 70px #0005}
+.drawer-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:22px}
+.drawer-header h2{margin:0;font-family:Manrope,sans-serif;font-size:21px;letter-spacing:-.6px}
+.drawer-header p{margin:7px 0 0;color:#8791a3;font-size:11px}
+.drawer-close{display:grid;place-items:center;width:34px;height:34px;flex-shrink:0;border:1px solid #ffffff16;border-radius:10px;background:#ffffff07;color:#d6dce7}
+.saved-gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.saved-image-card{min-width:0;overflow:hidden;border:1px solid #ffffff14;border-radius:12px;background:#ffffff05}
+.saved-image-card>img{display:block;width:100%;aspect-ratio:1;object-fit:cover;background:#080b11}
+.saved-image-card>p{margin:8px 9px;color:#b6bfcd;font-size:10px;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.saved-image-actions{display:flex;align-items:center;justify-content:space-between;padding:0 9px 10px}
+.saved-image-actions a{color:#8ce8cd;font-size:10px;text-decoration:none}
+.saved-image-actions button,.saved-chat-delete{display:grid;place-items:center;width:27px;height:27px;border:1px solid #ffffff12;border-radius:8px;background:#ffffff07;color:#aeb7c6}
+.saved-chat-list{display:flex;flex-direction:column;gap:9px}
+.saved-chat-card{display:flex;align-items:center;gap:8px;padding:12px;border:1px solid #ffffff14;border-radius:12px;background:#ffffff05}
+.saved-chat-open{display:flex;flex:1;min-width:0;flex-direction:column;gap:6px;border:0;background:transparent;color:#e1e6ef;text-align:left}
+.saved-chat-open strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600}
+.saved-chat-open small{color:#7f899b;font-size:10px}
+.drawer-empty{padding:38px 12px;text-align:center;color:#7f899b;font-size:12px;line-height:1.8}
+.auth-notice{margin:0;padding:10px;border:1px solid #70d9bb33;border-radius:9px;background:#70d9bb0b;color:#9aefd6;font-size:11px;line-height:1.5}
+.auth-switch p{margin:13px 0 0}
+.auth-switch button{display:inline-flex;align-items:center;gap:4px}
+@media(max-width:760px){.drawer{padding:20px 16px}.side-action{padding:10px 8px}}
