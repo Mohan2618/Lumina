@@ -97,10 +97,16 @@ export default function App() {
 
   function chooseFile(nextFile) {
     if (!nextFile) return;
-    if (!nextFile.type.startsWith("image/")) {
-      setError("Please choose an image file.");
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp"];
+    if (!allowedTypes.includes(nextFile.type)) {
+      setError("Use a JPG, PNG, WEBP, GIF, or BMP image.");
       return;
     }
+    if (nextFile.size > 10 * 1024 * 1024) {
+      setError("Images must be 10 MB or smaller.");
+      return;
+    }
+    if (preview.startsWith("blob:")) URL.revokeObjectURL(preview);
     setError("");
     setFile(nextFile);
     setPreview(URL.createObjectURL(nextFile));
@@ -254,7 +260,15 @@ export default function App() {
             )}
             <textarea
               value={prompt}
-              onChange={(event) => setPrompt(event.target.value)}
+              onPaste={(event) => {
+                const imageItem = Array.from(event.clipboardData?.items || []).find((item) => item.type.startsWith("image/"));
+                const pastedImage = imageItem?.getAsFile();
+                if (pastedImage) {
+                  event.preventDefault();
+                  chooseFile(new File([pastedImage], "pasted-image.png", { type: pastedImage.type || "image/png" }));
+                }
+              }}
+              onChange={(event) => setPrompt(event.target.value)
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
@@ -270,7 +284,7 @@ export default function App() {
                 <input
                   ref={fileInput}
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp,image/gif,image/bmp"
                   hidden
                   onChange={(event) => chooseFile(event.target.files?.[0])}
                 />
