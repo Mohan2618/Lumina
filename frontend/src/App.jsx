@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import AuthModal from "./AuthModal.jsx";
 import {
   ArrowUp,
   ImagePlus,
@@ -23,7 +24,23 @@ export default function App() {
   const [lastImage, setLastImage] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [user, setUser] = useState(null);
+  const [authOpen, setAuthOpen] = useState(false);
   const fileInput = useRef(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/auth/me", { credentials: "same-origin" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => { if (active && data?.authenticated) setUser(data.user); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  async function signOut() {
+    try { await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }); }
+    finally { setUser(null); }
+  }
 
   function chooseFile(nextFile) {
     if (!nextFile) return;
@@ -111,8 +128,9 @@ export default function App() {
           <span>AI workspace</span>
         </div>
         <div className="sidebar-bottom">
-          <div className="avatar">L</div>
-          <div><strong>Lumina</strong><small>Image assistant</small></div>
+          <div className="avatar">{user ? (user.firstName || user.username || "U").slice(0, 1).toUpperCase() : "L"}</div>
+          <div className="account-details"><strong>{user ? (user.firstName || user.username || "Account") : "Lumina"}</strong><small>{user ? (user.email || user.username) : "Image assistant"}</small></div>
+          {user ? <button className="account-action" onClick={signOut}>Sign out</button> : <button className="account-action" onClick={() => setAuthOpen(true)}>Sign in</button>}
         </div>
       </aside>
 
@@ -120,7 +138,10 @@ export default function App() {
         <header className="topbar">
           <div className="mobile-brand"><span className="brand-mark"><Sparkles size={17} /></span> Lumina</div>
           <span className="model-label"><span className="status-dot" /> AI Image Studio</span>
-          <span className="topbar-caption">Create · Edit · Explore</span>
+          <div className="topbar-actions">
+            {user ? <span className="signed-in-label">{user.firstName || user.username}</span> : <button className="topbar-signin" onClick={() => setAuthOpen(true)}>Sign in</button>}
+            <span className="topbar-caption">Create · Edit · Explore</span>
+          </div>
         </header>
 
         <div className="conversation" aria-live="polite">
@@ -206,6 +227,7 @@ export default function App() {
           <p className="disclaimer">Lumina can make mistakes. Review generated results before using them.</p>
         </div>
       </section>
+      {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onAuthenticated={(nextUser) => { setUser(nextUser); setAuthOpen(false); }} />}
     </main>
   );
 }
