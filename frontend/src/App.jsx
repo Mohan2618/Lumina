@@ -19,6 +19,8 @@ export default function App() {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState("");
   const [messages, setMessages] = useState([]);
+  const [apiHistory, setApiHistory] = useState([]);
+  const [lastImage, setLastImage] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const fileInput = useRef(null);
@@ -60,9 +62,8 @@ export default function App() {
     try {
       const body = new FormData();
       body.append("prompt", text);
-      body.append("history", JSON.stringify(
-        messages.map(({ role, text: content }) => ({ role, content })),
-      ));
+      body.append("history", JSON.stringify(apiHistory));
+      if (lastImage) body.append("last_image", lastImage);
       if (file) body.append("image", file);
 
       const response = await fetch("/process", { method: "POST", body });
@@ -75,9 +76,12 @@ export default function App() {
         "Lumina completed the request.";
       const images = Array.isArray(data.images) ? data.images :
         Array.isArray(data.result_images) ? data.result_images : [];
+      setApiHistory(Array.isArray(data.history) ? data.history : apiHistory);
+      setLastImage(typeof data.last_image === "string" ? data.last_image : lastImage);
+      const singleImage = data.image || "";
       setMessages((current) => [
         ...current,
-        { id: crypto.randomUUID(), role: "assistant", text: answer, images },
+        { id: crypto.randomUUID(), role: "assistant", text: answer, images: images.length ? images : (singleImage ? [singleImage] : []) },
       ]);
       clearFile();
     } catch (err) {
@@ -99,7 +103,7 @@ export default function App() {
           <span className="brand-mark"><Sparkles size={19} /></span>
           <span>Lumina</span>
         </a>
-        <button className="new-chat" onClick={() => { setMessages([]); setError(""); }}>
+        <button className="new-chat" onClick={() => { setMessages([]); setApiHistory([]); setLastImage(""); setError(""); }}>
           <PanelLeft size={17} /> New conversation
         </button>
         <div className="sidebar-note">
