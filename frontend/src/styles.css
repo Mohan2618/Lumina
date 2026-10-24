@@ -168,3 +168,13 @@ button:focus-visible,textarea:focus-visible{outline:2px solid #78e4c2;outline-of
 .response-code pre code{font:inherit}
 .response-actions{display:flex;justify-content:flex-end;margin-top:10px}
 .message-assistant .message-content>strong{display:block;margin-bottom:2px}
+
+.response-table-wrap{margin:14px 0;overflow:hidden;border:1px solid #ffffff1c;border-radius:11px;background:#0b0f16}
+.response-table-toolbar{display:flex;align-items:center;justify-content:space-between;padding:8px 11px;border-bottom:1px solid #ffffff12;background:#ffffff06;color:#aab4c5;font-size:11px}
+.response-table-toolbar button{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border:1px solid #ffffff18;border-radius:7px;background:#ffffff07;color:#cbd4df;font:inherit;font-size:11px;cursor:pointer}
+.response-table-scroll{max-width:100%;overflow-x:auto}
+.response-table{width:100%;border-collapse:collapse;font-size:12px;line-height:1.6}
+.response-table th,.response-table td{min-width:100px;padding:10px 12px;border-bottom:1px solid #ffffff10;text-align:left;vertical-align:top}
+.response-table th{background:#ffffff06;color:#edf2f8;font-weight:700}
+.response-table td{color:#c4c9d4}
+.response-table tbody tr:last-child td{border-bottom:0}
