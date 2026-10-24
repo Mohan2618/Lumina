@@ -31,6 +31,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [panel, setPanel] = useState("");
+  const [lightbox, setLightbox] = useState("");
   const [savedGallery, setSavedGallery] = useState(() => { try { return JSON.parse(localStorage.getItem("lumina_react_gallery") || "[]"); } catch { return []; } });
   const [savedChats, setSavedChats] = useState(() => { try { return JSON.parse(localStorage.getItem("lumina_react_chats") || "[]"); } catch { return []; } });
   const fileInput = useRef(null);
@@ -93,8 +94,8 @@ export default function App() {
     setPreview(URL.createObjectURL(nextFile));
   }
 
-  function clearFile() {
-    if (preview) URL.revokeObjectURL(preview);
+  function clearFile(revoke = true) {
+    if (preview && revoke) URL.revokeObjectURL(preview);
     setFile(null);
     setPreview("");
     if (fileInput.current) fileInput.current.value = "";
@@ -140,7 +141,7 @@ export default function App() {
         ...current,
         { id: crypto.randomUUID(), role: "assistant", text: answer, images: images.length ? images : (singleImage ? [singleImage] : []) },
       ]);
-      clearFile();
+      clearFile(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Something went wrong.";
       setError(message);
@@ -218,7 +219,7 @@ export default function App() {
                     {message.images?.map((src, index) => {
                       const imageSrc = src.startsWith("data:") || src.startsWith("http") ? src : "data:image/png;base64," + src;
                       return <div className="result-image-wrap" key={index}>
-                        <img className="message-image" src={imageSrc} alt={"Generated or edited result " + (index + 1)} />
+                        <button className="image-open-button" onClick={() => setLightbox(imageSrc)} aria-label="Open image preview"><img className="message-image" src={imageSrc} alt={"Generated or edited result " + (index + 1)} /></button>
                         <button className="save-image-button" onClick={() => saveImage(src)}><BookmarkPlus size={14} /> Save image</button>
                       </div>;
                     })}
@@ -274,6 +275,11 @@ export default function App() {
           <p className="disclaimer">Lumina can make mistakes. Review generated results before using them.</p>
         </div>
       </section>
+      {lightbox && <div className="lightbox-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setLightbox(""); }} role="presentation">
+        <button className="lightbox-close" onClick={() => setLightbox("")} aria-label="Close image preview"><X size={20} /></button>
+        <img src={lightbox} alt="Expanded Lumina result" />
+        <a href={lightbox} download="lumina-image.png">Download image</a>
+      </div>}
       {panel && <div className="drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setPanel(""); }}>
         <section className="drawer">
           <header className="drawer-header"><div><h2>{panel === "gallery" ? "Saved images" : "Saved conversations"}</h2><p>Saved locally in this browser</p></div><button className="drawer-close" onClick={() => setPanel("")} aria-label="Close panel"><X size={18} /></button></header>
