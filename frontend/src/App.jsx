@@ -280,18 +280,34 @@ export default function App() {
   function saveCurrentChat() {
     if (!messages.length) { setError("Start a conversation before saving it."); return; }
     const firstPrompt = messages.find((item) => item.role === "user")?.text || "Lumina conversation";
-    const chat = { id: crypto.randomUUID(), title: firstPrompt.slice(0, 52), savedAt: new Date().toISOString(), messages: messages.map(({ role, text }) => ({ role, text })) };
-    setSavedChats((current) => [chat, ...current].slice(0, 20));
+    // Keep images and edit context with the conversation, not only its text.
+    const chat = {
+      id: crypto.randomUUID(),
+      title: firstPrompt.slice(0, 52),
+      savedAt: new Date().toISOString(),
+      messages: messages.map((item) => ({
+        role: item.role,
+        text: item.text || "",
+        ...(Array.isArray(item.images) && item.images.length ? { images: item.images } : {}),
+      })),
+      apiHistory,
+      lastImage,
+      editVersions,
+      editVersionIndex,
+    };
+    setSavedChats((current) => [chat, ...current.filter((item) => item.title !== chat.title)].slice(0, 20));
     setPanel("history");
     setError("");
   }
 
   function restoreChat(chat) {
-    setMessages(chat.messages.map((item) => ({ ...item, id: crypto.randomUUID() })));
-    setApiHistory([]);
-    setLastImage("");
+    setMessages((chat.messages || []).map((item) => ({ ...item, id: crypto.randomUUID() })));
+    setApiHistory(Array.isArray(chat.apiHistory) ? chat.apiHistory : []);
+    setEditVersions(Array.isArray(chat.editVersions) ? chat.editVersions : []);
+    setEditVersionIndex(Number.isInteger(chat.editVersionIndex) ? chat.editVersionIndex : -1);
+    setLastImage(chat.lastImage || "");
     setPanel("");
-    setError("Saved text restored. Image-edit context starts fresh.");
+    setError("");
   }
 
   function recordEditVersion(src) {
