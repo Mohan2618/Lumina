@@ -510,7 +510,7 @@ export default function App() {
             </div>
           ) : (
             <div className="message-list">
-              {messages.map((message) => (
+              {messages.map((message, messageIndex) => (
                 <article className={`message message-${message.role}`} key={message.id}>
                   <div className="message-avatar">{message.role === "user" ? "Y" : <Sparkles size={16} />}</div>
                   <div className="message-content">
@@ -519,10 +519,13 @@ export default function App() {
                     {message.image && <img className="message-image" src={message.image} alt="Uploaded input" />}
                     {message.role === "user" && message.images?.map((src, index) => <img className="message-image attachment-message-image" key={index} src={src} alt={"Attached image " + (index + 1)} />)}
                     {message.images?.map((src, index) => {
-                      const imageSrc = src.startsWith("data:") || src.startsWith("http") ? src : "data:image/png;base64," + src;
+                      const isCurrentHistoryImage = message.role === "assistant" && messageIndex === messages.length - 1 && index === 0 && editVersionIndex >= 0 && editVersions[editVersionIndex];
+                      const displaySrc = isCurrentHistoryImage ? editVersions[editVersionIndex].src : src;
+                      const imageSrc = displaySrc.startsWith("data:") || displaySrc.startsWith("blob:") || displaySrc.startsWith("http") ? displaySrc : "data:image/png;base64," + displaySrc;
+                      const normalizedSrc = imageSrc;
                       return <div className="result-image-wrap" key={index}>
                         <button className="image-open-button" onClick={() => setLightbox(imageSrc)} aria-label="Open image preview"><img className="message-image" src={imageSrc} alt={"Generated or edited result " + (index + 1)} /></button>
-                        <div className="image-action-row"><button className="save-image-button" onClick={() => saveImage(src)}><BookmarkPlus size={14} /> Save image</button><a className="image-download-link" href={imageSrc} download="lumina-image.png">Download</a><button className="image-download-link" onClick={() => copyImage(src)}>Copy image</button><button className="image-download-link" onClick={() => { setLastImage(src.startsWith("data:") ? src.split(",", 2)[1] : src); setPrompt("Edit this image: "); }}>Use for edit</button><button className="image-download-link" disabled={editVersionIndex <= 0} onClick={undoImageEdit}>Undo edit</button><button className="image-download-link" disabled={editVersionIndex < 0 || editVersionIndex >= editVersions.length - 1} onClick={redoImageEdit}>Redo edit</button><button className="image-download-link" disabled={editVersionIndex <= 0} onClick={() => setCompareImages({ before: editVersions[editVersionIndex - 1]?.src, after: editVersions[editVersionIndex]?.src })}>Compare</button></div>
+                        <div className="image-action-row"><button className="save-image-button" onClick={() => saveImage(normalizedSrc)}><BookmarkPlus size={14} /> Save image</button><a className="image-download-link" href={imageSrc} download="lumina-image.png">Download</a><button className="image-download-link" onClick={() => copyImage(normalizedSrc)}>Copy image</button><button className="image-download-link" onClick={() => { setLastImage(normalizedSrc.startsWith("data:") ? normalizedSrc.split(",", 2)[1] : normalizedSrc.replace(/^blob:/, "")); setPrompt("Edit this image: "); }}>Use for edit</button><button className="image-download-link" disabled={editVersionIndex <= 0} onClick={undoImageEdit}>Undo edit</button><button className="image-download-link" disabled={editVersionIndex < 0 || editVersionIndex >= editVersions.length - 1} onClick={redoImageEdit}>Redo edit</button><button className="image-download-link" disabled={editVersionIndex <= 0} onClick={() => setCompareImages({ before: editVersions[editVersionIndex - 1]?.src, after: editVersions[editVersionIndex]?.src })}>Compare</button></div>
                       </div>;
                     })}
                   </div>
