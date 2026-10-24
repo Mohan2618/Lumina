@@ -12,12 +12,55 @@ import {
   History,
   Trash2,
   BookmarkPlus,
+  Mic,
+  Activity,
 } from "lucide-react";
 
 const WELCOME = {
   title: "What would you like to create?",
   subtitle: "Describe an image, upload one to edit, or ask Lumina about an image.",
 };
+
+const OPERATION_GROUPS = [
+  ["Medical", [
+    ["X-Ray Enhance", "enhance this xray"], ["MRI Enhance", "enhance MRI scan"],
+    ["CT Enhance", "enhance ct scan"], ["Fundus/Retina", "fundus enhance"],
+    ["Skin Analysis", "analyze skin"], ["Wound Analysis", "analyze wound"],
+    ["CLAHE", "clahe enhance"], ["Denoise", "denoise image"], ["Segmentation", "segment image"],
+  ]],
+  ["Creative effects", [
+    ["Cartoon", "apply cartoon effect"], ["Watercolor", "apply watercolor effect"],
+    ["Pencil Sketch", "apply pencil sketch"], ["Oil Painting", "apply oil painting"],
+    ["Neon Glow", "apply neon glow"], ["Glitch Art", "apply glitch effect"],
+    ["Halftone", "apply halftone effect"], ["Pop Art", "apply pop art effect"],
+    ["Stained Glass", "apply stained glass effect"], ["Pointillism", "apply pointillism effect"],
+    ["Thermal Vision", "apply thermal vision"], ["Vintage", "apply vintage filter"],
+    ["Duotone", "apply duotone effect"], ["Double Exposure", "double exposure effect"],
+    ["Tilt-Shift", "tilt shift miniature"], ["Bokeh", "apply bokeh blur background"],
+    ["HDR", "apply HDR effect"], ["Fisheye", "apply fisheye lens effect"],
+    ["ASCII Art", "ascii art"], ["Mosaic", "apply mosaic effect"], ["Cross Process", "cross process effect"],
+  ]],
+  ["Analysis", [
+    ["Face Detect", "detect faces"], ["Color Palette", "extract color palette"],
+    ["Canny Edges", "canny edge detection"], ["Sobel", "sobel gradient"],
+    ["Quality Check", "check image quality"], ["Color Analysis", "analyze colors"],
+    ["Histogram Equalization", "histogram equalization"],
+  ]],
+  ["Restoration", [
+    ["Super Resolution", "super resolution upscale"], ["Deblur", "deblur image"],
+    ["Colorize B&W", "colorize black and white"], ["Restore Old Photo", "restore old photo"],
+  ]],
+  ["Basic edits", [
+    ["Rotate 90°", "rotate 90 degrees"], ["Flip Horizontal", "flip horizontally"],
+    ["Flip Vertical", "flip vertically"], ["Grayscale", "make grayscale"],
+    ["Invert", "invert colors"], ["Sepia", "apply sepia"], ["Sharpen", "sharpen image"],
+    ["Blur", "blur image"], ["Increase Contrast", "increase contrast"],
+    ["Increase Brightness", "increase brightness"], ["Increase Saturation", "increase saturation"],
+    ["Vignette", "add vignette"], ["Film Grain", "add film grain"],
+    ["Warm Tone", "warm white balance"], ["Cool Tone", "cool white balance"],
+    ["Image Info", "image info"],
+  ]],
+];
 
 export default function App() {
   const [prompt, setPrompt] = useState("");
@@ -32,6 +75,9 @@ export default function App() {
   const [authOpen, setAuthOpen] = useState(false);
   const [panel, setPanel] = useState("");
   const [lightbox, setLightbox] = useState("");
+  const [apiStatus, setApiStatus] = useState("");
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef(null);
   const [savedGallery, setSavedGallery] = useState(() => { try { return JSON.parse(localStorage.getItem("lumina_react_gallery") || "[]"); } catch { return []; } });
   const [savedChats, setSavedChats] = useState(() => { try { return JSON.parse(localStorage.getItem("lumina_react_chats") || "[]"); } catch { return []; } });
   const fileInput = useRef(null);
@@ -58,6 +104,51 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem("lumina_react_chats", JSON.stringify(savedChats.slice(0, 20))); } catch {}
   }, [savedChats]);
+
+  function runOperation(operation) {
+    setPrompt(operation);
+    setPanel("");
+    setError("");
+  }
+
+  async function checkApiStatus() {
+    setPanel("status");
+    setApiStatus("Checking backend…");
+    try {
+      const response = await fetch("/health", { credentials: "same-origin" });
+      const data = await response.json().catch(() => ({}));
+      setApiStatus(response.ok ? "Backend is reachable." : `Backend returned HTTP ${response.status}.`);
+    } catch {
+      setApiStatus("Backend could not be reached. Check that Flask is running.");
+    }
+  }
+
+  function toggleVoiceInput() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setError("Voice input is not supported in this browser. Try a recent version of Chrome.");
+      return;
+    }
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results).map((result) => result[0].transcript).join("");
+      setPrompt(transcript);
+    };
+    recognition.onerror = () => { setListening(false); setError("Voice input failed. Please try again or type your prompt."); };
+    recognition.onend = () => setListening(false);
+    recognitionRef.current = recognition;
+    setListening(true);
+    setError("");
+    recognition.start();
+  }
 
   function saveCurrentChat() {
     if (!messages.length) { setError("Start a conversation before saving it."); return; }
@@ -185,6 +276,8 @@ export default function App() {
         <button className="side-action" onClick={() => setPanel(panel === "history" ? "" : "history")}><History size={16} /> Saved conversations <span>{savedChats.length}</span></button>
         <button className="side-action" onClick={() => setPanel(panel === "gallery" ? "" : "gallery")}><Images size={16} /> Saved images <span>{savedGallery.length}</span></button>
         <button className="side-action" onClick={saveCurrentChat}><BookmarkPlus size={16} /> Save conversation</button>
+        <button className="side-action" onClick={() => setPanel(panel === "operations" ? "" : "operations")}><WandSparkles size={16} /> Operations</button>
+        <button className="side-action" onClick={checkApiStatus}><Activity size={16} /> API status</button>
         <div className="sidebar-note">
           <span className="status-dot" />
           <span>AI workspace</span>
@@ -291,6 +384,9 @@ export default function App() {
                 <button className="tool-button" type="button" onClick={() => fileInput.current?.click()}>
                   <ImagePlus size={17} /><span>Add image</span>
                 </button>
+                <button className="tool-button" type="button" onClick={toggleVoiceInput} title="Voice input">
+                  <Mic size={17} /><span>{listening ? "Listening…" : "Voice"}</span>
+                </button>
                 <span className="hint">Shift + Enter for a new line</span>
               </div>
               <button className="send-button" type="submit" disabled={busy || (!prompt.trim() && !file)} aria-label="Send message">
@@ -308,8 +404,8 @@ export default function App() {
       </div>}
       {panel && <div className="drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setPanel(""); }}>
         <section className="drawer">
-          <header className="drawer-header"><div><h2>{panel === "gallery" ? "Saved images" : "Saved conversations"}</h2><p>Saved locally in this browser</p></div><button className="drawer-close" onClick={() => setPanel("")} aria-label="Close panel"><X size={18} /></button></header>
-          {panel === "gallery" ? (savedGallery.length ? <div className="saved-gallery">{savedGallery.map((item) => <article className="saved-image-card" key={item.id}><img src={item.src} alt={item.prompt} /><p title={item.prompt}>{item.prompt}</p><div className="saved-image-actions"><a href={item.src} download="lumina-image.png">Download</a><button onClick={() => setSavedGallery((current) => current.filter((saved) => saved.id !== item.id))} aria-label="Remove saved image"><Trash2 size={14} /></button></div></article>)}</div> : <p className="drawer-empty">No saved images yet. Generate an image and select Save image.</p>) : (savedChats.length ? <div className="saved-chat-list">{savedChats.map((chat) => <article className="saved-chat-card" key={chat.id}><button className="saved-chat-open" onClick={() => restoreChat(chat)}><strong>{chat.title}</strong><small>{new Date(chat.savedAt).toLocaleString()} · {chat.messages.length} messages</small></button><button className="saved-chat-delete" onClick={() => setSavedChats((current) => current.filter((item) => item.id !== chat.id))} aria-label="Delete saved conversation"><Trash2 size={14} /></button></article>)}</div> : <p className="drawer-empty">No saved conversations yet. Use Save conversation to keep a text copy.</p>)}
+          <header className="drawer-header"><div><h2>{panel === "gallery" ? "Saved images" : panel === "operations" ? "Image operations" : panel === "status" ? "API status" : "Saved conversations"}</h2><p>{panel === "operations" ? "Choose an operation, add an image if needed, then send the prompt." : panel === "status" ? "Local Flask backend health" : "Saved locally in this browser"}</p></div><button className="drawer-close" onClick={() => setPanel("")} aria-label="Close panel"><X size={18} /></button></header>
+          {panel === "operations" ? <div className="operations-content">{OPERATION_GROUPS.map(([group, operations]) => <section className="operation-group" key={group}><h3>{group}</h3><div className="operation-chips">{operations.map(([label, operation]) => <button type="button" className="operation-chip" key={label} onClick={() => runOperation(operation)}>{label}</button>)}</div></section>)}<button type="button" className="operation-chip operation-generate" onClick={() => runOperation("Generate an image from this description: ")}>✨ Generate from text</button></div> : panel === "status" ? <div className="status-content"><p>{apiStatus || "Checking backend…"}</p><button type="button" className="operation-chip" onClick={checkApiStatus}>Check again</button></div> : panel === "gallery" ? (savedGallery.length ? <div className="saved-gallery">{savedGallery.map((item) => <article className="saved-image-card" key={item.id}><img src={item.src} alt={item.prompt} /><p title={item.prompt}>{item.prompt}</p><div className="saved-image-actions"><a href={item.src} download="lumina-image.png">Download</a><button onClick={() => setSavedGallery((current) => current.filter((saved) => saved.id !== item.id))} aria-label="Remove saved image"><Trash2 size={14} /></button></div></article>)}</div> : <p className="drawer-empty">No saved images yet. Generate an image and select Save image.</p>) : (savedChats.length ? <div className="saved-chat-list">{savedChats.map((chat) => <article className="saved-chat-card" key={chat.id}><button className="saved-chat-open" onClick={() => restoreChat(chat)}><strong>{chat.title}</strong><small>{new Date(chat.savedAt).toLocaleString()} · {chat.messages.length} messages</small></button><button className="saved-chat-delete" onClick={() => setSavedChats((current) => current.filter((item) => item.id !== chat.id))} aria-label="Delete saved conversation"><Trash2 size={14} /></button></article>)}</div> : <p className="drawer-empty">No saved conversations yet. Use Save conversation to keep a text copy.</p>)}
         </section>
       </div>}
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onAuthenticated={(nextUser) => { setUser(nextUser); setAuthOpen(false); }} />}
