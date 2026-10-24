@@ -70,6 +70,7 @@ export default function App() {
   const [apiHistory, setApiHistory] = useState([]);
   const [lastImage, setLastImage] = useState("");
   const [busy, setBusy] = useState(false);
+  const requestController = useRef(null);
   const [error, setError] = useState("");
   const [user, setUser] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
@@ -210,6 +211,13 @@ export default function App() {
     if (fileInput.current) fileInput.current.value = "";
   }
 
+  function stopGeneration() {
+    requestController.current?.abort();
+    requestController.current = null;
+    setBusy(false);
+    setError("Generation stopped.");
+  }
+
   async function submitPrompt(event) {
     event.preventDefault();
     const text = prompt.trim();
@@ -225,6 +233,8 @@ export default function App() {
     setPrompt("");
     setError("");
     setBusy(true);
+    const controller = new AbortController();
+    requestController.current = controller;
 
     try {
       const body = new FormData();
@@ -233,7 +243,7 @@ export default function App() {
       if (lastImage) body.append("last_image", lastImage);
       if (file) body.append("image", file);
 
-      const response = await fetch("/process", { method: "POST", body });
+      const response = await fetch("/process", { method: "POST", body, signal: controller.signal });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(data.message || data.error || "Lumina couldn't complete that request.");
@@ -252,6 +262,7 @@ export default function App() {
       ]);
       clearFile(false);
     } catch (err) {
+      if (err?.name === "AbortError") return;
       const message = err instanceof Error ? err.message : "Something went wrong.";
       setError(message);
       setMessages((current) => [
@@ -259,6 +270,7 @@ export default function App() {
         { id: crypto.randomUUID(), role: "assistant", text: message, failed: true },
       ]);
     } finally {
+      if (requestController.current === controller) requestController.current = null;
       setBusy(false);
     }
   }
@@ -389,8 +401,8 @@ export default function App() {
                 </button>
                 <span className="hint">Shift + Enter for a new line</span>
               </div>
-              <button className="send-button" type="submit" disabled={busy || (!prompt.trim() && !file)} aria-label="Send message">
-                {busy ? <LoaderCircle className="spin" size={17} /> : <ArrowUp size={18} />}
+              <button className={`send-button${busy ? " stop-button" : ""}`} type={busy ? "button" : "submit"} onClick={busy ? stopGeneration : undefined} disabled={!busy && (!prompt.trim() && !file)} aria-label={busy ? "Stop generation" : "Send message"} title={busy ? "Stop generation" : "Send message"}>
+                {busy ? <X size={17} /> : <ArrowUp size={18} />}
               </button>
             </div>
           </form>
