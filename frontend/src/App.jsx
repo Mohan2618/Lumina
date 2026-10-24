@@ -8,6 +8,10 @@ import {
   LoaderCircle,
   WandSparkles,
   PanelLeft,
+  Images,
+  History,
+  Trash2,
+  BookmarkPlus,
 } from "lucide-react";
 
 const WELCOME = {
@@ -26,6 +30,9 @@ export default function App() {
   const [error, setError] = useState("");
   const [user, setUser] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
+  const [panel, setPanel] = useState("");
+  const [savedGallery, setSavedGallery] = useState(() => { try { return JSON.parse(localStorage.getItem("lumina_react_gallery") || "[]"); } catch { return []; } });
+  const [savedChats, setSavedChats] = useState(() => { try { return JSON.parse(localStorage.getItem("lumina_react_chats") || "[]"); } catch { return []; } });
   const fileInput = useRef(null);
 
   useEffect(() => {
@@ -40,6 +47,39 @@ export default function App() {
   async function signOut() {
     try { await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }); }
     finally { setUser(null); }
+  }
+
+  useEffect(() => {
+    try { localStorage.setItem("lumina_react_gallery", JSON.stringify(savedGallery.slice(0, 12))); }
+    catch { setError("Browser storage is full. Remove saved images and try again."); }
+  }, [savedGallery]);
+
+  useEffect(() => {
+    try { localStorage.setItem("lumina_react_chats", JSON.stringify(savedChats.slice(0, 20))); } catch {}
+  }, [savedChats]);
+
+  function saveCurrentChat() {
+    if (!messages.length) { setError("Start a conversation before saving it."); return; }
+    const firstPrompt = messages.find((item) => item.role === "user")?.text || "Lumina conversation";
+    const chat = { id: crypto.randomUUID(), title: firstPrompt.slice(0, 52), savedAt: new Date().toISOString(), messages: messages.map(({ role, text }) => ({ role, text })) };
+    setSavedChats((current) => [chat, ...current].slice(0, 20));
+    setPanel("history");
+    setError("");
+  }
+
+  function restoreChat(chat) {
+    setMessages(chat.messages.map((item) => ({ ...item, id: crypto.randomUUID() })));
+    setApiHistory([]);
+    setLastImage("");
+    setPanel("");
+    setError("Saved text restored. Image-edit context starts fresh.");
+  }
+
+  function saveImage(src) {
+    const image = src.startsWith("data:") || src.startsWith("http") ? src : "data:image/png;base64," + src;
+    setSavedGallery((current) => [{ id: crypto.randomUUID(), src: image, savedAt: new Date().toISOString(), prompt: messages.filter((m) => m.role === "user").at(-1)?.text || "Lumina image" }, ...current.filter((item) => item.src !== image)].slice(0, 12));
+    setPanel("gallery");
+    setError("");
   }
 
   function chooseFile(nextFile) {
@@ -120,9 +160,12 @@ export default function App() {
           <span className="brand-mark"><Sparkles size={19} /></span>
           <span>Lumina</span>
         </a>
-        <button className="new-chat" onClick={() => { setMessages([]); setApiHistory([]); setLastImage(""); setError(""); }}>
+        <button className="new-chat" onClick={() => { setMessages([]); setApiHistory([]); setLastImage(""); setError(""); setPanel(""); }}>
           <PanelLeft size={17} /> New conversation
         </button>
+        <button className="side-action" onClick={() => setPanel(panel === "history" ? "" : "history")}><History size={16} /> Saved conversations <span>{savedChats.length}</span></button>
+        <button className="side-action" onClick={() => setPanel(panel === "gallery" ? "" : "gallery")}><Images size={16} /> Saved images <span>{savedGallery.length}</span></button>
+        <button className="side-action" onClick={saveCurrentChat}><BookmarkPlus size={16} /> Save conversation</button>
         <div className="sidebar-note">
           <span className="status-dot" />
           <span>AI workspace</span>
@@ -172,9 +215,13 @@ export default function App() {
                     <strong>{message.role === "user" ? "You" : "Lumina"}</strong>
                     {message.text && <p>{message.text}</p>}
                     {message.image && <img className="message-image" src={message.image} alt="Uploaded input" />}
-                    {message.images?.map((src, index) => (
-                      <img className="message-image" key={index} src={src.startsWith("data:") || src.startsWith("http") ? src : `data:image/png;base64,${src}`} alt={`Generated result ${index + 1}`} />
-                    ))}
+                    {message.images?.map((src, index) => {
+                      const imageSrc = src.startsWith("data:") || src.startsWith("http") ? src : "data:image/png;base64," + src;
+                      return <div className="result-image-wrap" key={index}>
+                        <img className="message-image" src={imageSrc} alt={"Generated or edited result " + (index + 1)} />
+                        <button className="save-image-button" onClick={() => saveImage(src)}><BookmarkPlus size={14} /> Save image</button>
+                      </div>;
+                    })}
                   </div>
                 </article>
               ))}
@@ -227,6 +274,12 @@ export default function App() {
           <p className="disclaimer">Lumina can make mistakes. Review generated results before using them.</p>
         </div>
       </section>
+      {panel && <div className="drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setPanel(""); }}>
+        <section className="drawer">
+          <header className="drawer-header"><div><h2>{panel === "gallery" ? "Saved images" : "Saved conversations"}</h2><p>Saved locally in this browser</p></div><button className="drawer-close" onClick={() => setPanel("")} aria-label="Close panel"><X size={18} /></button></header>
+          {panel === "gallery" ? (savedGallery.length ? <div className="saved-gallery">{savedGallery.map((item) => <article className="saved-image-card" key={item.id}><img src={item.src} alt={item.prompt} /><p title={item.prompt}>{item.prompt}</p><div className="saved-image-actions"><a href={item.src} download="lumina-image.png">Download</a><button onClick={() => setSavedGallery((current) => current.filter((saved) => saved.id !== item.id))} aria-label="Remove saved image"><Trash2 size={14} /></button></div></article>)}</div> : <p className="drawer-empty">No saved images yet. Generate an image and select Save image.</p>) : (savedChats.length ? <div className="saved-chat-list">{savedChats.map((chat) => <article className="saved-chat-card" key={chat.id}><button className="saved-chat-open" onClick={() => restoreChat(chat)}><strong>{chat.title}</strong><small>{new Date(chat.savedAt).toLocaleString()} · {chat.messages.length} messages</small></button><button className="saved-chat-delete" onClick={() => setSavedChats((current) => current.filter((item) => item.id !== chat.id))} aria-label="Delete saved conversation"><Trash2 size={14} /></button></article>)}</div> : <p className="drawer-empty">No saved conversations yet. Use Save conversation to keep a text copy.</p>)}
+        </section>
+      </div>}
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onAuthenticated={(nextUser) => { setUser(nextUser); setAuthOpen(false); }} />}
     </main>
   );
