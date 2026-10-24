@@ -15,11 +15,11 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 ## Original frontend features found in `templates/index.html`
 
 ### Chat and generation
-- [ ] Send/stop generation and explicit cancellation behavior.
+- [x] Send/stop generation and explicit client-side request cancellation (server-side work may continue if already running).
 - [ ] Original activity/status stages during processing.
 - [ ] Multi-image attachments and previews; remove individual attachments.
 - [ ] Paste images from clipboard, including paste into prompt area.
-- [ ] Voice input via browser speech recognition, with graceful unsupported-browser handling.
+- [ ] Voice input via browser speech recognition, with graceful unsupported-browser handling (control visible; user test pending).
 - [ ] New chat and full conversation history save/list/load/delete, scoped by user.
 - [ ] Restore message history and relevant image/edit context, not only a text snapshot.
 - [ ] Share chat: create share link, copy link, and shared-chat behavior.
@@ -53,6 +53,11 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 - [ ] Change password workflow.
 - [ ] Profile menu, user/plan display, logout, and session refresh.
 - [ ] User-scoped saved data and safe behavior for guest sessions.
+
+## Latest user test results
+- [x] Operations panel visible and opens.
+- [x] API status check reports the backend reachable.
+- [ ] Voice input not tested yet.
 
 ## React migration gaps visible from current implementation
 - Saved chats currently restore text but explicitly reset API history/edit context.
