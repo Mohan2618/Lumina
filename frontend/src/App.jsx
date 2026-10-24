@@ -268,7 +268,7 @@ export default function App() {
                   chooseFile(new File([pastedImage], "pasted-image.png", { type: pastedImage.type || "image/png" }));
                 }
               }}
-              onChange={(event) => setPrompt(event.target.value)
+              onChange={(event) => setPrompt(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
