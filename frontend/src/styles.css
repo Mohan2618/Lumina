@@ -178,3 +178,23 @@ button:focus-visible,textarea:focus-visible{outline:2px solid #78e4c2;outline-of
 .response-table th{background:#ffffff06;color:#edf2f8;font-weight:700}
 .response-table td{color:#c4c9d4}
 .response-table tbody tr:last-child td{border-bottom:0}
+
+/* Make code blocks look and feel like an editor */
+.response-code{margin:14px 0;background:#0d1117;border-color:#303846;box-shadow:0 8px 24px #00000018}
+.response-code-header{min-height:42px;padding:8px 12px;background:#161b22;border-bottom-color:#303846}
+.code-language{display:inline-flex;align-items:center;gap:8px;color:#c9d1d9;font-size:12px;font-weight:600;text-transform:lowercase}
+.code-language-dot{width:7px;height:7px;border-radius:50%;background:#7c9cff;box-shadow:0 0 0 3px #7c9cff20}
+.code-header-actions{display:flex;align-items:center;gap:7px}
+.response-code-header .code-header-actions button{padding:6px 9px;background:#21262d;border-color:#3b4350;color:#d7dee8;font-size:11px}
+.response-code-header .code-header-actions button:hover{background:#303844}
+.response-code .code-pre{margin:0;padding:17px 18px;overflow:auto;background:#0d1117;color:#e6edf3;font:13px/1.8 "Cascadia Code","Fira Code",Consolas,Monaco,monospace;tab-size:4;white-space:pre;overflow-wrap:normal}
+.response-code .code-pre code{display:block;min-width:max-content;font:inherit}
+.response-code .code-pre.wrapped{white-space:pre-wrap;overflow-wrap:anywhere}
+.response-code .code-pre.wrapped code{min-width:0;white-space:inherit}
+.syntax-keyword{color:#ff7b72;font-weight:600}
+.syntax-string{color:#a5d6ff}
+.syntax-number{color:#79c0ff}
+.syntax-comment{color:#8b949e;font-style:italic}
+.syntax-builtin{color:#d2a8ff}
+.syntax-operator{color:#ff7b72}
+.syntax-punctuation{color:#c9d1d9}
