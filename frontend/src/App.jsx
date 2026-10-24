@@ -339,7 +339,7 @@ export default function App() {
   }
 
   function clearAttachments() {
-    attachments.forEach((item) => URL.revokeObjectURL(item.preview));
+    // Keep object URLs alive because the sent user message still displays these previews.
     setAttachments([]);
     if (fileInput.current) fileInput.current.value = "";
   }
