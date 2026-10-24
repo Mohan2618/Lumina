@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import AuthModal from "./AuthModal.jsx";
 import {
   ArrowUp,
+  Copy,
   ImagePlus,
   Sparkles,
   X,
@@ -61,6 +62,48 @@ const OPERATION_GROUPS = [
     ["Image Info", "image info"],
   ]],
 ];
+
+function InlineMarkdown({ text }) {
+  const parts = String(text).split(/(\x60[^\x60]+\x60|\*\*[^*]+\*\*|\*[^*]+\*)/g);
+  return parts.map((part, index) => {
+    if (part.charCodeAt(0) === 96 && part.endsWith(String.fromCharCode(96))) return <code className="inline-code" key={index}>{part.slice(1, -1)}</code>;
+    if (part.startsWith("**") && part.endsWith("**")) return <strong key={index}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith("*") && part.endsWith("*")) return <em key={index}>{part.slice(1, -1)}</em>;
+    return part;
+  });
+}
+function CodeSnippet({ code, language, onCopy, copied }) {
+  return <section className="response-code"><header className="response-code-header"><span>{language || "Code"}</span><button type="button" onClick={() => onCopy(code)} aria-label="Copy code snippet"><Copy size={14} />{copied ? "Copied" : "Copy code"}</button></header><pre><code>{code}</code></pre></section>;
+}
+function StructuredResponse({ text, onCopy }) {
+  const [copiedCode, setCopiedCode] = useState("");
+  const chunks = String(text || "").split(/\x60{3}([^\n\x60]*)\n([\s\S]*?)\x60{3}/g);
+  const blocks = [];
+  for (let i = 0; i < chunks.length;) {
+    if (i % 3 === 1) { blocks.push({ type: "code", language: chunks[i].trim(), code: chunks[i + 1].replace(/\n$/, "") }); i += 3; }
+    else { if (chunks[i]) blocks.push({ type: "text", text: chunks[i] }); i++; }
+  }
+  function copyCode(code) {
+    navigator.clipboard.writeText(code).then(() => { setCopiedCode(code); window.setTimeout(() => setCopiedCode(""), 1800); }).catch(() => {});
+  }
+  return <div className="structured-response">{blocks.map((block, index) => block.type === "code" ? <CodeSnippet key={index} code={block.code} language={block.language} onCopy={copyCode} copied={copiedCode === block.code} /> : <MarkdownText key={index} text={block.text} />)}<div className="response-actions"><button type="button" onClick={() => onCopy(text)}><Copy size={14} /> Copy response</button></div></div>;
+}
+function MarkdownText({ text }) {
+  const lines = text.split("\n");
+  const output = [];
+  let paragraph = [], listItems = [], listType = "";
+  const flushParagraph = () => { if (paragraph.length) { output.push(<p key={"p" + output.length}><InlineMarkdown text={paragraph.join(" ")} /></p>); paragraph = []; } };
+  const flushList = () => { if (listItems.length) { const Tag = listType === "ol" ? "ol" : "ul"; output.push(<Tag key={"l" + output.length}>{listItems.map((item, i) => <li key={i}><InlineMarkdown text={item} /></li>)}</Tag>); listItems = []; listType = ""; } };
+  lines.forEach((raw) => {
+    const line = raw.trim(), bullet = line.match(/^[-*+]\s+(.+)$/), numbered = line.match(/^\d+[.)]\s+(.+)$/);
+    if (!line) { flushParagraph(); flushList(); return; }
+    if (/^#{1,4}\s/.test(line)) { flushParagraph(); flushList(); const level = line.match(/^#+/)[0].length, Tag = "h" + Math.min(level + 2, 6); output.push(<Tag key={"h" + output.length}><InlineMarkdown text={line.replace(/^#{1,4}\s+/, "")} /></Tag>); }
+    else if (bullet || numbered) { flushParagraph(); const nextType = numbered ? "ol" : "ul"; if (listType && listType !== nextType) flushList(); listType = nextType; listItems.push((bullet || numbered)[1]); }
+    else { flushList(); paragraph.push(line); }
+  });
+  flushParagraph(); flushList();
+  return <div className="markdown-text">{output}</div>;
+}
 
 export default function App() {
   const [prompt, setPrompt] = useState("");
@@ -337,7 +380,7 @@ export default function App() {
                   <div className="message-avatar">{message.role === "user" ? "Y" : <Sparkles size={16} />}</div>
                   <div className="message-content">
                     <strong>{message.role === "user" ? "You" : "Lumina"}</strong>
-                    {message.text && <p>{message.text}</p>}
+                    {message.text && (message.role === "assistant" ? <StructuredResponse text={message.text} onCopy={(value) => navigator.clipboard.writeText(value).catch(() => setError("Clipboard access failed. Please copy manually."))} /> : <p>{message.text}</p>)}
                     {message.image && <img className="message-image" src={message.image} alt="Uploaded input" />}
                     {message.images?.map((src, index) => {
                       const imageSrc = src.startsWith("data:") || src.startsWith("http") ? src : "data:image/png;base64," + src;
