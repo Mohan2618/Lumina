@@ -428,14 +428,18 @@ export default function App() {
       setApiHistory(currentHistory);
       setLastImage(currentLastImage);
       if (resultImages.length) {
-        setEditVersions((current) => {
-          let next = editVersionIndex >= 0 ? current.slice(0, editVersionIndex + 1) : current;
-          if (!next.length && originalAttachmentPreview) next = [{ src: originalAttachmentPreview, createdAt: Date.now(), label: "Original" }];
-          const normalized = resultImages.map((src) => ({ src: src.startsWith("data:") || src.startsWith("http") ? src : "data:image/png;base64," + src, createdAt: Date.now(), label: "Edit" }));
-          next = [...next, ...normalized].slice(-20);
-          setEditVersionIndex(next.length - 1);
-          return next;
-        });
+        // Compute the next history outside a state updater: React may invoke updater
+        // functions more than once, and setting another state inside one is unsafe.
+        const base = editVersionIndex >= 0 ? editVersions.slice(0, editVersionIndex + 1) : editVersions;
+        const withOriginal = base.length ? base : (originalAttachmentPreview ? [{ src: originalAttachmentPreview, createdAt: Date.now(), label: "Original" }] : []);
+        const normalized = resultImages.map((src) => ({
+          src: src.startsWith("data:") || src.startsWith("blob:") || src.startsWith("http") ? src : "data:image/png;base64," + src,
+          createdAt: Date.now(),
+          label: "Edit",
+        }));
+        const next = [...withOriginal, ...normalized].slice(-20);
+        setEditVersions(next);
+        setEditVersionIndex(next.length - 1);
       }
       setMessages((current) => [...current, { id: crypto.randomUUID(), role: "assistant", text: answers.join("\\n\\n"), images: resultImages }]);
       clearAttachments();
