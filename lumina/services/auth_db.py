@@ -99,6 +99,31 @@ def init_db():
                 )
             """)
 
+        if _is_postgres():
+            _execute(conn, """
+                CREATE TABLE IF NOT EXISTS conversations (
+                    id TEXT PRIMARY KEY,
+                    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    title TEXT NOT NULL,
+                    payload JSONB NOT NULL,
+                    updated_at DOUBLE PRECISION NOT NULL,
+                    created_at DOUBLE PRECISION NOT NULL
+                )
+            """)
+            _execute(conn, "CREATE INDEX IF NOT EXISTS conversations_user_updated_idx ON conversations(user_id, updated_at DESC)")
+        else:
+            _execute(conn, """
+                CREATE TABLE IF NOT EXISTS conversations (
+                    id TEXT PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    title TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    updated_at REAL NOT NULL,
+                    created_at REAL NOT NULL
+                )
+            """)
+            _execute(conn, "CREATE INDEX IF NOT EXISTS conversations_user_updated_idx ON conversations(user_id, updated_at DESC)")
+
         conn.commit()
     finally:
         conn.close()
@@ -257,5 +282,60 @@ def otp_can_send(email, cooldown=60):
             (email,),
         ).fetchone()
         return not row or time.time() - row["sent_at"] >= cooldown
+    finally:
+        conn.close()
+
+
+def list_conversations(user_id):
+    import json
+    init_db()
+    conn = _connect()
+    try:
+        rows = _execute(conn, "SELECT id,title,payload,created_at,updated_at FROM conversations WHERE user_id=? ORDER BY updated_at DESC LIMIT 100", (user_id,)).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            if isinstance(item.get("payload"), str):
+                item["payload"] = json.loads(item["payload"])
+            result.append(item)
+        return result
+    finally:
+        conn.close()
+
+
+def upsert_conversation(user_id, conversation_id, title, payload):
+    import json
+    init_db()
+    now = time.time()
+    encoded = json.dumps(payload, separators=(",", ":"))
+    conn = _connect()
+    try:
+        if _is_postgres():
+            _execute(conn, """
+                INSERT INTO conversations(id,user_id,title,payload,created_at,updated_at)
+                VALUES(?,?,?,?::jsonb,?,?)
+                ON CONFLICT(id) DO UPDATE SET title=EXCLUDED.title,payload=EXCLUDED.payload,updated_at=EXCLUDED.updated_at
+                WHERE conversations.user_id=EXCLUDED.user_id
+            """, (conversation_id, user_id, title, encoded, now, now))
+        else:
+            _execute(conn, """
+                INSERT INTO conversations(id,user_id,title,payload,created_at,updated_at)
+                VALUES(?,?,?,?,?,?)
+                ON CONFLICT(id) DO UPDATE SET title=excluded.title,payload=excluded.payload,updated_at=excluded.updated_at
+                WHERE conversations.user_id=excluded.user_id
+            """, (conversation_id, user_id, title, encoded, now, now))
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+
+def delete_conversation(user_id, conversation_id):
+    init_db()
+    conn = _connect()
+    try:
+        cur = _execute(conn, "DELETE FROM conversations WHERE id=? AND user_id=?", (conversation_id, user_id))
+        conn.commit()
+        return cur.rowcount > 0
     finally:
         conn.close()
