@@ -4,6 +4,7 @@ import json
 import os
 import re
 import threading
+import time
 import numpy as np
 import cv2
 from PIL import Image, ImageOps
@@ -46,19 +47,38 @@ def call_gemini_fast(history: list, user_text: str, image_pil=None, gemini_clien
     error = [None]
 
     def _call():
-        try:
-            response = gemini_client.models.generate_content(
-                model=gemini_model,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    max_output_tokens=1024,
-                    temperature=0.7,
+        # Retry only transient provider failures. Do not retry invalid keys,
+        # malformed requests, or other permanent client errors.
+        retry_markers = (
+            "503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED",
+            "500", "INTERNAL", "502", "504", "temporarily unavailable",
+            "high demand", "rate limit",
+        )
+        for attempt in range(3):
+            try:
+                response = gemini_client.models.generate_content(
+                    model=gemini_model,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        max_output_tokens=1024,
+                        temperature=0.7,
+                    )
                 )
-            )
-            result[0] = response.text
-        except Exception as e:
-            error[0] = e
+                result[0] = response.text
+                return
+            except Exception as e:
+                error[0] = e
+                message = str(e).upper()
+                retryable = any(marker.upper() in message for marker in retry_markers)
+                if not retryable or attempt == 2:
+                    return
+                delay = 0.75 * (2 ** attempt)
+                print(
+                    f"[Gemini RETRY] transient failure on attempt "
+                    f"{attempt + 1}/3; retrying in {delay:.2f}s"
+                )
+                time.sleep(delay)
 
     t = threading.Thread(target=_call, daemon=True)
     t.start()
@@ -188,7 +208,16 @@ def free_reply(prompt, has_image, img=None):
     for pat, rep in replies.items():
         if re.search(pat, p): return rep
     
-    if p: return f"I'm Lumina, your AI image assistant. *Add GEMINI_API_KEY* for full answers!\n\n**I can:** 🖼️ Apply filters | 🤖 Generate images | 🏥 Medical analysis"
+    if re.search(r'\bwhat is ai\b|\bdefine ai\b|\bartificial intelligence\b', p):
+        return ("**Artificial intelligence (AI)** is technology that enables computers to perform tasks that usually require human intelligence, "
+                "such as understanding language, recognizing images, solving problems, and making predictions. "
+                "For example, a voice assistant that answers questions uses AI.")
+    if re.search(r'\bwhat is machine learning\b|\bdefine machine learning\b', p):
+        return ("**Machine learning (ML)** is a type of AI in which computers learn patterns from examples and data instead of being programmed "
+                "with a separate rule for every situation. For example, an email spam filter learns to recognize common patterns in spam.")
+    if p:
+        return ("I couldn't reach Lumina's AI service just now. The provider may be temporarily busy; "
+                "please try again shortly. Image tools may still work while chat is unavailable.")
     return "Upload an image or ask me anything!"
 
 def detect_op(p, has_image=False):
