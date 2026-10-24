@@ -130,3 +130,8 @@ button:focus-visible,textarea:focus-visible{outline:2px solid #78e4c2;outline-of
 .lightbox-backdrop>img{display:block;max-width:min(100%,1200px);max-height:calc(100vh - 130px);object-fit:contain;border:1px solid #ffffff1c;border-radius:10px;box-shadow:0 20px 90px #0009}
 .lightbox-backdrop>a{color:#9aefd6;font-size:12px;text-decoration:none}
 .lightbox-close{position:absolute;top:18px;right:18px;display:grid;place-items:center;width:38px;height:38px;border:1px solid #ffffff22;border-radius:12px;background:#ffffff0b;color:#f0f2f8}
+
+.image-action-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:7px}
+.image-action-row .save-image-button{margin-top:0}
+.image-download-link{display:inline-flex;align-items:center;padding:7px 9px;border:1px solid #ffffff1a;border-radius:8px;background:#ffffff08;color:#cbd4df;font-size:10px;text-decoration:none}
+.image-download-link:hover{background:#ffffff12;color:#fff}
