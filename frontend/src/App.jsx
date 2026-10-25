@@ -252,7 +252,10 @@ export default function App() {
           if (active && Array.isArray(result.conversations) && result.conversations.length) {
             setSavedChats((current) => {
               const merged = new Map(current.map((chat) => [chat.id, chat]));
-              result.conversations.forEach((chat) => merged.set(chat.id, chat));
+              result.conversations.forEach((chat) => {
+                const savedAt = typeof chat.savedAt === "number" ? new Date(chat.savedAt * 1000).toISOString() : chat.savedAt;
+                merged.set(chat.id, { ...chat, savedAt, messages: Array.isArray(chat.messages) ? chat.messages : [] });
+              });
               return [...merged.values()].sort((a, b) => new Date(b.savedAt || 0) - new Date(a.savedAt || 0)).slice(0, 100);
             });
           }
@@ -363,6 +366,23 @@ export default function App() {
       }).catch(() => setError("Conversation saved in this browser, but cloud sync is unavailable."));
     } else {
       setError("Saved in this browser. Sign in to sync conversations with Supabase.");
+    }
+  }
+
+  async function deleteSavedChat(chat) {
+    setSavedChats((current) => current.filter((item) => item.id !== chat.id));
+    if (!user) return;
+    try {
+      const response = await fetch("/api/conversations/" + encodeURIComponent(chat.id), {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      if (!response.ok && response.status !== 404) {
+        const result = await response.json().catch(() => ({}));
+        setError(result.error || "Conversation was removed locally, but cloud deletion failed.");
+      }
+    } catch {
+      setError("Conversation was removed locally, but cloud deletion could not be confirmed.");
     }
   }
 
@@ -687,7 +707,7 @@ export default function App() {
       {panel && <div className="drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setPanel(""); }}>
         <section className="drawer">
           <header className="drawer-header"><div><h2>{panel === "gallery" ? "Saved images" : panel === "operations" ? "Image operations" : panel === "status" ? "API status" : "Saved conversations"}</h2><p>{panel === "operations" ? "Choose an operation, add an image if needed, then send the prompt." : panel === "status" ? "Local Flask backend health" : "Saved locally in this browser"}</p></div><button className="drawer-close" onClick={() => setPanel("")} aria-label="Close panel"><X size={18} /></button></header>
-          {panel === "operations" ? <div className="operations-content">{OPERATION_GROUPS.map(([group, operations]) => <section className="operation-group" key={group}><h3>{group}</h3><div className="operation-chips">{operations.map(([label, operation]) => <button type="button" className="operation-chip" key={label} onClick={() => runOperation(operation)}>{label}</button>)}</div></section>)}<button type="button" className="operation-chip operation-generate" onClick={() => runOperation("Generate an image from this description: ")}>✨ Generate from text</button></div> : panel === "status" ? <div className="status-content"><p>{apiStatus || "Checking backend…"}</p><button type="button" className="operation-chip" onClick={checkApiStatus}>Check again</button></div> : panel === "gallery" ? (savedGallery.length ? <div className="saved-gallery">{savedGallery.map((item) => <article className="saved-image-card" key={item.id}><img src={item.src} alt={item.prompt} /><p title={item.prompt}>{item.prompt}</p><div className="saved-image-actions"><a href={item.src} download="lumina-image.png">Download</a><button onClick={() => setSavedGallery((current) => current.filter((saved) => saved.id !== item.id))} aria-label="Remove saved image"><Trash2 size={14} /></button></div></article>)}</div> : <p className="drawer-empty">No saved images yet. Generate an image and select Save image.</p>) : (savedChats.length ? <div className="saved-chat-list">{savedChats.map((chat) => <article className="saved-chat-card" key={chat.id}><button className="saved-chat-open" onClick={() => restoreChat(chat)}><strong>{chat.title}</strong><small>{new Date(chat.savedAt).toLocaleString()} · {chat.messages.length} messages</small></button><button className="saved-chat-delete" onClick={() => setSavedChats((current) => current.filter((item) => item.id !== chat.id))} aria-label="Delete saved conversation"><Trash2 size={14} /></button></article>)}</div> : <p className="drawer-empty">No saved conversations yet. Use Save conversation to keep a text copy.</p>)}
+          {panel === "operations" ? <div className="operations-content">{OPERATION_GROUPS.map(([group, operations]) => <section className="operation-group" key={group}><h3>{group}</h3><div className="operation-chips">{operations.map(([label, operation]) => <button type="button" className="operation-chip" key={label} onClick={() => runOperation(operation)}>{label}</button>)}</div></section>)}<button type="button" className="operation-chip operation-generate" onClick={() => runOperation("Generate an image from this description: ")}>✨ Generate from text</button></div> : panel === "status" ? <div className="status-content"><p>{apiStatus || "Checking backend…"}</p><button type="button" className="operation-chip" onClick={checkApiStatus}>Check again</button></div> : panel === "gallery" ? (savedGallery.length ? <div className="saved-gallery">{savedGallery.map((item) => <article className="saved-image-card" key={item.id}><img src={item.src} alt={item.prompt} /><p title={item.prompt}>{item.prompt}</p><div className="saved-image-actions"><a href={item.src} download="lumina-image.png">Download</a><button onClick={() => setSavedGallery((current) => current.filter((saved) => saved.id !== item.id))} aria-label="Remove saved image"><Trash2 size={14} /></button></div></article>)}</div> : <p className="drawer-empty">No saved images yet. Generate an image and select Save image.</p>) : (savedChats.length ? <div className="saved-chat-list">{savedChats.map((chat) => <article className="saved-chat-card" key={chat.id}><button className="saved-chat-open" onClick={() => restoreChat(chat)}><strong>{chat.title}</strong><small>{new Date(chat.savedAt).toLocaleString()} · {chat.messages.length} messages</small></button><button className="saved-chat-delete" onClick={() => deleteSavedChat(chat)} aria-label="Delete saved conversation"><Trash2 size={14} /></button></article>)}</div> : <p className="drawer-empty">No saved conversations yet. Use Save conversation to keep a text copy.</p>)}
         </section>
       </div>}
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onAuthenticated={(nextUser) => { setUser(nextUser); setAuthOpen(false); }} />}
