@@ -225,6 +225,7 @@ export default function App() {
   const [editVersions, setEditVersions] = useState([]);
   const [editVersionIndex, setEditVersionIndex] = useState(-1);
   const [compareImages, setCompareImages] = useState(null);
+  const [comparePosition, setComparePosition] = useState(50);
   const [busy, setBusy] = useState(false);
   const requestController = useRef(null);
   const [error, setError] = useState("");
@@ -744,7 +745,7 @@ export default function App() {
                       const normalizedSrc = imageSrc;
                       return <div className="result-image-wrap" key={index}>
                         <button className="image-open-button" onClick={() => setLightbox(imageSrc)} aria-label="Open image preview"><img className="message-image" src={imageSrc} alt={"Generated or edited result " + (index + 1)} /></button>
-                        <div className="image-action-row"><button className="save-image-button" onClick={() => saveImage(normalizedSrc)}><BookmarkPlus size={14} /> Save image</button><a className="image-download-link" href={imageSrc} download="lumina-image.png">Download</a><button className="image-download-link" onClick={() => copyImage(normalizedSrc)}>Copy image</button><button className="image-download-link" onClick={() => { setLastImage(normalizedSrc.startsWith("data:") ? normalizedSrc.split(",", 2)[1] : normalizedSrc.replace(/^blob:/, "")); setPrompt("Edit this image: "); }}>Use for edit</button><button className="image-download-link" disabled={editVersionIndex <= 0} onClick={undoImageEdit}>Undo edit</button><button className="image-download-link" disabled={editVersionIndex < 0 || editVersionIndex >= editVersions.length - 1} onClick={redoImageEdit}>Redo edit</button><button className="image-download-link" disabled={editVersionIndex <= 0} onClick={() => setCompareImages({ before: editVersions[editVersionIndex - 1]?.src, after: editVersions[editVersionIndex]?.src })}>Compare</button></div>
+                        <div className="image-action-row"><button className="save-image-button" onClick={() => saveImage(normalizedSrc)}><BookmarkPlus size={14} /> Save image</button><a className="image-download-link" href={imageSrc} download="lumina-image.png">Download</a><button className="image-download-link" onClick={() => copyImage(normalizedSrc)}>Copy image</button><button className="image-download-link" onClick={() => { setLastImage(normalizedSrc.startsWith("data:") ? normalizedSrc.split(",", 2)[1] : normalizedSrc.replace(/^blob:/, "")); setPrompt("Edit this image: "); }}>Use for edit</button><button className="image-download-link" disabled={editVersionIndex <= 0} onClick={undoImageEdit}>Undo edit</button><button className="image-download-link" disabled={editVersionIndex < 0 || editVersionIndex >= editVersions.length - 1} onClick={redoImageEdit}>Redo edit</button><button className="image-download-link" disabled={editVersionIndex <= 0} onClick={() => { setComparePosition(50); setCompareImages({ before: editVersions[editVersionIndex - 1]?.src, after: editVersions[editVersionIndex]?.src }); }}>Compare</button></div>
                       </div>;
                     })}
                   </div>
@@ -810,13 +811,19 @@ export default function App() {
       {compareImages && <div className="compare-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCompareImages(null); }}>
         <section className="compare-dialog" role="dialog" aria-modal="true" aria-label="Compare image edits">
           <header className="compare-header"><strong>Before and after</strong><button type="button" onClick={() => setCompareImages(null)} aria-label="Close comparison"><X size={18} /></button></header>
-          <div className="compare-grid"><figure><figcaption>Previous version</figcaption><img src={compareImages.before} alt="Previous image version" /></figure><figure><figcaption>Current version</figcaption><img src={compareImages.after} alt="Current image version" /></figure></div>
+          <div className="compare-slider" style={{ "--compare-position": comparePosition + "%" }}>
+            <img className="compare-after" src={compareImages.after} alt="Current image version" />
+            <div className="compare-before-clip" style={{ width: comparePosition + "%" }}><img src={compareImages.before} alt="Previous image version" /></div>
+            <div className="compare-slider-divider" style={{ left: comparePosition + "%" }} aria-hidden="true"><span>↔</span></div>
+          </div>
+          <div className="compare-slider-labels"><span>Previous version</span><span>Current version</span></div>
+          <label className="compare-slider-control">Drag to compare<input aria-label="Before and after comparison position" type="range" min="0" max="100" value={comparePosition} onChange={(event) => setComparePosition(Number(event.target.value))} /></label>
         </section>
       </div>}
       {lightbox && <div className="lightbox-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setLightbox(""); }} role="presentation">
         <button className="lightbox-close" onClick={() => setLightbox("")} aria-label="Close image preview"><X size={20} /></button>
         <img src={lightbox} alt="Expanded Lumina result" />
-        <a href={lightbox} download="lumina-image.png">Download image</a>
+        <div className="lightbox-actions"><a href={lightbox} download="lumina-image.png">Download image</a><button type="button" onClick={() => saveImage(lightbox)}><BookmarkPlus size={14} /> Save to gallery</button><button type="button" onClick={() => copyImage(lightbox)}><Copy size={14} /> Copy image</button></div>
       </div>}
       {panel && <div className="drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setPanel(""); }}>
         <section className="drawer">
