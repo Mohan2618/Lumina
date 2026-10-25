@@ -131,6 +131,25 @@ def init_db():
             )
         """)
 
+        if _is_postgres():
+            _execute(conn, """
+                CREATE TABLE IF NOT EXISTS shared_conversations (
+                    token TEXT PRIMARY KEY,
+                    payload JSONB NOT NULL,
+                    created_at DOUBLE PRECISION NOT NULL,
+                    expires_at DOUBLE PRECISION NOT NULL
+                )
+            """)
+        else:
+            _execute(conn, """
+                CREATE TABLE IF NOT EXISTS shared_conversations (
+                    token TEXT PRIMARY KEY,
+                    payload TEXT NOT NULL,
+                    created_at REAL NOT NULL,
+                    expires_at REAL NOT NULL
+                )
+            """)
+
         conn.commit()
     finally:
         conn.close()
@@ -311,6 +330,55 @@ def record_otp_sent(email):
             (normalized_email, time.time()),
         )
         conn.commit()
+    finally:
+        conn.close()
+
+
+def create_shared_conversation(token, payload, ttl=604800):
+    """Create a read-only share token that expires after seven days by default."""
+    import json
+    now = time.time()
+    encoded = json.dumps(payload, separators=(",", ":"))
+    conn = _connect()
+    try:
+        if _is_postgres():
+            _execute(
+                conn,
+                """INSERT INTO shared_conversations(token,payload,created_at,expires_at)
+                   VALUES(?,?,?,?) ON CONFLICT(token) DO UPDATE
+                   SET payload=EXCLUDED.payload, created_at=EXCLUDED.created_at, expires_at=EXCLUDED.expires_at""",
+                (token, encoded, now, now + ttl),
+            )
+        else:
+            _execute(
+                conn,
+                """INSERT INTO shared_conversations(token,payload,created_at,expires_at)
+                   VALUES(?,?,?,?) ON CONFLICT(token) DO UPDATE
+                   SET payload=excluded.payload, created_at=excluded.created_at, expires_at=excluded.expires_at""",
+                (token, encoded, now, now + ttl),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_shared_conversation(token):
+    import json
+    conn = _connect()
+    try:
+        row = _execute(
+            conn,
+            "SELECT payload, expires_at FROM shared_conversations WHERE token=?",
+            (token,),
+        ).fetchone()
+        if not row:
+            return None
+        if time.time() >= row["expires_at"]:
+            _execute(conn, "DELETE FROM shared_conversations WHERE token=?", (token,))
+            conn.commit()
+            return None
+        payload = row["payload"]
+        return json.loads(payload) if isinstance(payload, str) else payload
     finally:
         conn.close()
 
