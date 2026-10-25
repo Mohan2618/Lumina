@@ -219,10 +219,11 @@ ANTHROPIC_API_KEY=your_anthropic_api_key
 BREVO_API_KEY=your_brevo_api_key
 BREVO_FROM_EMAIL=your_verified_sender_email
 BREVO_FROM_NAME=Lumina
+FLASK_SECRET_KEY=generate_a_random_secret_at_least_32_characters
 DATABASE_URL=your_postgresql_connection_string
 ```
 
-Never commit real API keys, database connection strings, passwords, or other credentials to GitHub.
+Generate `FLASK_SECRET_KEY` as a long random secret (at least 32 characters) and set it in the deployment environment. Production startup now refuses to run without it because a random per-process session key invalidates logins across workers/restarts. Keep the same value across all app instances. Never commit real API keys, database connection strings, session secrets, passwords, or other credentials to GitHub.
 
 ### Persistent Authentication Database
 
