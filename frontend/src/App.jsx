@@ -228,6 +228,7 @@ export default function App() {
   const [comparePosition, setComparePosition] = useState(50);
   const [busy, setBusy] = useState(false);
   const requestController = useRef(null);
+  const activeConversationId = useRef("");
   const [error, setError] = useState("");
   const [user, setUser] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
@@ -246,6 +247,24 @@ export default function App() {
   const [savedGallery, setSavedGallery] = useState(() => { try { return JSON.parse(localStorage.getItem("lumina_react_gallery") || "[]"); } catch { return []; } });
   const [savedChats, setSavedChats] = useState(() => { try { return JSON.parse(localStorage.getItem("lumina_react_chats") || "[]"); } catch { return []; } });
   const fileInput = useRef(null);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("share")) return;
+    try {
+      const activeId = localStorage.getItem("lumina_react_active_chat");
+      if (!activeId || !savedChats.length) return;
+      const activeChat = savedChats.find((chat) => chat.id === activeId);
+      if (!activeChat || !Array.isArray(activeChat.messages) || !activeChat.messages.length) return;
+      activeConversationId.current = activeId;
+      setMessages(activeChat.messages.map((item) => ({ ...item, id: crypto.randomUUID() })));
+      setApiHistory(Array.isArray(activeChat.apiHistory) ? activeChat.apiHistory : []);
+      setLastImage(activeChat.lastImage || "");
+      setEditVersions(Array.isArray(activeChat.editVersions) ? activeChat.editVersions : []);
+      setEditVersionIndex(Number.isInteger(activeChat.editVersionIndex) ? activeChat.editVersionIndex : -1);
+    } catch { /* Ignore invalid browser cache and start with a fresh conversation. */ }
+  // Restore only from the browser snapshot available at initial mount.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -338,7 +357,7 @@ export default function App() {
   }, [savedGallery]);
 
   useEffect(() => {
-    try { localStorage.setItem("lumina_react_chats", JSON.stringify(savedChats.slice(0, 20))); } catch {}
+    try { localStorage.setItem("lumina_react_chats", JSON.stringify(savedChats.slice(0, 100))); } catch {}
   }, [savedChats]);
 
   function runOperation(operation) {
@@ -386,23 +405,26 @@ export default function App() {
     recognition.start();
   }
 
-  function saveCurrentChat() {
-    if (!messages.length) { setError("Start a conversation before saving it."); return; }
-    const firstPrompt = messages.find((item) => item.role === "user")?.text || "Lumina conversation";
-    // Keep images and edit context with the conversation, not only its text.
+  function persistChatSnapshot(messageList, history = apiHistory, image = lastImage, versions = editVersions, versionIndex = editVersionIndex) {
+    if (!Array.isArray(messageList) || !messageList.length || sharedReadOnly) return;
+    const firstPrompt = messageList.find((item) => item.role === "user")?.text || "Lumina conversation";
+    const id = activeConversationId.current || crypto.randomUUID();
+    activeConversationId.current = id;
+    try { localStorage.setItem("lumina_react_active_chat", id); } catch {}
     const chat = {
-      id: crypto.randomUUID(),
-      title: firstPrompt.slice(0, 52),
+      id,
+      title: firstPrompt.slice(0, 52) || "Lumina conversation",
       savedAt: new Date().toISOString(),
-      messages: messages.map((item) => ({
+      messages: messageList.map((item) => ({
         role: item.role,
         text: item.text || "",
         ...(Array.isArray(item.images) && item.images.length ? { images: item.images } : {}),
+        ...(item.failed ? { failed: true } : {}),
       })),
-      apiHistory,
-      lastImage,
-      editVersions,
-      editVersionIndex,
+      apiHistory: history,
+      lastImage: image,
+      editVersions: versions,
+      editVersionIndex: versionIndex,
     };
     const payload = {
       messages: chat.messages,
@@ -411,9 +433,11 @@ export default function App() {
       editVersions: chat.editVersions,
       editVersionIndex: chat.editVersionIndex,
     };
-    setSavedChats((current) => [chat, ...current.filter((item) => item.title !== chat.title)].slice(0, 20));
-    setPanel("history");
-    setError("");
+    setSavedChats((current) => {
+      const next = [chat, ...current.filter((item) => item.id !== id)].slice(0, 100);
+      try { localStorage.setItem("lumina_react_chats", JSON.stringify(next)); } catch {}
+      return next;
+    });
     if (user) {
       fetch("/api/conversations", {
         method: "POST",
@@ -423,14 +447,18 @@ export default function App() {
       }).then(async (response) => {
         if (!response.ok) {
           const result = await response.json().catch(() => ({}));
-          setError(result.error || "Conversation saved in this browser, but cloud sync failed.");
+          setError(result.error || "Conversation is saved in this browser, but cloud sync failed.");
         }
-      }).catch(() => setError("Conversation saved in this browser, but cloud sync is unavailable."));
-    } else {
-      setError("Saved in this browser. Sign in to sync conversations with Supabase.");
+      }).catch(() => setError("Conversation is saved in this browser, but cloud sync is unavailable."));
     }
   }
 
+  function saveCurrentChat() {
+    if (!messages.length) { setError("Start a conversation before saving it."); return; }
+    persistChatSnapshot(messages);
+    setPanel("history");
+    setError(user ? "" : "Saved in this browser. Sign in to sync conversations with Supabase.");
+  }
   async function deleteSavedChat(chat) {
     setSavedChats((current) => current.filter((item) => item.id !== chat.id));
     if (!user) return;
@@ -489,6 +517,8 @@ export default function App() {
   }
 
   function restoreChat(chat) {
+    activeConversationId.current = chat.id || crypto.randomUUID();
+    try { localStorage.setItem("lumina_react_active_chat", activeConversationId.current); } catch {}
     setMessages((chat.messages || []).map((item) => ({ ...item, id: crypto.randomUUID() })));
     setApiHistory(Array.isArray(chat.apiHistory) ? chat.apiHistory : []);
     setEditVersions(Array.isArray(chat.editVersions) ? chat.editVersions : []);
@@ -655,16 +685,29 @@ export default function App() {
         setEditVersions(next);
         setEditVersionIndex(next.length - 1);
       }
-      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "assistant", text: answers.join("\n\n"), images: resultImages }]);
+      const assistantMessage = { id: crypto.randomUUID(), role: "assistant", text: answers.join("\n\n"), images: resultImages };
+      const completedMessages = [...messages, userMessage, assistantMessage];
+      setMessages(completedMessages);
+      const completedVersions = resultImages.length
+        ? (editVersionIndex >= 0 ? editVersions.slice(0, editVersionIndex + 1) : editVersions).concat(
+            resultImages.map((src) => ({
+              src: src.startsWith("data:") || src.startsWith("blob:") || src.startsWith("http") ? src : "data:image/png;base64," + src,
+              createdAt: Date.now(),
+              label: "Edit",
+            }))
+          ).slice(-20)
+        : editVersions;
+      const completedVersionIndex = resultImages.length ? completedVersions.length - 1 : editVersionIndex;
+      persistChatSnapshot(completedMessages, currentHistory, currentLastImage, completedVersions, completedVersionIndex);
       clearAttachments();
     } catch (err) {
       if (err?.name === "AbortError") return;
       const message = err instanceof Error ? err.message : "Something went wrong.";
       setError(message);
-      setMessages((current) => [
-        ...current,
-        { id: crypto.randomUUID(), role: "assistant", text: message, failed: true },
-      ]);
+      const failedMessage = { id: crypto.randomUUID(), role: "assistant", text: message, failed: true };
+      const failedMessages = [...messages, userMessage, failedMessage];
+      setMessages(failedMessages);
+      persistChatSnapshot(failedMessages);
     } finally {
       if (requestController.current === controller) requestController.current = null;
       setBusy(false);
@@ -678,7 +721,7 @@ export default function App() {
           <span className="brand-mark"><Sparkles size={19} /></span>
           <span>Lumina</span>
         </a>
-        <button className="new-chat" onClick={() => { setMessages([]); setApiHistory([]); setLastImage(""); setError(""); setPanel(""); }}>
+        <button className="new-chat" onClick={() => { activeConversationId.current = ""; try { localStorage.removeItem("lumina_react_active_chat"); } catch {} setMessages([]); setApiHistory([]); setLastImage(""); setEditVersions([]); setEditVersionIndex(-1); setError(""); setPanel(""); }}>
           <PanelLeft size={17} /> New conversation
         </button>
         <button className="side-action" onClick={() => setPanel(panel === "history" ? "" : "history")}><History size={16} /> Saved conversations <span>{savedChats.length}</span></button>
@@ -828,7 +871,7 @@ export default function App() {
       {panel && <div className="drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setPanel(""); }}>
         <section className="drawer">
           <header className="drawer-header"><div><h2>{panel === "menu" ? "Lumina menu" : panel === "gallery" ? "Saved images" : panel === "operations" ? "Image operations" : panel === "status" ? "API status" : "Saved conversations"}</h2><p>{panel === "menu" ? "Navigate your workspace." : panel === "operations" ? "Choose an operation, add an image if needed, then send the prompt." : panel === "status" ? "Local Flask backend health" : "Saved locally in this browser"}</p></div><button className="drawer-close" onClick={() => setPanel("")} aria-label="Close panel"><X size={18} /></button></header>
-          {panel === "menu" ? <div className="mobile-menu-actions"><button className="side-action" onClick={() => { setMessages([]); setApiHistory([]); setLastImage(""); setError(""); setPanel(""); }}><PanelLeft size={16} /> New conversation</button><button className="side-action" onClick={() => setPanel("history")}><History size={16} /> Saved conversations <span>{savedChats.length}</span></button><button className="side-action" onClick={() => setPanel("gallery")}><Images size={16} /> Saved images <span>{savedGallery.length}</span></button><button className="side-action" onClick={() => { setPanel("operations"); }}><WandSparkles size={16} /> Operations</button><button className="side-action" onClick={checkApiStatus}><Activity size={16} /> API status</button><button className="side-action" onClick={saveCurrentChat}><BookmarkPlus size={16} /> Save conversation</button><button className="side-action" onClick={shareCurrentChat}><Share2 size={16} /> Share conversation</button>{user ? <><button className="side-action" onClick={() => { setPanel(""); setPasswordModalOpen(true); }}>Change password</button><button className="side-action" onClick={signOut}>Sign out</button></> : <button className="side-action" onClick={() => { setPanel(""); setAuthOpen(true); }}>Sign in</button>}</div> : panel === "operations" ? <div className="operations-content">{OPERATION_GROUPS.map(([group, operations]) => <section className="operation-group" key={group}><h3>{group}</h3><div className="operation-chips">{operations.map(([label, operation]) => <button type="button" className="operation-chip" key={label} onClick={() => runOperation(operation)}>{label}</button>)}</div></section>)}<button type="button" className="operation-chip operation-generate" onClick={() => runOperation("Generate an image from this description: ")}>✨ Generate from text</button></div> : panel === "status" ? <div className="status-content"><p>{apiStatus || "Checking backend…"}</p><button type="button" className="operation-chip" onClick={checkApiStatus}>Check again</button></div> : panel === "gallery" ? (savedGallery.length ? <div className="saved-gallery">{savedGallery.map((item) => <article className="saved-image-card" key={item.id}><img src={item.src} alt={item.prompt} /><p title={item.prompt}>{item.prompt}</p><div className="saved-image-actions"><a href={item.src} download="lumina-image.png">Download</a><button onClick={() => setSavedGallery((current) => current.filter((saved) => saved.id !== item.id))} aria-label="Remove saved image"><Trash2 size={14} /></button></div></article>)}</div> : <p className="drawer-empty">No saved images yet. Generate an image and select Save image.</p>) : (savedChats.length ? <div className="saved-chat-list">{savedChats.map((chat) => <article className="saved-chat-card" key={chat.id}><button className="saved-chat-open" onClick={() => restoreChat(chat)}><strong>{chat.title}</strong><small>{new Date(chat.savedAt).toLocaleString()} · {chat.messages.length} messages</small></button><button className="saved-chat-delete" onClick={() => deleteSavedChat(chat)} aria-label="Delete saved conversation"><Trash2 size={14} /></button></article>)}</div> : <p className="drawer-empty">No saved conversations yet. Use Save conversation to keep a text copy.</p>)}
+          {panel === "menu" ? <div className="mobile-menu-actions"><button className="side-action" onClick={() => { activeConversationId.current = ""; try { localStorage.removeItem("lumina_react_active_chat"); } catch {} setMessages([]); setApiHistory([]); setLastImage(""); setEditVersions([]); setEditVersionIndex(-1); setError(""); setPanel(""); }}><PanelLeft size={16} /> New conversation</button><button className="side-action" onClick={() => setPanel("history")}><History size={16} /> Saved conversations <span>{savedChats.length}</span></button><button className="side-action" onClick={() => setPanel("gallery")}><Images size={16} /> Saved images <span>{savedGallery.length}</span></button><button className="side-action" onClick={() => { setPanel("operations"); }}><WandSparkles size={16} /> Operations</button><button className="side-action" onClick={checkApiStatus}><Activity size={16} /> API status</button><button className="side-action" onClick={saveCurrentChat}><BookmarkPlus size={16} /> Save conversation</button><button className="side-action" onClick={shareCurrentChat}><Share2 size={16} /> Share conversation</button>{user ? <><button className="side-action" onClick={() => { setPanel(""); setPasswordModalOpen(true); }}>Change password</button><button className="side-action" onClick={signOut}>Sign out</button></> : <button className="side-action" onClick={() => { setPanel(""); setAuthOpen(true); }}>Sign in</button>}</div> : panel === "operations" ? <div className="operations-content">{OPERATION_GROUPS.map(([group, operations]) => <section className="operation-group" key={group}><h3>{group}</h3><div className="operation-chips">{operations.map(([label, operation]) => <button type="button" className="operation-chip" key={label} onClick={() => runOperation(operation)}>{label}</button>)}</div></section>)}<button type="button" className="operation-chip operation-generate" onClick={() => runOperation("Generate an image from this description: ")}>✨ Generate from text</button></div> : panel === "status" ? <div className="status-content"><p>{apiStatus || "Checking backend…"}</p><button type="button" className="operation-chip" onClick={checkApiStatus}>Check again</button></div> : panel === "gallery" ? (savedGallery.length ? <div className="saved-gallery">{savedGallery.map((item) => <article className="saved-image-card" key={item.id}><img src={item.src} alt={item.prompt} /><p title={item.prompt}>{item.prompt}</p><div className="saved-image-actions"><a href={item.src} download="lumina-image.png">Download</a><button onClick={() => setSavedGallery((current) => current.filter((saved) => saved.id !== item.id))} aria-label="Remove saved image"><Trash2 size={14} /></button></div></article>)}</div> : <p className="drawer-empty">No saved images yet. Generate an image and select Save image.</p>) : (savedChats.length ? <div className="saved-chat-list">{savedChats.map((chat) => <article className="saved-chat-card" key={chat.id}><button className="saved-chat-open" onClick={() => restoreChat(chat)}><strong>{chat.title}</strong><small>{new Date(chat.savedAt).toLocaleString()} · {chat.messages.length} messages</small></button><button className="saved-chat-delete" onClick={() => deleteSavedChat(chat)} aria-label="Delete saved conversation"><Trash2 size={14} /></button></article>)}</div> : <p className="drawer-empty">No saved conversations yet. Use Save conversation to keep a text copy.</p>)}
         </section>
       </div>}
       {passwordModalOpen && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setPasswordModalOpen(false); }}><section className="auth-card" role="dialog" aria-modal="true" aria-labelledby="change-password-heading"><button className="auth-close" type="button" onClick={() => setPasswordModalOpen(false)} aria-label="Close change password"><X size={18} /></button><div className="auth-mark"><Sparkles size={21} /></div><h2 id="change-password-heading">Change password</h2><p className="auth-subtitle">Confirm your current password and choose a strong new password.</p><form className="auth-form" onSubmit={submitPasswordChange}><label>Current password<input type="password" autoComplete="current-password" value={passwordFields.currentPassword} onChange={(event) => setPasswordFields((value) => ({ ...value, currentPassword: event.target.value }))} required /></label><label>New password<input type="password" autoComplete="new-password" minLength={8} value={passwordFields.newPassword} onChange={(event) => setPasswordFields((value) => ({ ...value, newPassword: event.target.value }))} required /></label><label>Confirm new password<input type="password" autoComplete="new-password" minLength={8} value={passwordFields.confirmPassword} onChange={(event) => setPasswordFields((value) => ({ ...value, confirmPassword: event.target.value }))} required /></label>{passwordError && <p className="auth-error" role="alert">{passwordError}</p>}{passwordNotice && <p className="auth-notice" role="status">{passwordNotice}</p>}<button className="auth-submit" type="submit" disabled={passwordBusy}>{passwordBusy ? "Updating…" : "Update password"}</button></form></section></div>}
