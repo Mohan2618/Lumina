@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+load_dotenv()
 from flask import request
 from lumina.core import app
 from lumina.routes import register_routes
