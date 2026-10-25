@@ -416,11 +416,27 @@ export default function App() {
     if (!user) { setAuthOpen(true); setError("Sign in to create a share link."); return; }
     setError("");
     try {
+      async function makeShareableImage(src) {
+        if (typeof src !== "string" || !src.startsWith("blob:")) return src;
+        const blob = await (await fetch(src)).blob();
+        return await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(new Error("An attached image could not be prepared for sharing."));
+          reader.readAsDataURL(blob);
+        });
+      }
+      const sharedMessages = await Promise.all(messages.map(async ({ role, text, images }) => ({
+        role,
+        text: text || "",
+        ...(Array.isArray(images) && images.length ? { images: await Promise.all(images.map(makeShareableImage)) } : {}),
+      })));
+      const sharedVersions = await Promise.all(editVersions.map(async (version) => ({ ...version, src: await makeShareableImage(version.src) })));
       const response = await fetch("/api/share", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload: { messages: messages.map(({ role, text, images }) => ({ role, text: text || "", ...(Array.isArray(images) && images.length ? { images } : {}) })), apiHistory, lastImage, editVersions, editVersionIndex } }),
+        body: JSON.stringify({ payload: { messages: sharedMessages, apiHistory, lastImage, editVersions: sharedVersions, editVersionIndex } }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Could not create a share link.");
