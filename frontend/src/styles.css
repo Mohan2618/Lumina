@@ -279,3 +279,8 @@ a{color:#ff5268}
 .mobile-menu-actions{display:flex;flex-direction:column;gap:5px;padding:8px}
 .mobile-menu-actions .side-action{padding:13px 10px;border:1px solid #ffffff0d;border-radius:10px}
 @media(max-width:760px){.mobile-menu-button{display:inline-flex}.topbar{gap:9px}.model-label{padding:7px 9px;font-size:10px}}
+
+.password-visibility,.resend-otp-control button{align-self:flex-start;border:0;background:transparent;color:#ff6579;font-size:11px;padding:3px 0}
+.password-visibility:hover,.resend-otp-control button:hover{color:#ff9aa7}
+.resend-otp-control{display:flex;align-items:center;justify-content:center;min-height:24px;color:#9da7b8;font-size:11px}
+.resend-otp-control button:disabled{opacity:.5;cursor:wait}
