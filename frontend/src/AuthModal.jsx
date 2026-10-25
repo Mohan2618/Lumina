@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, Sparkles, LoaderCircle, ArrowLeft } from "lucide-react";
 
 const initialForm = { identifier: "", password: "", firstName: "", lastName: "", email: "", username: "", confirm: "", otp: "" };
@@ -12,6 +12,8 @@ export default function AuthModal({ onClose, onAuthenticated }) {
   const [busy, setBusy] = useState(false);
   const [showPasswords, setShowPasswords] = useState(false);
   const [resendSeconds, setResendSeconds] = useState(0);
+  const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
+  const otpRefs = useRef([]);
 
   useEffect(() => {
     if (mode !== "reset" || resendSeconds <= 0) return;
@@ -51,6 +53,8 @@ export default function AuthModal({ onClose, onAuthenticated }) {
         const data = await postJson("/api/auth/send-otp", { email: form.identifier.trim() });
         setResetEmail(data.email || form.identifier.trim());
         setResendSeconds(60);
+        setOtpDigits(["", "", "", "", "", ""]);
+        setForm((current) => ({ ...current, otp: "" }));
         setMode("reset");
         setNotice("A verification code has been sent to your registered email.");
         return;
@@ -104,7 +108,29 @@ export default function AuthModal({ onClose, onAuthenticated }) {
           {isLogin && <label>Email or username<input name="identifier" value={form.identifier} onChange={update} required autoComplete="username" /></label>}
           {isForgot && <label>Email or username<input name="identifier" value={form.identifier} onChange={update} required autoComplete="username" /></label>}
           {isReset && <>
-            <label>Verification code<input name="otp" inputMode="numeric" pattern="[0-9]{6}" value={form.otp} onChange={update} required minLength={6} maxLength={6} autoComplete="one-time-code" /></label>
+            <label>Verification code
+              <div className="otp-digit-row" onPaste={(event) => {
+                const pasted = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+                if (!pasted) return;
+                event.preventDefault();
+                const next = Array.from({ length: 6 }, (_, index) => pasted[index] || "");
+                setOtpDigits(next);
+                setForm((current) => ({ ...current, otp: next.join("") }));
+                otpRefs.current[Math.min(pasted.length, 5)]?.focus();
+              }}>
+                {otpDigits.map((digit, index) => <input key={index} ref={(element) => { otpRefs.current[index] = element; }} aria-label={"Verification digit " + (index + 1)} inputMode="numeric" pattern="[0-9]" value={digit} required maxLength={1} autoComplete={index === 0 ? "one-time-code" : "off"} onChange={(event) => {
+                  const value = event.target.value.replace(/\D/g, "").slice(-1);
+                  const next = [...otpDigits]; next[index] = value;
+                  setOtpDigits(next);
+                  setForm((current) => ({ ...current, otp: next.join("") }));
+                  if (value && index < 5) otpRefs.current[index + 1]?.focus();
+                }} onKeyDown={(event) => {
+                  if (event.key === "Backspace" && !digit && index > 0) otpRefs.current[index - 1]?.focus();
+                  if (event.key === "ArrowLeft" && index > 0) otpRefs.current[index - 1]?.focus();
+                  if (event.key === "ArrowRight" && index < 5) otpRefs.current[index + 1]?.focus();
+                }} /></input>)}
+              </div>
+            </label>
             <label>New password<input name="password" type={showPasswords ? "text" : "password"} value={form.password} onChange={update} required minLength={8} autoComplete="new-password" /></label>
             <label>Confirm new password<input name="confirm" type={showPasswords ? "text" : "password"} value={form.confirm} onChange={update} required minLength={8} autoComplete="new-password" /></label>
           </>}
