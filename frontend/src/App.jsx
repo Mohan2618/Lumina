@@ -813,7 +813,7 @@ export default function App() {
           <header className="compare-header"><strong>Before and after</strong><button type="button" onClick={() => setCompareImages(null)} aria-label="Close comparison"><X size={18} /></button></header>
           <div className="compare-slider" style={{ "--compare-position": comparePosition + "%" }}>
             <img className="compare-after" src={compareImages.after} alt="Current image version" />
-            <div className="compare-before-clip" style={{ width: comparePosition + "%" }}><img src={compareImages.before} alt="Previous image version" /></div>
+            <div className="compare-before-clip" style={{ "--compare-position": comparePosition + "%" }}><img src={compareImages.before} alt="Previous image version" /></div>
             <div className="compare-slider-divider" style={{ left: comparePosition + "%" }} aria-hidden="true"><span>↔</span></div>
           </div>
           <div className="compare-slider-labels"><span>Previous version</span><span>Current version</span></div>
