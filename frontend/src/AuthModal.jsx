@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Sparkles, LoaderCircle, ArrowLeft } from "lucide-react";
 
 const initialForm = { identifier: "", password: "", firstName: "", lastName: "", email: "", username: "", confirm: "", otp: "" };
@@ -10,6 +10,14 @@ export default function AuthModal({ onClose, onAuthenticated }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [resendSeconds, setResendSeconds] = useState(0);
+
+  useEffect(() => {
+    if (mode !== "reset" || resendSeconds <= 0) return;
+    const timer = window.setTimeout(() => setResendSeconds((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [mode, resendSeconds]);
 
   function update(event) {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
@@ -42,6 +50,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
       if (mode === "forgot") {
         const data = await postJson("/api/auth/send-otp", { email: form.identifier.trim() });
         setResetEmail(data.email || form.identifier.trim());
+        setResendSeconds(60);
         setMode("reset");
         setNotice("A verification code has been sent to your registered email.");
         return;
@@ -96,12 +105,14 @@ export default function AuthModal({ onClose, onAuthenticated }) {
           {isForgot && <label>Email or username<input name="identifier" value={form.identifier} onChange={update} required autoComplete="username" /></label>}
           {isReset && <>
             <label>Verification code<input name="otp" inputMode="numeric" pattern="[0-9]{6}" value={form.otp} onChange={update} required minLength={6} maxLength={6} autoComplete="one-time-code" /></label>
-            <label>New password<input name="password" type="password" value={form.password} onChange={update} required minLength={8} autoComplete="new-password" /></label>
-            <label>Confirm new password<input name="confirm" type="password" value={form.confirm} onChange={update} required minLength={8} autoComplete="new-password" /></label>
+            <label>New password<input name="password" type={showPasswords ? "text" : "password"} value={form.password} onChange={update} required minLength={8} autoComplete="new-password" /></label>
+            <label>Confirm new password<input name="confirm" type={showPasswords ? "text" : "password"} value={form.confirm} onChange={update} required minLength={8} autoComplete="new-password" /></label>
           </>}
-          {(isLogin || isSignup) && <label>Password<input name="password" type="password" value={form.password} onChange={update} required autoComplete={isLogin ? "current-password" : "new-password"} minLength={8} /></label>}
-          {isSignup && <label>Confirm password<input name="confirm" type="password" value={form.confirm} onChange={update} required autoComplete="new-password" minLength={8} /></label>}
-          {error && <p className="auth-error" role="alert">{error}</p>}
+          {(isLogin || isSignup) && <label>Password<input name="password" type={showPasswords ? "text" : "password"} value={form.password} onChange={update} required autoComplete={isLogin ? "current-password" : "new-password"} minLength={8} /></label>}
+          {isSignup && <label>Confirm password<input name="confirm" type={showPasswords ? "text" : "password"} value={form.confirm} onChange={update} required autoComplete="new-password" minLength={8} /></label>}
+          {(isLogin || isSignup || isReset) && <button className="password-visibility" type="button" onClick={() => setShowPasswords((shown) => !shown)}>{showPasswords ? "Hide passwords" : "Show passwords"}</button>}
+          {isReset && <div className="resend-otp-control">{resendSeconds > 0 ? <span>Resend code in {resendSeconds}s</span> : <button type="button" disabled={busy} onClick={async () => { setError(""); setNotice(""); setBusy(true); try { await postJson("/api/auth/send-otp", { email: resetEmail }); setResendSeconds(60); setNotice("A new verification code has been sent."); } catch (err) { setError(err instanceof Error ? err.message : "Could not resend the code."); } finally { setBusy(false); } }}>Resend code</button>}</div>}
+                    {error && <p className="auth-error" role="alert">{error}</p>}
           {notice && <p className="auth-notice" role="status">{notice}</p>}
           <button className="auth-submit" type="submit" disabled={busy}>
             {busy && <LoaderCircle size={16} className="spin" />}
