@@ -230,6 +230,11 @@ export default function App() {
   const [error, setError] = useState("");
   const [user, setUser] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [passwordFields, setPasswordFields] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordNotice, setPasswordNotice] = useState("");
+  const [passwordBusy, setPasswordBusy] = useState(false);
   const [panel, setPanel] = useState("");
   const [lightbox, setLightbox] = useState("");
   const [apiStatus, setApiStatus] = useState("");
@@ -289,6 +294,37 @@ export default function App() {
       .catch((error) => { if (active) setError(error instanceof Error ? error.message : "Unable to load shared conversation."); });
     return () => { active = false; };
   }, []);
+
+  async function submitPasswordChange(event) {
+    event.preventDefault();
+    setPasswordError("");
+    setPasswordNotice("");
+    if (!passwordFields.currentPassword || !passwordFields.newPassword || !passwordFields.confirmPassword) {
+      setPasswordError("Fill in all password fields.");
+      return;
+    }
+    if (passwordFields.newPassword !== passwordFields.confirmPassword) {
+      setPasswordError("New passwords do not match.");
+      return;
+    }
+    setPasswordBusy(true);
+    try {
+      const response = await fetch("/api/auth/change-password", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword: passwordFields.currentPassword, newPassword: passwordFields.newPassword }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Could not change password.");
+      setPasswordFields({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setPasswordNotice("Password changed successfully.");
+    } catch (error) {
+      setPasswordError(error instanceof Error ? error.message : "Could not change password.");
+    } finally {
+      setPasswordBusy(false);
+    }
+  }
 
   async function signOut() {
     try { await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }); }
@@ -657,7 +693,7 @@ export default function App() {
         <div className="sidebar-bottom">
           <div className="avatar">{user ? (user.firstName || user.username || "U").slice(0, 1).toUpperCase() : "L"}</div>
           <div className="account-details"><strong>{user ? (user.firstName || user.username || "Account") : "Lumina"}</strong><small>{user ? (user.email || user.username) : "Image assistant"}</small></div>
-          {user ? <button className="account-action" onClick={signOut}>Sign out</button> : <button className="account-action" onClick={() => setAuthOpen(true)}>Sign in</button>}
+          {user ? <><button className="account-action" onClick={() => { setPasswordModalOpen(true); setPasswordError(""); setPasswordNotice(""); }}>Change password</button><button className="account-action" onClick={signOut}>Sign out</button></> : <button className="account-action" onClick={() => setAuthOpen(true)}>Sign in</button>}
         </div>
       </aside>
 
@@ -785,9 +821,10 @@ export default function App() {
       {panel && <div className="drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setPanel(""); }}>
         <section className="drawer">
           <header className="drawer-header"><div><h2>{panel === "menu" ? "Lumina menu" : panel === "gallery" ? "Saved images" : panel === "operations" ? "Image operations" : panel === "status" ? "API status" : "Saved conversations"}</h2><p>{panel === "menu" ? "Navigate your workspace." : panel === "operations" ? "Choose an operation, add an image if needed, then send the prompt." : panel === "status" ? "Local Flask backend health" : "Saved locally in this browser"}</p></div><button className="drawer-close" onClick={() => setPanel("")} aria-label="Close panel"><X size={18} /></button></header>
-          {panel === "menu" ? <div className="mobile-menu-actions"><button className="side-action" onClick={() => { setMessages([]); setApiHistory([]); setLastImage(""); setError(""); setPanel(""); }}><PanelLeft size={16} /> New conversation</button><button className="side-action" onClick={() => setPanel("history")}><History size={16} /> Saved conversations <span>{savedChats.length}</span></button><button className="side-action" onClick={() => setPanel("gallery")}><Images size={16} /> Saved images <span>{savedGallery.length}</span></button><button className="side-action" onClick={() => { setPanel("operations"); }}><WandSparkles size={16} /> Operations</button><button className="side-action" onClick={checkApiStatus}><Activity size={16} /> API status</button><button className="side-action" onClick={saveCurrentChat}><BookmarkPlus size={16} /> Save conversation</button><button className="side-action" onClick={shareCurrentChat}><Share2 size={16} /> Share conversation</button>{user ? <button className="side-action" onClick={signOut}>Sign out</button> : <button className="side-action" onClick={() => { setPanel(""); setAuthOpen(true); }}>Sign in</button>}</div> : panel === "operations" ? <div className="operations-content">{OPERATION_GROUPS.map(([group, operations]) => <section className="operation-group" key={group}><h3>{group}</h3><div className="operation-chips">{operations.map(([label, operation]) => <button type="button" className="operation-chip" key={label} onClick={() => runOperation(operation)}>{label}</button>)}</div></section>)}<button type="button" className="operation-chip operation-generate" onClick={() => runOperation("Generate an image from this description: ")}>✨ Generate from text</button></div> : panel === "status" ? <div className="status-content"><p>{apiStatus || "Checking backend…"}</p><button type="button" className="operation-chip" onClick={checkApiStatus}>Check again</button></div> : panel === "gallery" ? (savedGallery.length ? <div className="saved-gallery">{savedGallery.map((item) => <article className="saved-image-card" key={item.id}><img src={item.src} alt={item.prompt} /><p title={item.prompt}>{item.prompt}</p><div className="saved-image-actions"><a href={item.src} download="lumina-image.png">Download</a><button onClick={() => setSavedGallery((current) => current.filter((saved) => saved.id !== item.id))} aria-label="Remove saved image"><Trash2 size={14} /></button></div></article>)}</div> : <p className="drawer-empty">No saved images yet. Generate an image and select Save image.</p>) : (savedChats.length ? <div className="saved-chat-list">{savedChats.map((chat) => <article className="saved-chat-card" key={chat.id}><button className="saved-chat-open" onClick={() => restoreChat(chat)}><strong>{chat.title}</strong><small>{new Date(chat.savedAt).toLocaleString()} · {chat.messages.length} messages</small></button><button className="saved-chat-delete" onClick={() => deleteSavedChat(chat)} aria-label="Delete saved conversation"><Trash2 size={14} /></button></article>)}</div> : <p className="drawer-empty">No saved conversations yet. Use Save conversation to keep a text copy.</p>)}
+          {panel === "menu" ? <div className="mobile-menu-actions"><button className="side-action" onClick={() => { setMessages([]); setApiHistory([]); setLastImage(""); setError(""); setPanel(""); }}><PanelLeft size={16} /> New conversation</button><button className="side-action" onClick={() => setPanel("history")}><History size={16} /> Saved conversations <span>{savedChats.length}</span></button><button className="side-action" onClick={() => setPanel("gallery")}><Images size={16} /> Saved images <span>{savedGallery.length}</span></button><button className="side-action" onClick={() => { setPanel("operations"); }}><WandSparkles size={16} /> Operations</button><button className="side-action" onClick={checkApiStatus}><Activity size={16} /> API status</button><button className="side-action" onClick={saveCurrentChat}><BookmarkPlus size={16} /> Save conversation</button><button className="side-action" onClick={shareCurrentChat}><Share2 size={16} /> Share conversation</button>{user ? <><button className="side-action" onClick={() => { setPanel(""); setPasswordModalOpen(true); }}>Change password</button><button className="side-action" onClick={signOut}>Sign out</button></> : <button className="side-action" onClick={() => { setPanel(""); setAuthOpen(true); }}>Sign in</button>}</div> : panel === "operations" ? <div className="operations-content">{OPERATION_GROUPS.map(([group, operations]) => <section className="operation-group" key={group}><h3>{group}</h3><div className="operation-chips">{operations.map(([label, operation]) => <button type="button" className="operation-chip" key={label} onClick={() => runOperation(operation)}>{label}</button>)}</div></section>)}<button type="button" className="operation-chip operation-generate" onClick={() => runOperation("Generate an image from this description: ")}>✨ Generate from text</button></div> : panel === "status" ? <div className="status-content"><p>{apiStatus || "Checking backend…"}</p><button type="button" className="operation-chip" onClick={checkApiStatus}>Check again</button></div> : panel === "gallery" ? (savedGallery.length ? <div className="saved-gallery">{savedGallery.map((item) => <article className="saved-image-card" key={item.id}><img src={item.src} alt={item.prompt} /><p title={item.prompt}>{item.prompt}</p><div className="saved-image-actions"><a href={item.src} download="lumina-image.png">Download</a><button onClick={() => setSavedGallery((current) => current.filter((saved) => saved.id !== item.id))} aria-label="Remove saved image"><Trash2 size={14} /></button></div></article>)}</div> : <p className="drawer-empty">No saved images yet. Generate an image and select Save image.</p>) : (savedChats.length ? <div className="saved-chat-list">{savedChats.map((chat) => <article className="saved-chat-card" key={chat.id}><button className="saved-chat-open" onClick={() => restoreChat(chat)}><strong>{chat.title}</strong><small>{new Date(chat.savedAt).toLocaleString()} · {chat.messages.length} messages</small></button><button className="saved-chat-delete" onClick={() => deleteSavedChat(chat)} aria-label="Delete saved conversation"><Trash2 size={14} /></button></article>)}</div> : <p className="drawer-empty">No saved conversations yet. Use Save conversation to keep a text copy.</p>)}
         </section>
       </div>}
+      {passwordModalOpen && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setPasswordModalOpen(false); }}><section className="auth-card" role="dialog" aria-modal="true" aria-labelledby="change-password-heading"><button className="auth-close" type="button" onClick={() => setPasswordModalOpen(false)} aria-label="Close change password"><X size={18} /></button><div className="auth-mark"><Sparkles size={21} /></div><h2 id="change-password-heading">Change password</h2><p className="auth-subtitle">Confirm your current password and choose a strong new password.</p><form className="auth-form" onSubmit={submitPasswordChange}><label>Current password<input type="password" autoComplete="current-password" value={passwordFields.currentPassword} onChange={(event) => setPasswordFields((value) => ({ ...value, currentPassword: event.target.value }))} required /></label><label>New password<input type="password" autoComplete="new-password" minLength={8} value={passwordFields.newPassword} onChange={(event) => setPasswordFields((value) => ({ ...value, newPassword: event.target.value }))} required /></label><label>Confirm new password<input type="password" autoComplete="new-password" minLength={8} value={passwordFields.confirmPassword} onChange={(event) => setPasswordFields((value) => ({ ...value, confirmPassword: event.target.value }))} required /></label>{passwordError && <p className="auth-error" role="alert">{passwordError}</p>}{passwordNotice && <p className="auth-notice" role="status">{passwordNotice}</p>}<button className="auth-submit" type="submit" disabled={passwordBusy}>{passwordBusy ? "Updating…" : "Update password"}</button></form></section></div>}
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onAuthenticated={(nextUser) => { setUser(nextUser); setAuthOpen(false); }} />}
     </main>
   );
