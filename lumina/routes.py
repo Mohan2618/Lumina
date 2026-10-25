@@ -7,7 +7,7 @@ from .core import app, GEMINI_MODEL, GEMINI_TIMEOUT, SYSTEM_PROMPT, gemini_clien
 from .utils.auth import hash_password, verify_password, validate_password_strength, validate_username, validate_email
 from .utils.image import pil_to_base64, file_to_pil, bytes_to_pil, pil_to_bytes, pil_to_cv2, is_rate_limit, check_guest_limit, consume_guest_limit, ImageValidationError
 from .services.email_service import send_email_otp
-from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp, update_password, otp_can_send, list_conversations, upsert_conversation, delete_conversation
+from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp, update_password, otp_can_send, delete_otp, list_conversations, upsert_conversation, delete_conversation
 from .services.image_generation import generate_image_variations
 from .services.ai_service import call_ai, extract_op
 from .image_processing.processor import process_image
@@ -166,13 +166,21 @@ def register_routes(app):
         if not otp_can_send(email):
             return jsonify({"error":"Please wait before requesting another OTP"}),429
 
-        code=str(secrets.randbelow(900000)+100000)
-        save_otp(email,code)
+        code = str(secrets.randbelow(900000) + 100000)
+        # Store the code before delivery so a successfully delivered code is
+        # immediately verifiable. If delivery fails, remove it so the user can
+        # retry without being blocked by a stale OTP/cooldown.
         try:
-            send_email_otp(email,code)
-        except Exception:
-            return jsonify({"error":"Email delivery failed"}),500
-        return jsonify({"success":True,"email":email})
+            save_otp(email, code)
+            send_email_otp(email, code)
+        except Exception as exc:
+            try:
+                delete_otp(email)
+            except Exception as cleanup_exc:
+                print(f"[AUTH] OTP cleanup failed: {type(cleanup_exc).__name__}")
+            print(f"[AUTH] OTP email delivery failed: {type(exc).__name__}")
+            return jsonify({"error":"We couldn't send the verification email. Please check email service configuration and try again shortly."}),503
+        return jsonify({"success":True,"email":email,"message":"Verification code sent."})
 
     @app.route("/api/auth/verify-otp", methods=["POST"])
     def verify_otp_route():
