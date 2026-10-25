@@ -128,7 +128,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
                   if (event.key === "Backspace" && !digit && index > 0) otpRefs.current[index - 1]?.focus();
                   if (event.key === "ArrowLeft" && index > 0) otpRefs.current[index - 1]?.focus();
                   if (event.key === "ArrowRight" && index < 5) otpRefs.current[index + 1]?.focus();
-                }} /></input>)}
+                }} />)}
               </div>
             </label>
             <label>New password<input name="password" type={showPasswords ? "text" : "password"} value={form.password} onChange={update} required minLength={8} autoComplete="new-password" /></label>
