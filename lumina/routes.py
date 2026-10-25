@@ -7,7 +7,7 @@ from .core import app, GEMINI_MODEL, GEMINI_TIMEOUT, SYSTEM_PROMPT, gemini_clien
 from .utils.auth import hash_password, verify_password, validate_password_strength, validate_username, validate_email
 from .utils.image import pil_to_base64, file_to_pil, bytes_to_pil, pil_to_bytes, pil_to_cv2, is_rate_limit, check_guest_limit, consume_guest_limit, ImageValidationError
 from .services.email_service import send_email_otp
-from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp, update_password, otp_can_send, delete_otp, list_conversations, upsert_conversation, delete_conversation
+from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp, update_password, otp_can_send, record_otp_sent, delete_otp, list_conversations, upsert_conversation, delete_conversation
 from .services.image_generation import generate_image_variations
 from .services.ai_service import call_ai, extract_op
 from .image_processing.processor import process_image
@@ -173,6 +173,7 @@ def register_routes(app):
         try:
             save_otp(email, code)
             send_email_otp(email, code)
+            record_otp_sent(email)
         except Exception as exc:
             try:
                 delete_otp(email)
