@@ -7,7 +7,7 @@ from .core import app, GEMINI_MODEL, GEMINI_TIMEOUT, SYSTEM_PROMPT, gemini_clien
 from .utils.auth import hash_password, verify_password, validate_password_strength, validate_username, validate_email
 from .utils.image import pil_to_base64, file_to_pil, bytes_to_pil, pil_to_bytes, pil_to_cv2, is_rate_limit, check_guest_limit, consume_guest_limit, ImageValidationError
 from .services.email_service import send_email_otp
-from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp, update_password, otp_can_send, record_otp_sent, delete_otp, list_conversations, upsert_conversation, delete_conversation
+from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp, update_password, otp_can_send, record_otp_sent, delete_otp, list_conversations, upsert_conversation, delete_conversation, create_shared_conversation, get_shared_conversation
 from .services.image_generation import generate_image_variations
 from .services.ai_service import call_ai, extract_op
 from .image_processing.processor import process_image
@@ -114,6 +114,36 @@ def register_routes(app):
         except Exception as exc:
             print(f"[CONVERSATIONS] delete failed: {exc}")
             return jsonify({"error": "Could not delete conversation."}), 500
+
+    @app.route("/api/share", methods=["POST"])
+    def api_create_share():
+        user = session.get("user")
+        if not user:
+            return jsonify({"error": "Sign in to create a share link."}), 401
+        data = request.get_json(silent=True) or {}
+        payload = data.get("payload")
+        if not isinstance(payload, dict) or not isinstance(payload.get("messages"), list):
+            return jsonify({"error": "A valid conversation is required."}), 400
+        if len(request.get_data(cache=True)) > 12 * 1024 * 1024:
+            return jsonify({"error": "This conversation is too large to share (12 MB limit)."}), 413
+        token = secrets.token_urlsafe(24)
+        try:
+            create_shared_conversation(token, payload, ttl=604800)
+            return jsonify({"success": True, "token": token, "expiresIn": 604800})
+        except Exception as exc:
+            print(f"[SHARE] create failed: {type(exc).__name__}")
+            return jsonify({"error": "Could not create a share link."}), 500
+
+    @app.route("/api/shared/<token>", methods=["GET"])
+    def api_get_shared_conversation(token):
+        try:
+            payload = get_shared_conversation(token)
+            if not payload:
+                return jsonify({"error": "This share link is invalid or has expired."}), 404
+            return jsonify({"payload": payload})
+        except Exception as exc:
+            print(f"[SHARE] read failed: {type(exc).__name__}")
+            return jsonify({"error": "Could not load the shared conversation."}), 500
 
     @app.route("/api/auth/logout", methods=["POST"])
     def auth_logout():
