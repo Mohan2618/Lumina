@@ -16,23 +16,23 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 
 ### Chat and generation
 - [x] Send/stop generation and explicit client-side request cancellation (server-side work may continue if already running).
-- [ ] Original activity/status stages during processing.
-- [ ] Multi-image attachments and previews; remove individual attachments.
-- [ ] Paste images from clipboard, including paste into prompt area.
-- [ ] Voice input via browser speech recognition, with graceful unsupported-browser handling (control visible; user test pending).
-- [ ] New chat and full conversation history save/list/load/delete, scoped by user.
-- [ ] Restore message history and relevant image/edit context, not only a text snapshot.
-- [ ] Share chat: create share link, copy link, and shared-chat behavior.
-- [ ] Message copy controls and complete Markdown formatting.
-- [ ] Code/table response enhancements: copy/save code, run supported snippets in sandbox, copy tables.
-- [ ] Generated image variation display and per-image actions.
-- [ ] Use a generated image as the next edit input with proper binary/data URL handling.
-- [ ] Image lightbox actions: download, copy, save, close.
-- [ ] Before/after comparison slider.
-- [ ] Image edit undo/redo history and button enabled/disabled states.
+- [x] Task-specific progress labels for image generation, image editing, coding, structured information, and normal chat (sequential stage animation still differs from the original).
+- [x] Multi-image attachments and previews; remove individual attachments.
+- [x] Paste images from clipboard into the prompt area.
+- [x] Voice input via browser speech recognition, with graceful unsupported-browser handling (manual browser test still required).
+- [x] New chat and conversation history save/list/load/delete, with authenticated server sync.
+- [x] Restore messages, API history, image state, and edit versions.
+- [x] Create/copy expiring share links; shared conversations load read-only and expire after 7 days.
+- [ ] Message copy controls exist; full Markdown parity (nested lists, blockquotes, richer inline syntax) still needs work.
+- [x] Code copy/save, sandboxed browser-safe run previews, and table copy controls.
+- [x] Display returned image variations and provide per-image actions.
+- [x] Use generated images as the next edit input through the existing `last_image` flow.
+- [x] Image lightbox actions: download, copy, save to gallery, close.
+- [x] Draggable before/after comparison slider.
+- [x] Image edit undo/redo history and button enabled/disabled states.
 
 ### Image gallery and tools
-- [ ] Saved gallery with persistence, badge/count, preview, download, delete, and save from lightbox.
+- [x] Saved gallery with browser persistence, badge/count, display, download, delete, and save from lightbox (browser-local, not cloud-synced).
 - [ ] Operations panel and all original quick operations:
   - Medical: X-ray, MRI, CT, fundus/retina, skin, wound, CLAHE, denoise, segmentation.
   - Creative: cartoon, watercolor, sketch, oil painting, neon, glitch, halftone, pop art, stained glass, pointillism, thermal, vintage, duotone, double exposure, tilt-shift, bokeh, HDR, fisheye, ASCII, mosaic, cross-process.
@@ -40,18 +40,18 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
   - Restoration: super-resolution, deblur, colorize B&W, restore old photo.
   - Basic edits: rotate, flip, grayscale, invert, sepia, sharpen, blur, contrast, brightness, saturation, vignette, grain, warm/cool white balance, image info.
   - Generate from text shortcut.
-- [ ] API status check from profile menu.
+- [x] API status check from the workspace navigation.
 - [ ] Image compression/resizing behavior before upload (original max dimension 1024 and JPEG quality 0.85).
 
 ### Account and profile
-- [ ] Sign-in and sign-up fully wired to existing Flask endpoints.
+- [x] Sign-in and sign-up wired to existing Flask endpoints.
 - [ ] Sign-up fields/validation: first/last name, email, username, date of birth/age gate, password strength, confirm password, terms agreement.
 - [ ] Password visibility controls.
 - [ ] Login identifier supports email/username and saved-account dropdown behavior.
 - [ ] Failed-login rate-limit messaging/timer.
-- [ ] Forgot password flow: request OTP, countdown, resend, six-digit OTP input navigation, verify, set new password.
-- [ ] Change password workflow.
-- [ ] Profile menu, user/plan display, logout, and session refresh.
+- [ ] Forgot password request, 60-second resend countdown, resend, and OTP/password reset work in the React UI; six separate digit fields and keyboard navigation remain missing.
+- [x] Authenticated change-password workflow using the current password.
+- [ ] User display and logout work; dedicated profile menu/plan display and saved-account dropdown remain missing.
 - [ ] User-scoped saved data and safe behavior for guest sessions.
 
 ## Latest user test results
@@ -60,9 +60,9 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 - [ ] Voice input not tested yet.
 
 ## React migration gaps visible from current implementation
-- Saved chats currently restore text but explicitly reset API history/edit context.
+- Saved chats now restore API history and edit context; confirm with an authenticated end-to-end test.
 - React saved gallery is capped at 12 and saved chats at 20; original storage behavior needs comparison and compatibility decisions.
-- React UI currently lacks the original operations panel, voice input, chat sharing, change-password/profile menu, API status, complete auth validation/rate-limit UX, full code/table artifact actions, and full clipboard-paste/multi-attachment behavior.
+- Remaining known gaps: full Markdown parity; signup age/terms gates; saved-account dropdown; failed-login rate-limit timer; six-digit OTP keyboard navigation; dedicated profile/plan menu; image gallery cloud sync; and final end-to-end/manual regression tests.
 - Some features may exist in backend or shared scripts, but they are not considered migrated until wired into React and tested end-to-end.
 
 ## Implementation and verification order
