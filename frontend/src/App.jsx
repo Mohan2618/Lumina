@@ -15,6 +15,7 @@ import {
   BookmarkPlus,
   Mic,
   Activity,
+  Share2,
 } from "lucide-react";
 
 const WELCOME = {
@@ -233,6 +234,7 @@ export default function App() {
   const [lightbox, setLightbox] = useState("");
   const [apiStatus, setApiStatus] = useState("");
   const [progressLabel, setProgressLabel] = useState("Lumina is thinking…");
+  const [sharedReadOnly, setSharedReadOnly] = useState(false);
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef(null);
   const [savedGallery, setSavedGallery] = useState(() => { try { return JSON.parse(localStorage.getItem("lumina_react_gallery") || "[]"); } catch { return []; } });
@@ -263,6 +265,28 @@ export default function App() {
         } catch { /* Keep the browser cache available when sync is offline. */ }
       })
       .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("share");
+    if (!token) return;
+    let active = true;
+    setSharedReadOnly(true);
+    fetch("/api/shared/" + encodeURIComponent(token), { credentials: "same-origin" })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "This share link is unavailable.");
+        if (!active) return;
+        const payload = data.payload || {};
+        setMessages(Array.isArray(payload.messages) ? payload.messages.map((item) => ({ ...item, id: crypto.randomUUID() })) : []);
+        setApiHistory(Array.isArray(payload.apiHistory) ? payload.apiHistory : []);
+        setLastImage(payload.lastImage || "");
+        setEditVersions(Array.isArray(payload.editVersions) ? payload.editVersions : []);
+        setEditVersionIndex(Number.isInteger(payload.editVersionIndex) ? payload.editVersionIndex : -1);
+        setError("Read-only shared conversation. Shared links expire after 7 days.");
+      })
+      .catch((error) => { if (active) setError(error instanceof Error ? error.message : "Unable to load shared conversation."); });
     return () => { active = false; };
   }, []);
 
@@ -387,6 +411,30 @@ export default function App() {
     }
   }
 
+  async function shareCurrentChat() {
+    if (!messages.length) { setError("Start a conversation before sharing it."); return; }
+    if (!user) { setAuthOpen(true); setError("Sign in to create a share link."); return; }
+    setError("");
+    try {
+      const response = await fetch("/api/share", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payload: { messages: messages.map(({ role, text, images }) => ({ role, text: text || "", ...(Array.isArray(images) && images.length ? { images } : {}) })), apiHistory, lastImage, editVersions, editVersionIndex } }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Could not create a share link.");
+      const url = new URL(window.location.href);
+      url.search = "";
+      url.hash = "";
+      url.searchParams.set("share", data.token);
+      await navigator.clipboard.writeText(url.toString());
+      setError("Share link copied. It expires in 7 days; anyone with the link can view this conversation.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not create or copy a share link.");
+    }
+  }
+
   function restoreChat(chat) {
     setMessages((chat.messages || []).map((item) => ({ ...item, id: crypto.randomUUID() })));
     setApiHistory(Array.isArray(chat.apiHistory) ? chat.apiHistory : []);
@@ -498,7 +546,7 @@ export default function App() {
   async function submitPrompt(event) {
     event.preventDefault();
     const text = prompt.trim();
-    if ((!text && !attachments.length) || busy) return;
+    if (sharedReadOnly || (!text && !attachments.length) || busy) return;
 
     const userMessage = {
       id: crypto.randomUUID(),
@@ -583,6 +631,7 @@ export default function App() {
         <button className="side-action" onClick={() => setPanel(panel === "history" ? "" : "history")}><History size={16} /> Saved conversations <span>{savedChats.length}</span></button>
         <button className="side-action" onClick={() => setPanel(panel === "gallery" ? "" : "gallery")}><Images size={16} /> Saved images <span>{savedGallery.length}</span></button>
         <button className="side-action" onClick={saveCurrentChat}><BookmarkPlus size={16} /> Save conversation</button>
+        <button className="side-action" onClick={shareCurrentChat}><Share2 size={16} /> Share conversation</button>
         <button className="side-action" onClick={() => setPanel(panel === "operations" ? "" : "operations")}><WandSparkles size={16} /> Operations</button>
         <button className="side-action" onClick={checkApiStatus}><Activity size={16} /> API status</button>
         <div className="sidebar-note">
@@ -659,6 +708,7 @@ export default function App() {
           <form className="composer" onSubmit={submitPrompt}>
             {attachments.length > 0 && <div className="attachment-strip" aria-label="Selected image attachments">{attachments.map((item, index) => <div className="attachment" key={item.id}><button type="button" className="attachment-preview-trigger" onClick={() => setLightbox(item.preview)} aria-label={"Preview image " + (index + 1)}><img src={item.preview} alt={"Selected upload preview " + (index + 1)} onError={(event) => { event.currentTarget.style.display = "none"; event.currentTarget.parentElement.parentElement.classList.add("attachment-preview-error"); }} /></button><span>{index + 1}</span><button type="button" className="attachment-remove" aria-label={"Remove image " + (index + 1)} onClick={() => removeAttachment(item.id)}><X size={15} /></button></div>)}</div>}
             <textarea
+              disabled={sharedReadOnly}
               value={prompt}
               onPaste={(event) => {
                 const imageItem = Array.from(event.clipboardData?.items || []).find((item) => item.type.startsWith("image/"));
@@ -689,15 +739,15 @@ export default function App() {
                   hidden
                   onChange={(event) => chooseFiles(event.target.files)}
                 />
-                <button className="tool-button" type="button" onClick={() => fileInput.current?.click()}>
+                <button className="tool-button" type="button" onClick={() => fileInput.current?.click()} disabled={sharedReadOnly}>
                   <ImagePlus size={17} /><span>Add image</span>
                 </button>
-                <button className="tool-button" type="button" onClick={toggleVoiceInput} title="Voice input">
+                <button className="tool-button" type="button" onClick={toggleVoiceInput} title="Voice input" disabled={sharedReadOnly}>
                   <Mic size={17} /><span>{listening ? "Listening…" : "Voice"}</span>
                 </button>
                 <span className="hint">Shift + Enter for a new line</span>
               </div>
-              <button className={`send-button${busy ? " stop-button" : ""}`} type={busy ? "button" : "submit"} onClick={busy ? stopGeneration : undefined} disabled={!busy && (!prompt.trim() && !attachments.length)} aria-label={busy ? "Stop generation" : "Send message"} title={busy ? "Stop generation" : "Send message"}>
+              <button className={`send-button${busy ? " stop-button" : ""}`} type={busy ? "button" : "submit"} onClick={busy ? stopGeneration : undefined} disabled={sharedReadOnly || (!busy && (!prompt.trim() && !attachments.length))} aria-label={busy ? "Stop generation" : "Send message"} title={busy ? "Stop generation" : "Send message"}>
                 {busy ? <X size={17} /> : <ArrowUp size={18} />}
               </button>
             </div>
@@ -719,7 +769,7 @@ export default function App() {
       {panel && <div className="drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setPanel(""); }}>
         <section className="drawer">
           <header className="drawer-header"><div><h2>{panel === "menu" ? "Lumina menu" : panel === "gallery" ? "Saved images" : panel === "operations" ? "Image operations" : panel === "status" ? "API status" : "Saved conversations"}</h2><p>{panel === "menu" ? "Navigate your workspace." : panel === "operations" ? "Choose an operation, add an image if needed, then send the prompt." : panel === "status" ? "Local Flask backend health" : "Saved locally in this browser"}</p></div><button className="drawer-close" onClick={() => setPanel("")} aria-label="Close panel"><X size={18} /></button></header>
-          {panel === "menu" ? <div className="mobile-menu-actions"><button className="side-action" onClick={() => { setMessages([]); setApiHistory([]); setLastImage(""); setError(""); setPanel(""); }}><PanelLeft size={16} /> New conversation</button><button className="side-action" onClick={() => setPanel("history")}><History size={16} /> Saved conversations <span>{savedChats.length}</span></button><button className="side-action" onClick={() => setPanel("gallery")}><Images size={16} /> Saved images <span>{savedGallery.length}</span></button><button className="side-action" onClick={() => { setPanel("operations"); }}><WandSparkles size={16} /> Operations</button><button className="side-action" onClick={checkApiStatus}><Activity size={16} /> API status</button><button className="side-action" onClick={saveCurrentChat}><BookmarkPlus size={16} /> Save conversation</button>{user ? <button className="side-action" onClick={signOut}>Sign out</button> : <button className="side-action" onClick={() => { setPanel(""); setAuthOpen(true); }}>Sign in</button>}</div> : panel === "operations" ? <div className="operations-content">{OPERATION_GROUPS.map(([group, operations]) => <section className="operation-group" key={group}><h3>{group}</h3><div className="operation-chips">{operations.map(([label, operation]) => <button type="button" className="operation-chip" key={label} onClick={() => runOperation(operation)}>{label}</button>)}</div></section>)}<button type="button" className="operation-chip operation-generate" onClick={() => runOperation("Generate an image from this description: ")}>✨ Generate from text</button></div> : panel === "status" ? <div className="status-content"><p>{apiStatus || "Checking backend…"}</p><button type="button" className="operation-chip" onClick={checkApiStatus}>Check again</button></div> : panel === "gallery" ? (savedGallery.length ? <div className="saved-gallery">{savedGallery.map((item) => <article className="saved-image-card" key={item.id}><img src={item.src} alt={item.prompt} /><p title={item.prompt}>{item.prompt}</p><div className="saved-image-actions"><a href={item.src} download="lumina-image.png">Download</a><button onClick={() => setSavedGallery((current) => current.filter((saved) => saved.id !== item.id))} aria-label="Remove saved image"><Trash2 size={14} /></button></div></article>)}</div> : <p className="drawer-empty">No saved images yet. Generate an image and select Save image.</p>) : (savedChats.length ? <div className="saved-chat-list">{savedChats.map((chat) => <article className="saved-chat-card" key={chat.id}><button className="saved-chat-open" onClick={() => restoreChat(chat)}><strong>{chat.title}</strong><small>{new Date(chat.savedAt).toLocaleString()} · {chat.messages.length} messages</small></button><button className="saved-chat-delete" onClick={() => deleteSavedChat(chat)} aria-label="Delete saved conversation"><Trash2 size={14} /></button></article>)}</div> : <p className="drawer-empty">No saved conversations yet. Use Save conversation to keep a text copy.</p>)}
+          {panel === "menu" ? <div className="mobile-menu-actions"><button className="side-action" onClick={() => { setMessages([]); setApiHistory([]); setLastImage(""); setError(""); setPanel(""); }}><PanelLeft size={16} /> New conversation</button><button className="side-action" onClick={() => setPanel("history")}><History size={16} /> Saved conversations <span>{savedChats.length}</span></button><button className="side-action" onClick={() => setPanel("gallery")}><Images size={16} /> Saved images <span>{savedGallery.length}</span></button><button className="side-action" onClick={() => { setPanel("operations"); }}><WandSparkles size={16} /> Operations</button><button className="side-action" onClick={checkApiStatus}><Activity size={16} /> API status</button><button className="side-action" onClick={saveCurrentChat}><BookmarkPlus size={16} /> Save conversation</button><button className="side-action" onClick={shareCurrentChat}><Share2 size={16} /> Share conversation</button>{user ? <button className="side-action" onClick={signOut}>Sign out</button> : <button className="side-action" onClick={() => { setPanel(""); setAuthOpen(true); }}>Sign in</button>}</div> : panel === "operations" ? <div className="operations-content">{OPERATION_GROUPS.map(([group, operations]) => <section className="operation-group" key={group}><h3>{group}</h3><div className="operation-chips">{operations.map(([label, operation]) => <button type="button" className="operation-chip" key={label} onClick={() => runOperation(operation)}>{label}</button>)}</div></section>)}<button type="button" className="operation-chip operation-generate" onClick={() => runOperation("Generate an image from this description: ")}>✨ Generate from text</button></div> : panel === "status" ? <div className="status-content"><p>{apiStatus || "Checking backend…"}</p><button type="button" className="operation-chip" onClick={checkApiStatus}>Check again</button></div> : panel === "gallery" ? (savedGallery.length ? <div className="saved-gallery">{savedGallery.map((item) => <article className="saved-image-card" key={item.id}><img src={item.src} alt={item.prompt} /><p title={item.prompt}>{item.prompt}</p><div className="saved-image-actions"><a href={item.src} download="lumina-image.png">Download</a><button onClick={() => setSavedGallery((current) => current.filter((saved) => saved.id !== item.id))} aria-label="Remove saved image"><Trash2 size={14} /></button></div></article>)}</div> : <p className="drawer-empty">No saved images yet. Generate an image and select Save image.</p>) : (savedChats.length ? <div className="saved-chat-list">{savedChats.map((chat) => <article className="saved-chat-card" key={chat.id}><button className="saved-chat-open" onClick={() => restoreChat(chat)}><strong>{chat.title}</strong><small>{new Date(chat.savedAt).toLocaleString()} · {chat.messages.length} messages</small></button><button className="saved-chat-delete" onClick={() => deleteSavedChat(chat)} aria-label="Delete saved conversation"><Trash2 size={14} /></button></article>)}</div> : <p className="drawer-empty">No saved conversations yet. Use Save conversation to keep a text copy.</p>)}
         </section>
       </div>}
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onAuthenticated={(nextUser) => { setUser(nextUser); setAuthOpen(false); }} />}
