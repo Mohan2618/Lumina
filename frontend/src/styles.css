@@ -300,3 +300,7 @@ a{color:#ff5268}
 .lightbox-actions>a,.lightbox-actions>button{display:inline-flex;align-items:center;gap:6px;border:1px solid #ffffff22;border-radius:8px;padding:8px 11px;background:#ffffff0b;color:#e8edf5;font:inherit;font-size:11px;text-decoration:none}
 .lightbox-actions>a{color:#ff9aa7}
 @media(max-width:680px){.compare-slider{height:48vh;min-height:200px}.compare-slider-control{padding:10px}}
+
+.otp-digit-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;width:100%}
+.auth-form .otp-digit-row input{min-width:0;padding:12px 4px;text-align:center;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+@media(max-width:420px){.otp-digit-row{gap:5px}.auth-form .otp-digit-row input{padding:10px 2px}}
