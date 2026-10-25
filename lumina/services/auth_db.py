@@ -124,6 +124,13 @@ def init_db():
             """)
             _execute(conn, "CREATE INDEX IF NOT EXISTS conversations_user_updated_idx ON conversations(user_id, updated_at DESC)")
 
+        _execute(conn, """
+            CREATE TABLE IF NOT EXISTS otp_send_limits (
+                email TEXT PRIMARY KEY,
+                sent_at DOUBLE PRECISION NOT NULL
+            )
+        """)
+
         conn.commit()
     finally:
         conn.close()
@@ -282,6 +289,28 @@ def otp_can_send(email, cooldown=60):
             (email,),
         ).fetchone()
         return not row or time.time() - row["sent_at"] >= cooldown
+    finally:
+        conn.close()
+
+
+def record_otp_sent(email):
+    """Persist the last successful OTP send independently of the OTP's lifecycle."""
+    normalized_email = str(email or "").strip().lower()
+    if not normalized_email:
+        raise ValueError("Email is required")
+    init_db()
+    conn = _connect()
+    try:
+        _execute(
+            conn,
+            """
+                INSERT INTO otp_send_limits(email, sent_at)
+                VALUES(?, ?)
+                ON CONFLICT(email) DO UPDATE SET sent_at=excluded.sent_at
+            """,
+            (normalized_email, time.time()),
+        )
+        conn.commit()
     finally:
         conn.close()
 
