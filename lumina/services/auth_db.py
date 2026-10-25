@@ -339,3 +339,14 @@ def delete_conversation(user_id, conversation_id):
         return cur.rowcount > 0
     finally:
         conn.close()
+
+
+def delete_otp(email):
+    """Remove a pending OTP when delivery fails, allowing a clean retry."""
+    init_db()
+    conn = _connect()
+    try:
+        _execute(conn, "DELETE FROM otps WHERE LOWER(email)=LOWER(?)", (str(email or "").strip(),))
+        conn.commit()
+    finally:
+        conn.close()
