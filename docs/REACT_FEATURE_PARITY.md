@@ -49,7 +49,7 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 - [ ] Password visibility controls.
 - [ ] Login identifier supports email/username and saved-account dropdown behavior.
 - [ ] Failed-login rate-limit messaging/timer.
-- [ ] Forgot password request, 60-second resend countdown, resend, and OTP/password reset work in the React UI; six separate digit fields and keyboard navigation remain missing.
+- [x] Forgot password request, 60-second resend countdown, resend, six separate OTP digit fields with keyboard navigation/paste, and OTP/password reset UI are implemented; end-to-end email verification still needs manual testing.
 - [x] Authenticated change-password workflow using the current password.
 - [ ] User display and logout work; dedicated profile menu/plan display and saved-account dropdown remain missing.
 - [ ] User-scoped saved data and safe behavior for guest sessions.
@@ -62,7 +62,7 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 ## React migration gaps visible from current implementation
 - Saved chats now restore API history and edit context; confirm with an authenticated end-to-end test.
 - React saved gallery is capped at 12 and saved chats at 20; original storage behavior needs comparison and compatibility decisions.
-- Remaining known gaps: full Markdown parity; signup age/terms gates; saved-account dropdown; failed-login rate-limit timer; six-digit OTP keyboard navigation; dedicated profile/plan menu; image gallery cloud sync; and final end-to-end/manual regression tests.
+- Remaining known gaps: full Markdown parity; signup age/terms gates; saved-account dropdown; failed-login rate-limit timer;  dedicated profile/plan menu; image gallery cloud sync; and final end-to-end/manual regression tests.
 - Some features may exist in backend or shared scripts, but they are not considered migrated until wired into React and tested end-to-end.
 
 ## Implementation and verification order
