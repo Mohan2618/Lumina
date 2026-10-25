@@ -12,9 +12,11 @@ BREVO_FROM_NAME = os.environ.get("BREVO_FROM_NAME", "Lumina")
 
 def send_email_otp(to_email, otp):
     if not BREVO_API_KEY:
-        raise RuntimeError("BREVO_API_KEY environment variable is required")
+        print("[BREVO] Configuration error: BREVO_API_KEY is missing.")
+        raise RuntimeError("Email service is not configured")
     if not BREVO_FROM_EMAIL:
-        raise RuntimeError("BREVO_FROM_EMAIL environment variable is required")
+        print("[BREVO] Configuration error: BREVO_FROM_EMAIL is missing.")
+        raise RuntimeError("Email service is not configured")
 
     payload = {
         "sender": {
@@ -56,8 +58,9 @@ def send_email_otp(to_email, otp):
             print("Brevo email sent successfully:", response_body)
     except urllib.error.HTTPError as e:
         error_body = e.read().decode("utf-8", errors="replace")
-        print("BREVO EMAIL ERROR:", e.code, error_body)
-        raise RuntimeError(f"Brevo email API returned HTTP {e.code}: {error_body}") from e
+        # Never log API keys, OTP values, or recipient addresses.
+        print(f"[BREVO] Email API rejected request with HTTP {e.code}: {error_body[:1000]}")
+        raise RuntimeError(f"Email provider rejected the request (HTTP {e.code})") from e
     except Exception as e:
-        print("BREVO EMAIL ERROR:", str(e))
-        raise
+        print(f"[BREVO] Email request failed: {type(e).__name__}: {str(e)[:300]}")
+        raise RuntimeError("Could not connect to the email provider") from e
