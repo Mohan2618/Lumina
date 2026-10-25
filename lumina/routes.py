@@ -1,4 +1,4 @@
-from flask import request, jsonify, render_template, session
+from flask import request, jsonify, render_template, session, send_from_directory
 import base64, io, os, time, secrets, random, json
 import numpy as np
 import cv2
@@ -236,7 +236,21 @@ def register_routes(app):
     
     @app.route("/")
     def index():
+        # Serve the built React app in deployments that include frontend/dist.
+        # Local Flask-only development keeps the legacy template available;
+        # the Vite dev server serves React directly during frontend development.
+        react_dist = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "dist")
+        react_index = os.path.join(react_dist, "index.html")
+        if os.path.isfile(react_index):
+            return send_from_directory(react_dist, "index.html")
         return render_template("index.html")
+
+    @app.route("/assets/<path:filename>")
+    def react_assets(filename):
+        react_dist = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "dist")
+        if not os.path.isdir(os.path.join(react_dist, "assets")):
+            return jsonify({"error": "React assets are not built."}), 404
+        return send_from_directory(os.path.join(react_dist, "assets"), filename)
     
     @app.route("/process", methods=["POST"])
     def process():
