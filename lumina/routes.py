@@ -145,6 +145,27 @@ def register_routes(app):
             print(f"[SHARE] read failed: {type(exc).__name__}")
             return jsonify({"error": "Could not load the shared conversation."}), 500
 
+    @app.route("/api/auth/change-password", methods=["POST"])
+    def api_change_password():
+        user_session = session.get("user")
+        if not user_session:
+            return jsonify({"error": "Sign in to change your password."}), 401
+        data = request.get_json(silent=True) or {}
+        current_password = data.get("currentPassword", "")
+        new_password = data.get("newPassword", "")
+        if not current_password or not new_password:
+            return jsonify({"error": "Current and new passwords are required."}), 400
+        strength = validate_password_strength(new_password)
+        if not strength["valid"]:
+            return jsonify({"error": "Weak password", "details": strength["errors"]}), 400
+        user_record = get_user(user_session.get("email") or user_session.get("username") or "")
+        if not user_record or not verify_password(current_password, user_record["salt"], user_record["password_hash"]):
+            return jsonify({"error": "Current password is incorrect."}), 400
+        salt, hashed = hash_password(new_password)
+        if not update_password(user_record["email"], salt, hashed):
+            return jsonify({"error": "Could not update the password."}), 500
+        return jsonify({"success": True})
+
     @app.route("/api/auth/logout", methods=["POST"])
     def auth_logout():
         session.pop("user",None)
