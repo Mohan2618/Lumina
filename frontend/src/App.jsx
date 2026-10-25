@@ -232,6 +232,7 @@ export default function App() {
   const [panel, setPanel] = useState("");
   const [lightbox, setLightbox] = useState("");
   const [apiStatus, setApiStatus] = useState("");
+  const [progressLabel, setProgressLabel] = useState("Lumina is thinking…");
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef(null);
   const [savedGallery, setSavedGallery] = useState(() => { try { return JSON.parse(localStorage.getItem("lumina_react_gallery") || "[]"); } catch { return []; } });
@@ -485,6 +486,15 @@ export default function App() {
     setError("Generation stopped.");
   }
 
+  function getProgressLabel(promptText, hasAttachments) {
+    const value = String(promptText || "").toLowerCase();
+    if (/\b(generate|create|draw|make)\b/.test(value) && /\b(image|picture|illustration|wallpaper|art)\b/.test(value)) return "Creating your image…";
+    if (hasAttachments || /\b(edit|enhance|restore|remove background|denoise|upscale|rotate|crop|filter)\b/.test(value)) return "Processing your image…";
+    if (/\b(code|python|javascript|debug|function|class|algorithm|program|sql|api)\b/.test(value)) return "Structuring your solution…";
+    if (/\b(table|chart|compare|comparison|diagram|summarize|organize)\b/.test(value)) return "Organizing the details…";
+    return "Forming a response…";
+  }
+
   async function submitPrompt(event) {
     event.preventDefault();
     const text = prompt.trim();
@@ -497,6 +507,7 @@ export default function App() {
       images: attachments.map((attachment) => attachment.preview),
     };
     setMessages((current) => [...current, userMessage]);
+    setProgressLabel(getProgressLabel(text, attachments.length > 0));
     setPrompt("");
     setError("");
     setBusy(true);
@@ -588,6 +599,7 @@ export default function App() {
       <section className="workspace">
         <header className="topbar">
           <div className="mobile-brand"><span className="brand-mark"><Sparkles size={17} /></span> Lumina</div>
+          <button className="mobile-menu-button" type="button" onClick={() => setPanel("menu")} aria-label="Open navigation menu"><PanelLeft size={18} /></button>
           <span className="model-label"><span className="status-dot" /> AI Image Studio</span>
           <div className="topbar-actions">
             {user ? <span className="signed-in-label">{user.firstName || user.username}</span> : <button className="topbar-signin" onClick={() => setAuthOpen(true)}>Sign in</button>}
@@ -637,7 +649,7 @@ export default function App() {
                   </div>
                 </article>
               ))}
-              {busy && <div className="loading-line"><LoaderCircle className="spin" size={17} /> Lumina is thinking…</div>}
+              {busy && <div className="loading-line"><LoaderCircle className="spin" size={17} /> {progressLabel}</div>}
             </div>
           )}
         </div>
@@ -706,8 +718,8 @@ export default function App() {
       </div>}
       {panel && <div className="drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setPanel(""); }}>
         <section className="drawer">
-          <header className="drawer-header"><div><h2>{panel === "gallery" ? "Saved images" : panel === "operations" ? "Image operations" : panel === "status" ? "API status" : "Saved conversations"}</h2><p>{panel === "operations" ? "Choose an operation, add an image if needed, then send the prompt." : panel === "status" ? "Local Flask backend health" : "Saved locally in this browser"}</p></div><button className="drawer-close" onClick={() => setPanel("")} aria-label="Close panel"><X size={18} /></button></header>
-          {panel === "operations" ? <div className="operations-content">{OPERATION_GROUPS.map(([group, operations]) => <section className="operation-group" key={group}><h3>{group}</h3><div className="operation-chips">{operations.map(([label, operation]) => <button type="button" className="operation-chip" key={label} onClick={() => runOperation(operation)}>{label}</button>)}</div></section>)}<button type="button" className="operation-chip operation-generate" onClick={() => runOperation("Generate an image from this description: ")}>✨ Generate from text</button></div> : panel === "status" ? <div className="status-content"><p>{apiStatus || "Checking backend…"}</p><button type="button" className="operation-chip" onClick={checkApiStatus}>Check again</button></div> : panel === "gallery" ? (savedGallery.length ? <div className="saved-gallery">{savedGallery.map((item) => <article className="saved-image-card" key={item.id}><img src={item.src} alt={item.prompt} /><p title={item.prompt}>{item.prompt}</p><div className="saved-image-actions"><a href={item.src} download="lumina-image.png">Download</a><button onClick={() => setSavedGallery((current) => current.filter((saved) => saved.id !== item.id))} aria-label="Remove saved image"><Trash2 size={14} /></button></div></article>)}</div> : <p className="drawer-empty">No saved images yet. Generate an image and select Save image.</p>) : (savedChats.length ? <div className="saved-chat-list">{savedChats.map((chat) => <article className="saved-chat-card" key={chat.id}><button className="saved-chat-open" onClick={() => restoreChat(chat)}><strong>{chat.title}</strong><small>{new Date(chat.savedAt).toLocaleString()} · {chat.messages.length} messages</small></button><button className="saved-chat-delete" onClick={() => deleteSavedChat(chat)} aria-label="Delete saved conversation"><Trash2 size={14} /></button></article>)}</div> : <p className="drawer-empty">No saved conversations yet. Use Save conversation to keep a text copy.</p>)}
+          <header className="drawer-header"><div><h2>{panel === "menu" ? "Lumina menu" : panel === "gallery" ? "Saved images" : panel === "operations" ? "Image operations" : panel === "status" ? "API status" : "Saved conversations"}</h2><p>{panel === "menu" ? "Navigate your workspace." : panel === "operations" ? "Choose an operation, add an image if needed, then send the prompt." : panel === "status" ? "Local Flask backend health" : "Saved locally in this browser"}</p></div><button className="drawer-close" onClick={() => setPanel("")} aria-label="Close panel"><X size={18} /></button></header>
+          {panel === "menu" ? <div className="mobile-menu-actions"><button className="side-action" onClick={() => { setMessages([]); setApiHistory([]); setLastImage(""); setError(""); setPanel(""); }}><PanelLeft size={16} /> New conversation</button><button className="side-action" onClick={() => setPanel("history")}><History size={16} /> Saved conversations <span>{savedChats.length}</span></button><button className="side-action" onClick={() => setPanel("gallery")}><Images size={16} /> Saved images <span>{savedGallery.length}</span></button><button className="side-action" onClick={() => { setPanel("operations"); }}><WandSparkles size={16} /> Operations</button><button className="side-action" onClick={checkApiStatus}><Activity size={16} /> API status</button><button className="side-action" onClick={saveCurrentChat}><BookmarkPlus size={16} /> Save conversation</button>{user ? <button className="side-action" onClick={signOut}>Sign out</button> : <button className="side-action" onClick={() => { setPanel(""); setAuthOpen(true); }}>Sign in</button>}</div> : panel === "operations" ? <div className="operations-content">{OPERATION_GROUPS.map(([group, operations]) => <section className="operation-group" key={group}><h3>{group}</h3><div className="operation-chips">{operations.map(([label, operation]) => <button type="button" className="operation-chip" key={label} onClick={() => runOperation(operation)}>{label}</button>)}</div></section>)}<button type="button" className="operation-chip operation-generate" onClick={() => runOperation("Generate an image from this description: ")}>✨ Generate from text</button></div> : panel === "status" ? <div className="status-content"><p>{apiStatus || "Checking backend…"}</p><button type="button" className="operation-chip" onClick={checkApiStatus}>Check again</button></div> : panel === "gallery" ? (savedGallery.length ? <div className="saved-gallery">{savedGallery.map((item) => <article className="saved-image-card" key={item.id}><img src={item.src} alt={item.prompt} /><p title={item.prompt}>{item.prompt}</p><div className="saved-image-actions"><a href={item.src} download="lumina-image.png">Download</a><button onClick={() => setSavedGallery((current) => current.filter((saved) => saved.id !== item.id))} aria-label="Remove saved image"><Trash2 size={14} /></button></div></article>)}</div> : <p className="drawer-empty">No saved images yet. Generate an image and select Save image.</p>) : (savedChats.length ? <div className="saved-chat-list">{savedChats.map((chat) => <article className="saved-chat-card" key={chat.id}><button className="saved-chat-open" onClick={() => restoreChat(chat)}><strong>{chat.title}</strong><small>{new Date(chat.savedAt).toLocaleString()} · {chat.messages.length} messages</small></button><button className="saved-chat-delete" onClick={() => deleteSavedChat(chat)} aria-label="Delete saved conversation"><Trash2 size={14} /></button></article>)}</div> : <p className="drawer-empty">No saved conversations yet. Use Save conversation to keep a text copy.</p>)}
         </section>
       </div>}
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onAuthenticated={(nextUser) => { setUser(nextUser); setAuthOpen(false); }} />}
