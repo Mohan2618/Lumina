@@ -345,7 +345,7 @@ def create_shared_conversation(token, payload, ttl=604800):
             _execute(
                 conn,
                 """INSERT INTO shared_conversations(token,payload,created_at,expires_at)
-                   VALUES(?,?,?,?) ON CONFLICT(token) DO UPDATE
+                   VALUES(?,?::jsonb,?,?) ON CONFLICT(token) DO UPDATE
                    SET payload=EXCLUDED.payload, created_at=EXCLUDED.created_at, expires_at=EXCLUDED.expires_at""",
                 (token, encoded, now, now + ttl),
             )
