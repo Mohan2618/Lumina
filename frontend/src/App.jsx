@@ -97,10 +97,39 @@ function HighlightedCode({ code, language }) {
 }
 function CodeSnippet({ code, language, onCopy, copied }) {
   const [wrapped, setWrapped] = useState(false);
-  return <section className="response-code">
-    <header className="response-code-header"><span className="code-language"><span className="code-language-dot" />{language || "Code"}</span><div className="code-header-actions"><button type="button" onClick={() => setWrapped(!wrapped)}>{wrapped ? "No wrap" : "Wrap"}</button><button type="button" onClick={() => onCopy(code)} aria-label="Copy code snippet"><Copy size={14} />{copied ? "Copied" : "Copy code"}</button></div></header>
-    <pre className={wrapped ? "code-pre wrapped" : "code-pre"}><HighlightedCode code={code} language={language} /></pre>
-  </section>;
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const normalizedLanguage = String(language || "").toLowerCase();
+  const canRun = ["html", "svg", "css", "javascript", "js"].includes(normalizedLanguage);
+  const extension = ({ javascript: "js", js: "js", html: "html", svg: "svg", css: "css", python: "py", py: "py", typescript: "ts", ts: "ts", jsx: "jsx", tsx: "tsx", json: "json", bash: "sh", sh: "sh" })[normalizedLanguage] || "txt";
+  const previewDocument = normalizedLanguage === "css"
+    ? `<!doctype html><html><head><meta charset="utf-8"><style>${code}</style></head><body><h2>CSS preview</h2><p>Sample text</p><button>Sample button</button></body></html>`
+    : normalizedLanguage === "js" || normalizedLanguage === "javascript"
+      ? `<!doctype html><html><head><meta charset="utf-8"></head><body><h2>JavaScript preview</h2><pre id="output"></pre><script>const originalLog = console.log; console.log = (...args) => { document.getElementById('output').textContent += args.join(' ') + '\\n'; originalLog(...args); }; try { ${code} } catch (error) { document.getElementById('output').textContent += String(error); }</script></body></html>`
+      : code;
+  function saveCode() {
+    const blob = new Blob([code], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "lumina-code." + extension;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+  return <>
+    <section className="response-code">
+      <header className="response-code-header"><span className="code-language"><span className="code-language-dot" />{language || "Code"}</span><div className="code-header-actions"><button type="button" onClick={() => setWrapped(!wrapped)}>{wrapped ? "No wrap" : "Wrap"}</button><button type="button" onClick={saveCode}>Save</button>{canRun && <button type="button" onClick={() => setPreviewOpen(true)}>Run preview</button>}<button type="button" onClick={() => onCopy(code)} aria-label="Copy code snippet"><Copy size={14} />{copied ? "Copied" : "Copy code"}</button></div></header>
+      <pre className={wrapped ? "code-pre wrapped" : "code-pre"}><HighlightedCode code={code} language={language} /></pre>
+    </section>
+    {previewOpen && <div className="artifact-preview-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setPreviewOpen(false); }}>
+      <section className="artifact-preview-dialog" role="dialog" aria-modal="true" aria-label="Code preview">
+        <header><strong>Sandboxed preview · {normalizedLanguage.toUpperCase()}</strong><button type="button" onClick={() => setPreviewOpen(false)} aria-label="Close code preview">Close</button></header>
+        <iframe title="Sandboxed code preview" sandbox="allow-scripts" referrerPolicy="no-referrer" srcDoc={previewDocument} />
+        <p>Preview runs in an isolated sandbox. It cannot access Lumina's page storage or authenticated session.</p>
+      </section>
+    </div>}
+  </>;
 }
 function StructuredResponse({ text, onCopy }) {
   const [copiedCode, setCopiedCode] = useState("");
@@ -494,7 +523,7 @@ export default function App() {
         setEditVersions(next);
         setEditVersionIndex(next.length - 1);
       }
-      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "assistant", text: answers.join("\\n\\n"), images: resultImages }]);
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "assistant", text: answers.join("\n\n"), images: resultImages }]);
       clearAttachments();
     } catch (err) {
       if (err?.name === "AbortError") return;
