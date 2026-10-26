@@ -84,19 +84,39 @@ function InlineMarkdown({ text }) {
   });
 }
 function HighlightedCode({ code, language }) {
-  const lang = String(language || "").toLowerCase();
-  if (!["python", "py", "javascript", "js", "typescript", "ts", "jsx", "tsx", "json", "bash", "sh"].includes(lang)) return <code>{code}</code>;
-  const tokenPattern = /(#[^\n]*|\/\/[^\n]*|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|\b(?:def|return|if|elif|else|for|while|in|not|and|or|is|class|import|from|as|try|except|finally|with|lambda|yield|async|await|pass|break|continue|raise|True|False|None|const|let|var|function|new|throw|catch|typeof|export|default|interface|type|public|private|static)\b|\b\d+(?:\.\d+)?\b|\b(?:print|len|range|enumerate|int|str|list|dict|set|sum|min|max|abs|map|filter|input|JSON|console|Math)\b|[=+\-*/%<>!]+|[{}()[\].,:])/g;
+  const lang = String(language || "").toLowerCase().trim();
+  const aliases = { py: "python", js: "javascript", jsx: "javascript", ts: "typescript", tsx: "typescript", h: "c", hpp: "cpp", cc: "cpp", cxx: "cpp", cs: "csharp", rs: "rust", rb: "ruby", sh: "bash", zsh: "bash", yml: "yaml", md: "markdown" };
+  const key = aliases[lang] || lang;
+  const groups = {
+    python: "def return if elif else for while in not and or is class import from as try except finally with lambda yield async await pass break continue raise True False None self",
+    javascript: "const let var function return if else for while do switch case break continue new throw try catch finally class extends import from export default async await this typeof instanceof in of null undefined true false",
+    typescript: "const let var function return if else for while do switch case break continue new throw try catch finally class extends import from export default async await this typeof instanceof in of null undefined true false interface type enum implements public private protected readonly abstract declare",
+    java: "public private protected static final void int long short byte float double char boolean String class interface enum extends implements new return if else for while do switch case break continue try catch finally throw throws import package this super null true false var record",
+    c: "auto break case char const continue default do double else enum extern float for goto if int long register return short signed sizeof static struct switch typedef union unsigned void volatile while include define",
+    cpp: "alignas auto bool break case char class const constexpr continue default delete do double else enum explicit extern false float for friend goto if inline int long namespace new nullptr operator private protected public return short signed sizeof static struct switch template this throw try typedef typename union unsigned using virtual void volatile while",
+    csharp: "abstract as base bool break byte case catch char checked class const continue decimal default delegate do double else enum event explicit extern false finally fixed float for foreach goto if implicit in int interface internal is lock long namespace new null object operator out override params private protected public readonly ref return sbyte sealed short sizeof stackalloc static string struct switch this throw true try typeof uint ulong unchecked unsafe ushort using var virtual void volatile while",
+    go: "break case chan const continue default defer else fallthrough for func go goto if import interface map package range return select struct switch type var bool byte error false float32 float64 int int8 int16 int32 int64 rune string true uint nil",
+    rust: "as async await break const continue crate dyn else enum extern false fn for if impl in let loop match mod move mut pub ref return self Self static struct super trait true type unsafe use where while",
+    php: "abstract and array as break case catch class clone const continue declare default do echo else elseif endfor endforeach endif endswitch endwhile extends final finally for foreach function global if implements include instanceof interface namespace new or print private protected public return static switch throw trait try use var while yield",
+    ruby: "BEGIN END alias and begin break case class def do else elsif end ensure false for if in module next nil not or redo rescue retry return self super then true undef unless until when while yield puts require",
+    sql: "add all alter and any as asc begin between by case check column constraint create cross current_date current_time database default delete desc distinct drop else end exists foreign from full group having in index inner insert into is join key left like limit not null offset on or order outer primary references right select set table then union unique update values view when where",
+    bash: "if then else elif fi for while do done case esac function in export local readonly return exit echo printf cd pwd mkdir rm cp mv cat grep sed awk find chmod sudo",
+    html: "html head body title meta link script style div span p a img button input form label section main header footer nav ul ol li table tr td th",
+    css: "import media supports keyframes from to important inherit initial unset var calc display position color background margin padding border flex grid width height min-width max-width font-size font-family align-items justify-content"
+  };
+  const keywords = new Set((groups[key] || "if else for while return function class public private static const let var new import from export default async await try catch throw null true false").split(/\s+/));
+  const builtins = new Set("print len range enumerate int str list dict set tuple sum min max abs map filter input open super isinstance type console log Math JSON Array Object String Number Boolean Promise Date Error parseInt parseFloat require module process".split(/\s+/));
+  const tokenPattern = /(#.*$|\/\/[^\n]*|--[^\n]*|\/\*[\s\S]*?\*\/|"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b[A-Za-z_$][\w$]*\b|\b\d+(?:\.\d+)?\b|=>|===?|!==?|==|<=|>=|&&|\|\||\+\+|--|[=+\-*\/%<>!&|^~?:]+|[{}()[\].,;])/gm;
   const parts = []; let cursor = 0, match;
   while ((match = tokenPattern.exec(code)) !== null) {
     if (match.index > cursor) parts.push({ text: code.slice(cursor, match.index), type: "" });
     const token = match[0]; let type = "punctuation";
-    if (/^(#|\/\/)/.test(token)) type = "comment";
-    else if (/^["\']/.test(token)) type = "string";
+    if (/^(#|\/\/|--|\/\*)/.test(token)) type = "comment";
+    else if (/^["']/.test(token)) type = "string";
     else if (/^\d/.test(token)) type = "number";
-    else if (/^(def|return|if|elif|else|for|while|in|not|and|or|is|class|import|from|as|try|except|finally|with|lambda|yield|async|await|pass|break|continue|raise|True|False|None|const|let|var|function|new|throw|catch|typeof|export|default|interface|type|public|private|static)$/.test(token)) type = "keyword";
-    else if (/^(print|len|range|enumerate|int|str|list|dict|set|sum|min|max|abs|map|filter|input|JSON|console|Math)$/.test(token)) type = "builtin";
-    else if (/^[=+\-*/%<>!]+$/.test(token)) type = "operator";
+    else if (keywords.has(token) || (key === "json" && /^(true|false|null)$/.test(token))) type = "keyword";
+    else if (builtins.has(token)) type = "builtin";
+    else if (/^(=>|===?|!==?|==|<=|>=|&&|\|\||\+\+|--|[=+\-*\/%<>!&|^~?:]+)$/.test(token)) type = "operator";
     parts.push({ text: token, type }); cursor = tokenPattern.lastIndex;
   }
   if (cursor < code.length) parts.push({ text: code.slice(cursor), type: "" });
@@ -107,7 +127,7 @@ function CodeSnippet({ code, language, onCopy, copied }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const normalizedLanguage = String(language || "").toLowerCase();
   const canRun = ["html", "svg", "css", "javascript", "js"].includes(normalizedLanguage);
-  const extension = ({ javascript: "js", js: "js", html: "html", svg: "svg", css: "css", python: "py", py: "py", typescript: "ts", ts: "ts", jsx: "jsx", tsx: "tsx", json: "json", bash: "sh", sh: "sh" })[normalizedLanguage] || "txt";
+  const extension = ({ python: "py", py: "py", javascript: "js", js: "js", typescript: "ts", ts: "ts", jsx: "jsx", tsx: "tsx", java: "java", c: "c", h: "h", cpp: "cpp", hpp: "hpp", csharp: "cs", cs: "cs", go: "go", rust: "rs", rs: "rs", php: "php", ruby: "rb", rb: "rb", sql: "sql", html: "html", svg: "svg", css: "css", json: "json", yaml: "yml", yml: "yml", bash: "sh", sh: "sh", zsh: "zsh", markdown: "md", md: "md", xml: "xml", dockerfile: "Dockerfile", kotlin: "kt", swift: "swift", r: "r", scala: "scala", perl: "pl" })[normalizedLanguage] || "txt";
   const previewDocument = normalizedLanguage === "css"
     ? `<!doctype html><html><head><meta charset="utf-8"><style>${code}</style></head><body><h2>CSS preview</h2><p>Sample text</p><button>Sample button</button></body></html>`
     : normalizedLanguage === "js" || normalizedLanguage === "javascript"
