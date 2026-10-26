@@ -33,6 +33,19 @@ def register_routes(app):
         required=["firstName","lastName","email","username","password"]
         if any(not str(data.get(k,"")).strip() for k in required):
             return jsonify({"error":"All required fields must be provided"}),400
+        # Enforce age and consent on the server; client-side checks can be bypassed.
+        dob_text = str(data.get("dateOfBirth") or "").strip()
+        if not dob_text or data.get("acceptedTerms") is not True:
+            return jsonify({"error":"Date of birth and acceptance of the Terms of Service and Privacy Policy are required."}),400
+        try:
+            from datetime import date
+            birth_date = date.fromisoformat(dob_text)
+            today = date.today()
+            age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+            if birth_date > today or age < 13:
+                return jsonify({"error":"You must be at least 13 years old to create an account."}),400
+        except (ValueError, TypeError):
+            return jsonify({"error":"Enter a valid date of birth."}),400
         email=data["email"].strip().lower()
         username=data["username"].strip()
         if not validate_email(email): return jsonify({"error":"Invalid email"}),400
