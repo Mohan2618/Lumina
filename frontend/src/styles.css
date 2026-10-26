@@ -378,3 +378,23 @@ a{color:#ff5268}
   .message-actions button{min-height:32px;padding:6px 9px}
 }
 
+/* Final layout for message action bars: actions sit beneath the content, never beside the author label. */
+.message .message-content{display:flex;flex-direction:column;align-items:stretch;min-width:0}
+.message .message-heading{display:flex;align-items:center;min-height:24px;margin:0 0 4px}
+.message .message-heading strong{display:block;margin:0;color:#f4f5f8;font-size:14px;font-weight:700;line-height:1.4}
+.message .message-actions{position:static;display:flex;align-items:center;justify-content:flex-start;gap:8px;flex-wrap:wrap;width:100%;margin:13px 0 0;padding:10px 0 0;border-top:1px solid #ffffff12}
+.message .message-actions button{appearance:none;-webkit-appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:32px;margin:0;padding:7px 11px;border:1px solid #ffffff20;border-radius:9px;background:#191a1f;color:#cbd2df;font-family:inherit;font-size:12px;font-weight:500;line-height:1.2;white-space:nowrap;box-shadow:none;cursor:pointer;transition:background .15s ease,border-color .15s ease,color .15s ease,transform .15s ease}
+.message .message-actions button svg{width:14px;height:14px;flex:0 0 auto}
+.message .message-actions button:hover:not(:disabled){background:#24252c;border-color:#ff40586b;color:#fff}
+.message .message-actions button:active:not(:disabled){transform:translateY(1px)}
+.message .message-actions button:focus-visible{outline:2px solid #ff5268;outline-offset:2px}
+.message .message-actions button:disabled{opacity:.45;cursor:not-allowed}
+.message .message-actions-user button:first-child{border-color:#ffffff22;background:#17191e}
+.message .message-actions-assistant button:first-child{border-color:#ff40583d;background:#ff40580c;color:#ffb0ba}
+.message .message-actions-assistant button:first-child:hover:not(:disabled){background:#ff40581c;border-color:#ff405880}
+.message .structured-response>.response-actions{display:none}
+@media(max-width:640px){
+  .message .message-actions{gap:7px;margin-top:11px;padding-top:9px}
+  .message .message-actions button{min-height:35px;padding:8px 10px;font-size:12px}
+}
+
