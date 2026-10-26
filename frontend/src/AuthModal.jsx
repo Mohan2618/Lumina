@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Sparkles, LoaderCircle, ArrowLeft } from "lucide-react";
 
-const initialForm = { identifier: "", password: "", firstName: "", lastName: "", email: "", username: "", confirm: "", otp: "" };
+const initialForm = { identifier: "", password: "", firstName: "", lastName: "", email: "", username: "", confirm: "", otp: "", dateOfBirth: "", acceptedTerms: false };
 
 export default function AuthModal({ onClose, onAuthenticated }) {
   const [mode, setMode] = useState("login");
@@ -46,6 +46,37 @@ export default function AuthModal({ onClose, onAuthenticated }) {
     if ((mode === "signup" || mode === "reset") && form.password !== form.confirm) {
       setError("Passwords do not match.");
       return;
+    }
+    if (mode === "signup") {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+        setError("Enter a valid email address.");
+        return;
+      }
+      if (!/^[a-zA-Z0-9_]{3,24}$/.test(form.username.trim())) {
+        setError("Username must be 3–24 characters and use only letters, numbers, or underscores.");
+        return;
+      }
+      if (form.password.length < 8 || !/[A-Za-z]/.test(form.password) || !/\d/.test(form.password)) {
+        setError("Use at least 8 characters with at least one letter and one number.");
+        return;
+      }
+      if (!form.dateOfBirth) {
+        setError("Enter your date of birth to continue.");
+        return;
+      }
+      const birthDate = new Date(form.dateOfBirth + "T00:00:00");
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const beforeBirthday = today.getMonth() < birthDate.getMonth() || (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate());
+      if (beforeBirthday) age--;
+      if (Number.isNaN(birthDate.getTime()) || birthDate > today || age < 13) {
+        setError("You must be at least 13 years old to create an account.");
+        return;
+      }
+      if (!form.acceptedTerms) {
+        setError("Please accept the Terms of Service and Privacy Policy.");
+        return;
+      }
     }
     setBusy(true);
     try {
@@ -103,7 +134,8 @@ export default function AuthModal({ onClose, onAuthenticated }) {
               <label>Last name<input name="lastName" value={form.lastName} onChange={update} required autoComplete="family-name" /></label>
             </div>
             <label>Email<input name="email" type="email" value={form.email} onChange={update} required autoComplete="email" /></label>
-            <label>Username<input name="username" value={form.username} onChange={update} required autoComplete="username" minLength={3} /></label>
+            <label>Username<input name="username" value={form.username} onChange={update} required autoComplete="username" minLength={3} maxLength={24} pattern="[a-zA-Z0-9_]{3,24}" title="3–24 letters, numbers, or underscores" /></label>
+            <label>Date of birth<input name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={update} required max={new Date().toISOString().slice(0, 10)} /></label>
           </>}
           {isLogin && <label>Email or username<input name="identifier" value={form.identifier} onChange={update} required autoComplete="username" /></label>}
           {isForgot && <label>Email or username<input name="identifier" value={form.identifier} onChange={update} required autoComplete="username" /></label>}
@@ -136,6 +168,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
           </>}
           {(isLogin || isSignup) && <label>Password<input name="password" type={showPasswords ? "text" : "password"} value={form.password} onChange={update} required autoComplete={isLogin ? "current-password" : "new-password"} minLength={8} /></label>}
           {isSignup && <label>Confirm password<input name="confirm" type={showPasswords ? "text" : "password"} value={form.confirm} onChange={update} required autoComplete="new-password" minLength={8} /></label>}
+          {isSignup && <label className="auth-terms"><input type="checkbox" name="acceptedTerms" checked={form.acceptedTerms} onChange={(event) => setForm((current) => ({ ...current, acceptedTerms: event.target.checked }))} required /> <span>I agree to the Terms of Service and Privacy Policy.</span></label>}
           {(isLogin || isSignup || isReset) && <button className="password-visibility" type="button" onClick={() => setShowPasswords((shown) => !shown)}>{showPasswords ? "Hide passwords" : "Show passwords"}</button>}
           {isReset && <div className="resend-otp-control">{resendSeconds > 0 ? <span>Resend code in {resendSeconds}s</span> : <button type="button" disabled={busy} onClick={async () => { setError(""); setNotice(""); setBusy(true); try { await postJson("/api/auth/send-otp", { email: resetEmail }); setResendSeconds(60); setNotice("A new verification code has been sent."); } catch (err) { setError(err instanceof Error ? err.message : "Could not resend the code."); } finally { setBusy(false); } }}>Resend code</button>}</div>}
                     {error && <p className="auth-error" role="alert">{error}</p>}
