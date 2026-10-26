@@ -324,6 +324,7 @@ export default function App() {
           return;
         }
         setUser(data.user);
+        setHistoryLoading(true);
         try {
           const galleryResponse = await fetch("/api/gallery", { credentials: "same-origin" });
           if (galleryResponse.ok) {
@@ -357,7 +358,7 @@ export default function App() {
         }
         try {
           const response = await fetch("/api/conversations", { credentials: "same-origin" });
-          if (!response.ok) return;
+          if (!response.ok) { setError("Signed in, but conversation history could not be loaded. Please reopen History or try again."); return; }
           const result = await response.json();
           if (active && Array.isArray(result.conversations)) {
             const serverChats = result.conversations.map((chat) => {
@@ -384,9 +385,10 @@ export default function App() {
               setEditVersionIndex(Number.isInteger(activeChat.editVersionIndex) ? activeChat.editVersionIndex : -1);
             }
           }
-        } catch { /* Keep the browser cache available when sync is offline. */ }
+        } catch { setError("Signed in, but conversation history could not be loaded."); /* Keep the browser cache available when sync is offline. */ }
+        finally { setHistoryLoading(false); }
       })
-      .catch(() => {});
+      .catch(() => { setHistoryLoading(false); });
     return () => { active = false; };
   }, []);
 
@@ -1156,6 +1158,7 @@ export default function App() {
         // will not run again. Explicitly hydrate this account's server-owned data.
         setUser(nextUser);
         setAuthOpen(false);
+        setPanel("history");
         setError("");
         setHistoryLoading(true);
         try {
