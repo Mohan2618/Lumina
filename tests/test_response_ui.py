@@ -31,7 +31,7 @@ class ResponseUITests(unittest.TestCase):
             "Never stop in the middle of a sentence, code block, list item, or explanation",
             "Avoid duplicated examples, repeated headings, malformed Markdown",
             "one complete runnable code block",
-            "Time and space complexity",
+            "include time and space complexity when relevant",
             "state meaning, transition derivation, base cases",
         ):
             self.assertIn(requirement, prompt)
