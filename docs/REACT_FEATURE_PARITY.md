@@ -9,7 +9,7 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 - [x] Flask API is reached through the Vite proxy.
 - [x] Text chat and generated images render in chat (user-tested).
 - [x] Basic image upload, generated-image download/save/copy, and image preview.
-- [x] Basic sign-in/sign-up UI and password-reset UI exist (full workflow still needs testing).
+- [x] Sign-in/sign-up UI and password-reset UI exist; sign-up now validates email format, username format, password strength, age 13+, and terms acceptance in the client (server-side age/terms enforcement is not implemented).
 - [x] Local browser storage for saved chats/images exists (not equivalent to original full chat history).
 
 ## Original frontend features found in `templates/index.html`
@@ -32,7 +32,7 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 - [x] Image edit undo/redo history and button enabled/disabled states.
 
 ### Image gallery and tools
-- [x] Saved gallery with browser persistence, badge/count, display, download, delete, and save from lightbox (browser-local, not cloud-synced).
+- [x] Saved gallery with browser persistence, badge/count, display, download, delete, and save from lightbox; signed-in saves use the authenticated `/api/gallery` endpoints, while guest images stay in guest browser storage (legacy guest items are not automatically imported into accounts).
 - [ ] Operations panel and all original quick operations:
   - Medical: X-ray, MRI, CT, fundus/retina, skin, wound, CLAHE, denoise, segmentation.
   - Creative: cartoon, watercolor, sketch, oil painting, neon, glitch, halftone, pop art, stained glass, pointillism, thermal, vintage, duotone, double exposure, tilt-shift, bokeh, HDR, fisheye, ASCII, mosaic, cross-process.
@@ -45,14 +45,19 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 
 ### Account and profile
 - [x] Sign-in and sign-up wired to existing Flask endpoints.
-- [ ] Sign-up fields/validation: first/last name, email, username, date of birth/age gate, password strength, confirm password, terms agreement.
+- [x] Sign-up fields/validation: first/last name, email, username, date of birth/age gate, password strength, confirm password, terms agreement (age/terms still need server-side enforcement).
 - [ ] Password visibility controls.
 - [ ] Login identifier supports email/username and saved-account dropdown behavior.
 - [ ] Failed-login rate-limit messaging/timer.
 - [x] Forgot password request, 60-second resend countdown, resend, six separate OTP digit fields with keyboard navigation/paste, and OTP/password reset UI are implemented; end-to-end email verification still needs manual testing.
 - [x] Authenticated change-password workflow using the current password.
 - [ ] User display and logout work; dedicated profile menu/plan display and saved-account dropdown remain missing.
-- [ ] User-scoped saved data and safe behavior for guest sessions.
+- [x] User-scoped conversation and gallery API endpoints; guest gallery storage is separated from authenticated gallery state. Verify all sign-out/login edge cases manually.
+
+## Latest branch changes
+- Added authenticated saved-gallery GET/POST/DELETE endpoints and frontend sync for signed-in saved images.
+- Added sign-up client validation for email, username, password strength, date of birth/age 13+, and terms acceptance.
+- Latest known green CI commit before the sign-up validation change: `4c4fba6`; rerun CI for newer commits before merging.
 
 ## Latest user test results
 - [x] Operations panel visible and opens.
