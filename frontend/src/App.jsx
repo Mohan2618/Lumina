@@ -171,8 +171,31 @@ function MarkdownText({ text, onCopyTable }) {
   };
   const flushList = () => {
     if (listItems.length) {
-      const Tag = listType === "ol" ? "ol" : "ul";
-      output.push(<Tag key={"l" + output.length}>{listItems.map((item, i) => <li key={i}><InlineMarkdown text={item} /></li>)}</Tag>);
+      const roots = [];
+      const stack = [];
+      for (const item of listItems) {
+        const node = { ...item, children: [] };
+        while (stack.length && stack[stack.length - 1].indent >= node.indent) stack.pop();
+        if (stack.length) stack[stack.length - 1].children.push(node);
+        else roots.push(node);
+        stack.push(node);
+      }
+      const renderItems = (items, key) => {
+        const groups = [];
+        for (const item of items) {
+          let group = groups[groups.length - 1];
+          if (!group || group.type !== item.type) {
+            group = { type: item.type, items: [] };
+            groups.push(group);
+          }
+          group.items.push(item);
+        }
+        return groups.map((group, gi) => {
+          const Tag = group.type === "ol" ? "ol" : "ul";
+          return <Tag key={key + "-" + gi}>{group.items.map((item, i) => <li key={i}><InlineMarkdown text={item.text} />{item.children.length > 0 && renderItems(item.children, key + "-" + gi + "-" + i)}</li>)}</Tag>;
+        });
+      };
+      output.push(<div className="response-list-group" key={"l" + output.length}>{renderItems(roots, "list")}</div>);
       listItems = []; listType = ""; listIndent = 0;
     }
   };
@@ -218,10 +241,11 @@ function MarkdownText({ text, onCopyTable }) {
     if (bullet || numbered) {
       flushParagraph();
       const nextType = numbered ? "ol" : "ul";
-      const indent = (numbered || bullet)[1].length;
-      if (listType && (listType !== nextType || indent !== listIndent)) flushList();
-      listType = nextType; listIndent = indent;
-      listItems.push((numbered || bullet)[2]);
+      const indent = (numbered || bullet)[1].replace(/\t/g, "  ").length;
+      if (listType && indent === 0 && listIndent !== 0) flushList();
+      if (!listType) listType = nextType;
+      listIndent = indent;
+      listItems.push({ text: (numbered || bullet)[2], type: nextType, indent });
       continue;
     }
     flushList();
