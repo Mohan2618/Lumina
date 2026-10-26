@@ -353,3 +353,9 @@ a{color:#ff5268}
 .profile-dropdown>button.profile-signout{color:#ff8998}
 .profile-dropdown>button.profile-signout:hover{background:#ff405814}
 @media(max-width:760px){.profile-dropdown{left:8px;right:8px}}
+
+
+/* Markdown blockquotes in assistant responses */
+.markdown-text blockquote{margin:12px 0;padding:10px 14px;border-left:3px solid #7c8ba5;border-radius:0 8px 8px 0;background:#ffffff08;color:#c7ceda}
+.markdown-text blockquote p:first-child{margin-top:0}
+.markdown-text blockquote p:last-child{margin-bottom:0}
