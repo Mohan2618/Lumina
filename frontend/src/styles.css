@@ -359,3 +359,22 @@ a{color:#ff5268}
 .markdown-text blockquote{margin:12px 0;padding:10px 14px;border-left:3px solid #7c8ba5;border-radius:0 8px 8px 0;background:#ffffff08;color:#c7ceda}
 .markdown-text blockquote p:first-child{margin-top:0}
 .markdown-text blockquote p:last-child{margin-bottom:0}
+
+/* Chat actions and clearly separated pinned history */
+.message-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.message-actions button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:27px;padding:5px 8px;border:1px solid #ffffff17;border-radius:7px;background:#ffffff05;color:#aeb7c7;font:inherit;font-size:11px;cursor:pointer;transition:background .15s ease,border-color .15s ease,color .15s ease}
+.message-actions button:hover:not(:disabled){border-color:#ff405855;background:#ff40580d;color:#fff}
+.message-actions button:focus-visible,.saved-chat-pin:focus-visible,.saved-chat-delete:focus-visible{outline:2px solid #ff5268;outline-offset:2px}
+.message-actions button:disabled{opacity:.45;cursor:not-allowed}
+.message-user .message-actions button{color:#c3cad7}
+.saved-chat-sections{display:flex;flex-direction:column;gap:20px;padding:12px}
+.saved-chat-group{display:flex;flex-direction:column;gap:9px;min-width:0}
+.saved-chat-group-title{margin:0;padding:0 2px;color:#f0f2f7;font-size:12px;font-weight:700;letter-spacing:.02em}
+.saved-chat-group .saved-chat-list{padding:0}
+.saved-chat-card.is-pinned{border-color:#ff40583b;background:#ff405808}
+.saved-chat-pin{white-space:nowrap}
+@media(max-width:760px){
+  .message-actions{gap:5px}
+  .message-actions button{min-height:32px;padding:6px 9px}
+}
+
