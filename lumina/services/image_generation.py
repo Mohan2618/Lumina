@@ -1,7 +1,7 @@
 import os
 import time
 import logging
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageFilter
 
 logger = logging.getLogger(__name__)
 
@@ -317,11 +317,52 @@ def generate_desktop_outpaint(img, target_size=(3840, 2160)):
         except Exception as exc:
             last_error = exc
             print(f"[OUTPAINT ATTEMPT {attempt + 1}/2] {type(exc).__name__}: {exc}")
-            if attempt == 0 and _is_rate_limited(exc):
-                time.sleep(2)
-                continue
+            if _is_rate_limited(exc):
+                # Daily quota exhaustion will not recover after a short sleep.
+                # Fall back to a local 4K wallpaper so the user still gets a
+                # correctly sized image without paying for another provider call.
+                error_text = str(exc).lower()
+                quota_exhausted = (
+                    "quota" in error_text
+                    or "resource_exhausted" in error_text
+                    or "retry in " in error_text
+                )
+                if quota_exhausted:
+                    print("[OUTPAINT] Provider quota unavailable; using local wallpaper fallback.")
+                    return _make_local_wallpaper(source, target_w, target_h)
+                if attempt == 0:
+                    time.sleep(2)
+                    continue
             break
 
     raise RuntimeError(
         f"Desktop outpainting failed: {type(last_error).__name__}: {last_error}"
     )
+
+
+def _make_local_wallpaper(source, target_w, target_h):
+    """Build a 4K wallpaper locally when AI outpainting quota is unavailable.
+
+    The full source is preserved, centered and fitted without cropping over a
+    softly blurred, cover-sized background derived from the same image.
+    """
+    source = ImageOps.exif_transpose(source).convert("RGB")
+    scale = max(target_w / source.width, target_h / source.height)
+    background = source.resize(
+        (max(target_w, int(source.width * scale)),
+         max(target_h, int(source.height * scale))),
+        Image.Resampling.LANCZOS,
+    )
+    left = (background.width - target_w) // 2
+    top = (background.height - target_h) // 2
+    background = background.crop((left, top, left + target_w, top + target_h))
+    background = background.filter(ImageFilter.GaussianBlur(radius=max(18, target_w // 120)))
+    # Slightly darken the blurred fill so the original photo stays visually prominent.
+    background = Image.blend(background, Image.new("RGB", background.size, (0, 0, 0)), 0.16)
+
+    fitted = _fit_without_crop(source, target_w, target_h)
+    background.paste(
+        fitted,
+        ((target_w - fitted.width) // 2, (target_h - fitted.height) // 2),
+    )
+    return background
