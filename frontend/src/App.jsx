@@ -17,6 +17,7 @@ import {
   Activity,
   Share2,
   Settings,
+  ChevronDown,
 } from "lucide-react";
 
 const WELCOME = {
@@ -241,6 +242,7 @@ export default function App() {
   const [passwordNotice, setPasswordNotice] = useState("");
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [panel, setPanel] = useState("");
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [lightbox, setLightbox] = useState("");
   const [apiStatus, setApiStatus] = useState("");
   const [progressLabel, setProgressLabel] = useState("Lumina is thinking…");
@@ -821,10 +823,20 @@ export default function App() {
           <span className="status-dot" />
           <span>AI workspace</span>
         </div>
-        <div className="sidebar-bottom">
-          <div className="avatar">{user ? (user.firstName || user.username || "U").slice(0, 1).toUpperCase() : "L"}</div>
-          <div className="account-details"><strong>{user ? (user.firstName || user.username || "Account") : "Lumina"}</strong><small>{user ? (user.email || user.username) : "Image assistant"}</small></div>
-          {user ? <><button className="account-action" onClick={() => { setPasswordModalOpen(true); setPasswordError(""); setPasswordNotice(""); }}>Change password</button><button className="account-action" onClick={signOut}>Sign out</button></> : <button className="account-action" onClick={() => setAuthOpen(true)}>Sign in</button>}
+        <div className="sidebar-bottom profile-menu-wrap">
+          <button type="button" className="profile-trigger" aria-haspopup="menu" aria-expanded={profileMenuOpen} onClick={() => setProfileMenuOpen((open) => !open)}>
+            <span className="avatar">{user ? (user.firstName || user.username || "U").slice(0, 1).toUpperCase() : "L"}</span>
+            <span className="account-details"><strong>{user ? (user.firstName || user.username || "Account") : "Lumina"}</strong><small>{user ? (user.email || user.username) : "Image assistant"}</small></span>
+            <ChevronDown size={15} className={profileMenuOpen ? "profile-chevron is-open" : "profile-chevron"} />
+          </button>
+          {profileMenuOpen && <div className="profile-dropdown" role="menu">
+            <div className="profile-dropdown-heading"><strong>{user ? (user.firstName || user.username || "Account") : "Guest"}</strong><small>{user ? (user.email || user.username) : "Image assistant"}</small></div>
+            <button type="button" role="menuitem" onClick={() => { setProfileMenuOpen(false); setPanel("settings"); }}>Settings</button>
+            {user ? <>
+              <button type="button" role="menuitem" onClick={() => { setProfileMenuOpen(false); setPasswordModalOpen(true); setPasswordError(""); setPasswordNotice(""); }}>Change password</button>
+              <button type="button" role="menuitem" className="profile-signout" onClick={() => { setProfileMenuOpen(false); signOut(); }}>Sign out</button>
+            </> : <button type="button" role="menuitem" onClick={() => { setProfileMenuOpen(false); setAuthOpen(true); }}>Sign in</button>}
+          </div>}
         </div>
       </aside>
 
