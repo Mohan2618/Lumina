@@ -11,7 +11,6 @@ export default function AuthModal({ onClose, onAuthenticated }) {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [showPasswords, setShowPasswords] = useState(false);
-  const [savedIdentifiers, setSavedIdentifiers] = useState(() => { try { return JSON.parse(localStorage.getItem("lumina_saved_login_identifiers") || "[]").filter((item) => typeof item === "string").slice(0, 5); } catch { return []; } });
   const [lockoutSeconds, setLockoutSeconds] = useState(0);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [resendSeconds, setResendSeconds] = useState(0);
@@ -116,9 +115,6 @@ export default function AuthModal({ onClose, onAuthenticated }) {
       );
       if (!data.user) throw new Error("The server did not return an account session.");
       if (isLogin) {
-        const next = [form.identifier.trim(), ...savedIdentifiers.filter((item) => item.toLowerCase() !== form.identifier.trim().toLowerCase())].filter(Boolean).slice(0, 5);
-        setSavedIdentifiers(next);
-        try { localStorage.setItem("lumina_saved_login_identifiers", JSON.stringify(next)); } catch {}
         setLockoutSeconds(0);
         setFailedAttempts(0);
       }
@@ -154,7 +150,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
         <div className="auth-mark"><Sparkles size={21} /></div>
         <h2 id="auth-heading">{title}</h2>
         <p className="auth-subtitle">{subtitle}</p>
-        <form onSubmit={submit} className="auth-form">
+        <form onSubmit={submit} className="auth-form" autoComplete="off">
           {isSignup && <>
             <div className="auth-two">
               <label>First name<input name="firstName" value={form.firstName} onChange={update} required autoComplete="given-name" /></label>
@@ -164,7 +160,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
             <label>Username<input name="username" value={form.username} onChange={update} required autoComplete="username" minLength={3} maxLength={24} pattern="[a-zA-Z0-9_]{3,24}" title="3–24 letters, numbers, or underscores" /></label>
             <label>Date of birth<input name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={update} required max={new Date().toISOString().slice(0, 10)} /></label>
           </>}
-          {isLogin && <label>Email or username<input name="identifier" value={form.identifier} onChange={update} required autoComplete="username" list="lumina-saved-identifiers" /><datalist id="lumina-saved-identifiers">{savedIdentifiers.map((identifier) => <option key={identifier} value={identifier} />)}</datalist></label>}{isLogin && savedIdentifiers.length > 0 && <div className="saved-login-accounts"><span>Recent accounts</span>{savedIdentifiers.map((identifier) => <button key={identifier} type="button" onClick={() => setForm((current) => ({ ...current, identifier }))}>{identifier}</button>)}</div>}
+          {isLogin && <label>Email or username<input name="identifier" value={form.identifier} onChange={update} required autoComplete="off" spellCheck={false} /></label>}
           {isForgot && <label>Email or username<input name="identifier" value={form.identifier} onChange={update} required autoComplete="username" /></label>}
           {isReset && <>
             <label>Verification code
@@ -193,7 +189,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
             <label>New password<input name="password" type={showPasswords ? "text" : "password"} value={form.password} onChange={update} required minLength={8} autoComplete="new-password" /></label>
             <label>Confirm new password<input name="confirm" type={showPasswords ? "text" : "password"} value={form.confirm} onChange={update} required minLength={8} autoComplete="new-password" /></label>
           </>}
-          {(isLogin || isSignup) && <label>Password<input name="password" type={showPasswords ? "text" : "password"} value={form.password} onChange={update} required autoComplete={isLogin ? "current-password" : "new-password"} minLength={8} /></label>}
+          {(isLogin || isSignup) && <label>Password<input name="password" type={showPasswords ? "text" : "password"} value={form.password} onChange={update} required autoComplete="new-password" minLength={8} /></label>}
           {isSignup && <label>Confirm password<input name="confirm" type={showPasswords ? "text" : "password"} value={form.confirm} onChange={update} required autoComplete="new-password" minLength={8} /></label>}
           {isSignup && <label className="auth-terms"><input type="checkbox" name="acceptedTerms" checked={form.acceptedTerms} onChange={(event) => setForm((current) => ({ ...current, acceptedTerms: event.target.checked }))} required /> <span>I agree to the Terms of Service and Privacy Policy.</span></label>}
           {(isLogin || isSignup || isReset) && <button className="password-visibility" type="button" onClick={() => setShowPasswords((shown) => !shown)}>{showPasswords ? "Hide passwords" : "Show passwords"}</button>}
