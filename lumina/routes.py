@@ -15,6 +15,8 @@ from .image_processing.processor import process_image
 
 def register_routes(app):
     init_db()
+    # Process-local throttling is a defense-in-depth UX safeguard; production deployments
+    # should additionally enforce shared rate limits at the proxy/cache layer.
     # ─────────────────────────────────────────────────────────────
     # AUTH ROUTES
     # ─────────────────────────────────────────────────────────────
@@ -67,9 +69,24 @@ def register_routes(app):
         identifier=str(data.get("identifier") or "").strip()
         pw=data.get("password","")
         if identifier:
+            now = time.time()
+            bucket_key = (request.remote_addr or "unknown", identifier.casefold())
+            failures = app.config.setdefault("_login_failures", {})
+            state = failures.get(bucket_key, {"count": 0, "locked_until": 0})
+            if state["locked_until"] > now:
+                retry_after = max(1, int(state["locked_until"] - now + 0.999))
+                return jsonify({"valid": False, "error": f"Too many sign-in attempts. Try again in {retry_after} seconds.", "retry_after": retry_after}), 429
             user=get_user(identifier)
             if not user or not verify_password(pw,user["salt"],user["password_hash"]):
-                return jsonify({"valid":False}),401
+                state["count"] = state["count"] + 1
+                if state["count"] >= 5:
+                    state["count"] = 0
+                    state["locked_until"] = now + 30
+                    failures[bucket_key] = state
+                    return jsonify({"valid": False, "error": "Too many sign-in attempts. Try again in 30 seconds.", "retry_after": 30}), 429
+                failures[bucket_key] = state
+                return jsonify({"valid":False,"error":"Incorrect username/email or password."}),401
+            failures.pop(bucket_key, None)
             session["user"]={"id":user["id"],"firstName":user["first_name"],"lastName":user["last_name"],"email":user["email"],"username":user["username"]}
             return jsonify({"valid":True,"user":session["user"]})
         salt=data.get("salt",""); stored_hash=data.get("hash","")
