@@ -7,7 +7,7 @@ from .core import app, GEMINI_MODEL, GEMINI_TIMEOUT, SYSTEM_PROMPT, gemini_clien
 from .utils.auth import hash_password, verify_password, validate_password_strength, validate_username, validate_email
 from .utils.image import pil_to_base64, file_to_pil, bytes_to_pil, pil_to_bytes, pil_to_cv2, is_rate_limit, check_guest_limit, consume_guest_limit, ImageValidationError
 from .services.email_service import send_email_otp
-from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp, update_password, otp_can_send, record_otp_sent, delete_otp, list_conversations, upsert_conversation, delete_conversation, create_shared_conversation, get_shared_conversation
+from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp, update_password, otp_can_send, record_otp_sent, delete_otp, list_conversations, upsert_conversation, delete_conversation, create_shared_conversation, get_shared_conversation, list_saved_gallery, upsert_saved_gallery, delete_saved_gallery
 from .services.image_generation import generate_image_variations
 from .services.ai_service import call_ai, extract_op
 from .image_processing.processor import process_image
@@ -66,6 +66,48 @@ def register_routes(app):
     @app.route("/api/auth/me", methods=["GET"])
     def auth_me():
         return jsonify({"authenticated": "user" in session, "user": session.get("user")})
+
+
+    @app.route("/api/gallery", methods=["GET", "POST"])
+    def api_gallery():
+        user = session.get("user")
+        if not user:
+            return jsonify({"error": "Sign in to sync saved images."}), 401
+        user_id = user.get("id")
+        if request.method == "GET":
+            try:
+                return jsonify({"images": list_saved_gallery(user_id)})
+            except Exception as exc:
+                print(f"[GALLERY] list failed: {exc}")
+                return jsonify({"error": "Could not load saved images."}), 500
+
+        data = request.get_json(silent=True) or {}
+        image_id = str(data.get("id") or "").strip()
+        if not image_id or len(image_id) > 100:
+            return jsonify({"error": "A valid saved image id is required."}), 400
+        payload = data.get("payload")
+        if not isinstance(payload, dict) or not isinstance(payload.get("src"), str):
+            return jsonify({"error": "Saved image payload must include an image source."}), 400
+        if len(request.get_data(cache=True)) > 12 * 1024 * 1024:
+            return jsonify({"error": "Image is too large to save (12 MB limit)."}), 413
+        try:
+            upsert_saved_gallery(user_id, image_id, payload)
+            return jsonify({"success": True, "id": image_id})
+        except Exception as exc:
+            print(f"[GALLERY] save failed: {exc}")
+            return jsonify({"error": "Could not save image to your account."}), 500
+
+    @app.route("/api/gallery/<image_id>", methods=["DELETE"])
+    def api_gallery_item(image_id):
+        user = session.get("user")
+        if not user:
+            return jsonify({"error": "Sign in to manage saved images."}), 401
+        try:
+            deleted = delete_saved_gallery(user.get("id"), image_id)
+            return jsonify({"success": True, "deleted": deleted})
+        except Exception as exc:
+            print(f"[GALLERY] delete failed: {exc}")
+            return jsonify({"error": "Could not delete saved image."}), 500
 
     @app.route("/api/conversations", methods=["GET", "POST"])
     def api_conversations():
