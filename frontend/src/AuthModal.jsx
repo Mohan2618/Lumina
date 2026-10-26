@@ -13,6 +13,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
   const [showPasswords, setShowPasswords] = useState(false);
   const [savedIdentifiers, setSavedIdentifiers] = useState(() => { try { return JSON.parse(localStorage.getItem("lumina_saved_login_identifiers") || "[]").filter((item) => typeof item === "string").slice(0, 5); } catch { return []; } });
   const [lockoutSeconds, setLockoutSeconds] = useState(0);
+  const [failedAttempts, setFailedAttempts] = useState(0);
   const [resendSeconds, setResendSeconds] = useState(0);
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
   const otpRefs = useRef([]);
@@ -22,6 +23,12 @@ export default function AuthModal({ onClose, onAuthenticated }) {
     const timer = window.setTimeout(() => setResendSeconds((seconds) => Math.max(0, seconds - 1)), 1000);
     return () => window.clearTimeout(timer);
   }, [mode, resendSeconds]);
+
+  useEffect(() => {
+    if (lockoutSeconds <= 0) return;
+    const timer = window.setTimeout(() => setLockoutSeconds((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [lockoutSeconds]);
 
   function update(event) {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
@@ -49,7 +56,8 @@ export default function AuthModal({ onClose, onAuthenticated }) {
       setError("Passwords do not match.");
       return;
     }
-    if (mode === "login" && lockoutSeconds > 0) { setError(`Please wait ${lockoutSeconds}s before trying again.`); return; }\n    if (mode === "signup") {
+    if (mode === "login" && lockoutSeconds > 0) { setError(`Please wait ${lockoutSeconds}s before trying again.`); return; }
+    if (mode === "signup") {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
         setError("Enter a valid email address.");
         return;
@@ -107,8 +115,25 @@ export default function AuthModal({ onClose, onAuthenticated }) {
           : { firstName: form.firstName.trim(), lastName: form.lastName.trim(), email: form.email.trim(), username: form.username.trim(), password: form.password, dateOfBirth: form.dateOfBirth, acceptedTerms: form.acceptedTerms },
       );
       if (!data.user) throw new Error("The server did not return an account session.");
-      if (isLogin) {\n        const next = [form.identifier.trim(), ...savedIdentifiers.filter((item) => item.toLowerCase() !== form.identifier.trim().toLowerCase())].filter(Boolean).slice(0, 5);\n        setSavedIdentifiers(next);\n        try { localStorage.setItem("lumina_saved_login_identifiers", JSON.stringify(next)); } catch {}\n        setLockoutSeconds(0);\n      }\n      onAuthenticated(data.user);
+      if (isLogin) {
+        const next = [form.identifier.trim(), ...savedIdentifiers.filter((item) => item.toLowerCase() !== form.identifier.trim().toLowerCase())].filter(Boolean).slice(0, 5);
+        setSavedIdentifiers(next);
+        try { localStorage.setItem("lumina_saved_login_identifiers", JSON.stringify(next)); } catch {}
+        setLockoutSeconds(0);
+        setFailedAttempts(0);
+      }
+      onAuthenticated(data.user);
     } catch (err) {
+      if (mode === "login") {
+        const attempts = failedAttempts + 1;
+        setFailedAttempts(attempts);
+        if (attempts >= 5) {
+          setFailedAttempts(0);
+          setLockoutSeconds(30);
+          setError("Too many sign-in attempts. Please wait 30 seconds before trying again.");
+          return;
+        }
+      }
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setBusy(false);
