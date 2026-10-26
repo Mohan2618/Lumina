@@ -439,14 +439,18 @@ def register_routes(app):
             return jsonify({"message":clean_reply,"image":result_b64,"images":result_images,"history":updated_history,"last_image":new_last_image,"model":"lumina"})
     
         except Exception as e:
-            err=str(e); print(f"[ERROR] {err}")
+            err = str(e)
+            print(f"[ERROR] {type(e).__name__}: {err}")
             if "API_KEY_INVALID" in err or "API key not valid" in err:
-                msg="⚠️ Lumina could not connect to its AI service. Please try again."
+                msg = "⚠️ Lumina couldn't authenticate with its AI provider. Check the configured API key."
+                status = 503
             elif is_rate_limit(err):
-                msg="⚠️ Lumina is temporarily busy. Please try again shortly."
+                msg = "⚠️ Lumina's AI provider is rate-limiting requests. Please wait a moment and try again."
+                status = 429
             else:
-                msg="⚠️ Lumina couldn’t process your request. Please try again."
-            return jsonify({"message":msg}),200
+                msg = "⚠️ Lumina couldn't process this request because of a server or AI-provider error. Please try again shortly."
+                status = 500
+            return jsonify({"message": msg}), status
     
     if __name__=="__main__":
         app.run(host="0.0.0.0",port=int(os.environ.get("PORT",7860)),debug=False)
