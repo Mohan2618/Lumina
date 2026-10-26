@@ -51,7 +51,7 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 - [x] Client-side failed-login retry countdown feedback is implemented; server-side authentication throttling still requires backend protection and security verification.
 - [x] Forgot password request, 60-second resend countdown, resend, six separate OTP digit fields with keyboard navigation/paste, and OTP/password reset UI are implemented; end-to-end email verification still needs manual testing.
 - [x] Authenticated change-password workflow using the current password.
-- [x] User display, logout, Settings, and Change password are accessible through the profile dropdown; plan is shown only when the authenticated user payload includes a plan field.
+- [x] User display, logout, Settings, and Change password are accessible through the profile dropdown; Settings displays plan data when supplied, otherwise explicitly shows that plan is not configured.
 - [x] User-scoped conversation and gallery API endpoints; guest gallery storage is separated from authenticated gallery state. Verify all sign-out/login edge cases manually.
 
 ## Latest branch changes
@@ -69,8 +69,8 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 ## React migration gaps visible from current implementation
 - Saved chats now restore API history and edit context; confirm with an authenticated end-to-end test.
 - React saved gallery is capped at 12 and saved chats at 20; original storage behavior needs comparison and compatibility decisions.
-- Remaining known gaps: complete Markdown edge-case parity; backend login throttling; confirm plan data is supplied by the backend; full quick-operation parity verification; voice-input verification; and final end-to-end/manual regression tests.
-- Added recent account selection without storing credentials, client-side failed-login retry feedback, additional inline strikethrough formatting, and conditional plan display.
+- Remaining known gaps: complete Markdown edge-case parity; verify all quick-operation prompts against the legacy frontend; voice-input verification; and final end-to-end/manual regression tests. Plan values are not currently populated by the backend. Login throttling is process-local and should be moved to a shared store/proxy for multi-worker production deployments.
+- Added recent account selection without storing credentials, client-side failed-login retry feedback, inline strikethrough rendering, conditional plan status in Settings, and backend process-local login throttling.
 - Added nested ordered/unordered list rendering with indentation-aware list nesting.
 - Added recent login identifier selection and client-side retry countdown; no passwords are persisted and the countdown is not a substitute for server-side rate limiting.
 - Added inline strikethrough support and repaired malformed newline escapes in the response renderer.
