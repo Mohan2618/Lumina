@@ -157,7 +157,6 @@ function StructuredResponse({ text, onCopy }) {
     {blocks.map((block, index) => block.type === "code"
       ? <CodeSnippet key={index} code={block.code} language={block.language} onCopy={copyCode} copied={copiedCode === block.code} />
       : <MarkdownText key={index} text={block.text} onCopyTable={(csv) => navigator.clipboard.writeText(csv).catch(() => {})} />)}
-    <div className="response-actions"><button type="button" onClick={() => onCopy(text)}><Copy size={14} /> Copy response</button></div>
   </div>;
 }
 function MarkdownText({ text, onCopyTable }) {
@@ -1019,14 +1018,15 @@ export default function App() {
                 <article className={`message message-${message.role}`} key={message.id}>
                   <div className="message-avatar">{message.role === "user" ? "Y" : <Sparkles size={16} />}</div>
                   <div className="message-content">
-                    <div className="message-heading"><strong>{message.role === "user" ? "You" : "Lumina"}</strong><div className="message-actions">
-                      {message.text && <button type="button" onClick={() => copyText(message.text, "Message copied.")} title={message.role === "user" ? "Copy prompt" : "Copy response"} aria-label={message.role === "user" ? "Copy prompt" : "Copy response"}><Copy size={13} /> Copy</button>}
-                      {message.role === "user" && message.text && <button type="button" onClick={() => editUserMessage(message, messageIndex)} title="Edit and resend this prompt">Edit</button>}
-                      {message.role === "assistant" && <button type="button" onClick={() => retryAssistantResponse(messageIndex)} disabled={busy || sharedReadOnly} title={message.failed ? "Retry failed response" : "Regenerate this response"} aria-label="Retry response"><WandSparkles size={13} /> Retry</button>}
-                    </div></div>
+                    <div className="message-heading"><strong>{message.role === "user" ? "You" : "Lumina"}</strong></div>
                     {message.text && (message.role === "assistant" ? <StructuredResponse text={message.text} onCopy={(value) => copyText(value, "Response copied.")} /> : <p>{message.text}</p>)}
                     {message.image && <img className="message-image" src={message.image} alt="Uploaded input" />}
                     {message.role === "user" && message.images?.map((src, index) => <img className="message-image attachment-message-image" key={index} src={src} alt={"Attached image " + (index + 1)} />)}
+                    {message.text && <div className={"message-actions message-actions-" + message.role}>
+                      <button type="button" onClick={() => copyText(message.text, message.role === "user" ? "Prompt copied." : "Response copied.")} title={message.role === "user" ? "Copy prompt" : "Copy response"} aria-label={message.role === "user" ? "Copy prompt" : "Copy response"}><Copy size={14} /> {message.role === "user" ? "Copy prompt" : "Copy response"}</button>
+                      {message.role === "user" && <button type="button" onClick={() => editUserMessage(message, messageIndex)} title="Edit and resend this prompt"><WandSparkles size={14} /> Edit prompt</button>}
+                      {message.role === "assistant" && <button type="button" onClick={() => retryAssistantResponse(messageIndex)} disabled={busy || sharedReadOnly} title={message.failed ? "Retry failed response" : "Regenerate this response"} aria-label="Retry response"><WandSparkles size={14} /> {message.failed ? "Retry response" : "Regenerate"}</button>}
+                    </div>}
                     {message.role !== "user" && message.images?.map((src, index) => {
                       const isCurrentHistoryImage = message.role === "assistant" && messageIndex === messages.length - 1 && index === 0 && editVersionIndex >= 0 && editVersions[editVersionIndex];
                       const displaySrc = isCurrentHistoryImage ? editVersions[editVersionIndex].src : src;
