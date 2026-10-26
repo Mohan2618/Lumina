@@ -70,7 +70,7 @@ function InlineMarkdown({ text }) {
   const source = String(text ?? "");
   // Keep inline-code matching separate from newline handling so ordinary text
   // containing the letter "n" is not accidentally excluded by the regex.
-  const tokens = source.split(/(\x60{1,2}[^\x60\n]+\x60{1,2}|\*\*[^*\n]+\*\*|__[^_\n]+__|\*[^*\n]+\*|_[^_\n]+_|\[[^\]]+\]\([^)]+\))/g);
+  const tokens = source.split(/(\x60{1,2}[^\x60\n]+\x60{1,2}|~~[^~\n]+~~|\*\*[^*\n]+\*\*|__[^_\n]+__|\*[^*\n]+\*|_[^_\n]+_|\[[^\]]+\]\([^)]+\))/g);
   return tokens.map((token, index) => {
     if (/^\x60{1,2}[^\x60\n]+\x60{1,2}$/.test(token)) return <code className="inline-code" key={index}>{token.replace(/^\x60{1,2}|\x60{1,2}$/g, "")}</code>;
     if (token.startsWith("~~") && token.endsWith("~~")) return <del key={index}>{token.slice(2, -2)}</del>;
