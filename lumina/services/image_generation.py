@@ -252,12 +252,10 @@ def _gemini_expand_image(client, model, source, prompt):
         contents=[prompt, source],
         config=types.GenerateContentConfig(
             response_modalities=["IMAGE"],
-            response_format={
-                "image": {
-                    "aspect_ratio": "16:9",
-                    "image_size": "2K",
-                }
-            },
+            image_config=types.ImageConfig(
+                aspect_ratio="16:9",
+                image_size="2K",
+            ),
         ),
     )
 
