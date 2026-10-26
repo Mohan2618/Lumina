@@ -970,7 +970,56 @@ export default function App() {
         </section>
       </div>}
       {passwordModalOpen && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setPasswordModalOpen(false); }}><section className="auth-card" role="dialog" aria-modal="true" aria-labelledby="change-password-heading"><button className="auth-close" type="button" onClick={() => setPasswordModalOpen(false)} aria-label="Close change password"><X size={18} /></button><div className="auth-mark"><Sparkles size={21} /></div><h2 id="change-password-heading">Change password</h2><p className="auth-subtitle">Confirm your current password and choose a strong new password.</p><form className="auth-form" onSubmit={submitPasswordChange}><label>Current password<input type="password" autoComplete="current-password" value={passwordFields.currentPassword} onChange={(event) => setPasswordFields((value) => ({ ...value, currentPassword: event.target.value }))} required /></label><label>New password<input type="password" autoComplete="new-password" minLength={8} value={passwordFields.newPassword} onChange={(event) => setPasswordFields((value) => ({ ...value, newPassword: event.target.value }))} required /></label><label>Confirm new password<input type="password" autoComplete="new-password" minLength={8} value={passwordFields.confirmPassword} onChange={(event) => setPasswordFields((value) => ({ ...value, confirmPassword: event.target.value }))} required /></label>{passwordError && <p className="auth-error" role="alert">{passwordError}</p>}{passwordNotice && <p className="auth-notice" role="status">{passwordNotice}</p>}<button className="auth-submit" type="submit" disabled={passwordBusy}>{passwordBusy ? "Updating…" : "Update password"}</button></form></section></div>}
-      {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onAuthenticated={(nextUser) => { setUser(nextUser); setAuthOpen(false); }} />}
+      {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onAuthenticated={async (nextUser) => {
+        // A login can happen without a page reload, so the initial auth bootstrap
+        // will not run again. Explicitly hydrate this account's server-owned data.
+        setUser(nextUser);
+        setAuthOpen(false);
+        setError("");
+        try {
+          const [chatsResponse, galleryResponse] = await Promise.all([
+            fetch("/api/conversations", { credentials: "same-origin" }),
+            fetch("/api/gallery", { credentials: "same-origin" }),
+          ]);
+          if (chatsResponse.ok) {
+            const result = await chatsResponse.json();
+            if (Array.isArray(result.conversations)) {
+              const serverChats = result.conversations.map((chat) => ({
+                ...chat,
+                savedAt: typeof chat.savedAt === "number" ? new Date(chat.savedAt * 1000).toISOString() : chat.savedAt,
+                messages: Array.isArray(chat.messages) ? chat.messages : [],
+              }));
+              setSavedChats(serverChats);
+              try { localStorage.setItem("lumina_react_chats", JSON.stringify(serverChats)); } catch {}
+              const activeId = (() => { try { return localStorage.getItem("lumina_react_active_chat"); } catch { return ""; } })();
+              const activeChat = serverChats.find((chat) => chat.id === activeId);
+              if (activeChat && activeChat.messages.length) {
+                activeConversationId.current = activeChat.id;
+                setMessages(activeChat.messages.map((item) => ({ ...item, id: crypto.randomUUID() })));
+                setApiHistory(Array.isArray(activeChat.apiHistory) ? activeChat.apiHistory : []);
+                setLastImage(activeChat.lastImage || "");
+                setEditVersions(Array.isArray(activeChat.editVersions) ? activeChat.editVersions : []);
+                setEditVersionIndex(Number.isInteger(activeChat.editVersionIndex) ? activeChat.editVersionIndex : -1);
+              }
+            }
+          } else {
+            setError("Signed in, but conversation history could not be loaded. Please reopen History or try again.");
+          }
+          if (galleryResponse.ok) {
+            const result = await galleryResponse.json();
+            if (Array.isArray(result.images)) {
+              setSavedGallery(result.images.map((item) => ({
+                ...item,
+                savedAt: typeof item.savedAt === "number" ? new Date(item.savedAt * 1000).toISOString() : item.savedAt,
+              })));
+            }
+          } else {
+            setError((current) => current || "Signed in, but saved images could not be loaded.");
+          }
+        } catch {
+          setError("Signed in, but account history or saved images could not be loaded. Please try again.");
+        }
+      }} />}
     </main>
   );
 }
