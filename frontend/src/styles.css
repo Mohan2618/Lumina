@@ -561,3 +561,102 @@ a{color:#ff5268}
   .auth-card{max-height:calc(100dvh - 24px)}
 }
 
+/* Image result actions: keep essentials visible and tuck secondary tools into an overflow menu. */
+.image-action-row{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+  width:100%;
+  box-sizing:border-box;
+  margin:10px 0 0;
+  padding:0;
+}
+.image-action-row .save-image-button,
+.image-action-row .image-download-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-height:36px;
+  box-sizing:border-box;
+  padding:8px 12px;
+  border:1px solid #ffffff20;
+  border-radius:10px;
+  background:#191a20;
+  color:#d9e0eb;
+  font:inherit;
+  font-size:12px;
+  font-weight:500;
+  line-height:1;
+  text-decoration:none;
+  white-space:nowrap;
+  cursor:pointer;
+}
+.image-action-row .save-image-button{
+  border-color:#ff52684d;
+  background:#ff40580d;
+  color:#ff9baa;
+}
+.image-action-row .save-image-button:hover,
+.image-action-row .image-download-link:hover{
+  border-color:#ff526880;
+  background:#24252d;
+  color:#fff;
+}
+.image-more-actions{position:relative;display:inline-flex;align-self:center}
+.image-more-actions>summary{
+  display:grid;
+  place-items:center;
+  width:36px;
+  height:36px;
+  box-sizing:border-box;
+  border:1px solid #ffffff20;
+  border-radius:10px;
+  background:#191a20;
+  color:#cbd4e1;
+  list-style:none;
+  cursor:pointer;
+}
+.image-more-actions>summary::-webkit-details-marker{display:none}
+.image-more-actions>summary:hover,
+.image-more-actions[open]>summary{border-color:#ff526880;background:#24252d;color:#fff}
+.image-more-menu{
+  position:absolute;
+  z-index:20;
+  right:0;
+  bottom:calc(100% + 8px);
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  min-width:164px;
+  padding:6px;
+  border:1px solid #ffffff1c;
+  border-radius:12px;
+  background:#191a20;
+  box-shadow:0 12px 34px #0008;
+}
+.image-more-menu button{
+  display:flex;
+  align-items:center;
+  width:100%;
+  min-height:36px;
+  padding:8px 10px;
+  border:0;
+  border-radius:7px;
+  background:transparent;
+  color:#d9e0eb;
+  text-align:left;
+  font:inherit;
+  font-size:12px;
+  cursor:pointer;
+}
+.image-more-menu button:hover{background:#ffffff0d;color:#fff}
+.image-more-menu button:disabled{opacity:.35;cursor:not-allowed}
+@media(max-width:520px){
+  .image-action-row{gap:6px}
+  .image-action-row .save-image-button,
+  .image-action-row .image-download-link{min-height:34px;padding:7px 9px;font-size:11px}
+  .image-more-actions>summary{width:34px;height:34px}
+}
+
