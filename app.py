@@ -11,6 +11,11 @@ register_routes(app)
 def inject_response_enhancements(response):
     """Load the structured-response UI without changing the existing template."""
     content_type = response.headers.get("Content-Type", "")
+    # File/stream responses (for example, send_file/send_from_directory) use
+    # direct passthrough and cannot be read with get_data(). Leave them alone.
+    if response.direct_passthrough:
+        return response
+
     if response.status_code == 200 and content_type.startswith("text/html"):
         body = response.get_data(as_text=True)
         marker = '<script src="/static/response_enhancements.js?v=1"></script>'
