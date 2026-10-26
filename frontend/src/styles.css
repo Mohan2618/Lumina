@@ -332,3 +332,24 @@ a{color:#ff5268}
   .sidebar{position:static;height:auto;overflow:visible}
   .workspace{margin-left:0;width:100%}
 }
+
+
+/* Profile identity stays compact; account actions live in its dropdown. */
+.profile-menu-wrap{position:relative;display:block;padding:10px 12px;border-top:1px solid #ffffff12}
+.profile-trigger{display:flex;align-items:center;gap:10px;width:100%;min-width:0;padding:8px;border:1px solid transparent;border-radius:12px;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.profile-trigger:hover,.profile-trigger[aria-expanded="true"]{background:#ffffff08;border-color:#ffffff12}
+.profile-trigger .avatar{flex:0 0 34px}
+.profile-trigger .account-details{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
+.profile-trigger .account-details strong,.profile-trigger .account-details small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.profile-chevron{flex:0 0 auto;color:#9da7b8;transition:transform .15s ease}
+.profile-chevron.is-open{transform:rotate(180deg)}
+.profile-dropdown{position:absolute;left:12px;right:12px;bottom:calc(100% - 4px);z-index:60;display:flex;flex-direction:column;gap:3px;padding:7px;border:1px solid #ffffff20;border-radius:13px;background:#151922;box-shadow:0 14px 40px #0008}
+.profile-dropdown-heading{display:flex;flex-direction:column;gap:4px;padding:10px 9px 12px;margin-bottom:3px;border-bottom:1px solid #ffffff12;min-width:0}
+.profile-dropdown-heading strong,.profile-dropdown-heading small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.profile-dropdown-heading strong{font-size:12px;color:#f3f4f6}
+.profile-dropdown-heading small{font-size:11px;color:#9da7b8}
+.profile-dropdown>button{display:flex;align-items:center;width:100%;padding:10px;border:0;border-radius:8px;background:transparent;color:#d9deea;text-align:left;font:inherit;font-size:12px;cursor:pointer}
+.profile-dropdown>button:hover{background:#ffffff0d;color:#fff}
+.profile-dropdown>button.profile-signout{color:#ff8998}
+.profile-dropdown>button.profile-signout:hover{background:#ff405814}
+@media(max-width:760px){.profile-dropdown{left:8px;right:8px}}
