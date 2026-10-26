@@ -258,6 +258,8 @@ function MarkdownText({ text, onCopyTable }) {
 
 export default function App() {
   const [prompt, setPrompt] = useState("");
+  const [editingMessageId, setEditingMessageId] = useState("");
+  const composerFormRef = useRef(null);
   const [attachments, setAttachments] = useState([]);
   const [messages, setMessages] = useState([]);
   const [apiHistory, setApiHistory] = useState([]);
@@ -562,12 +564,74 @@ export default function App() {
     }
   }
 
-  function togglePinnedChat(chat) {
+  async function togglePinnedChat(chat) {
+    const pinned = !Boolean(chat.pinned);
+    const updatedChat = { ...chat, pinned };
     setSavedChats((current) => {
-      const next = current.map((item) => item.id === chat.id ? { ...item, pinned: !item.pinned } : item);
+      const next = current.map((item) => item.id === chat.id ? { ...item, pinned } : item);
       try { localStorage.setItem("lumina_react_chats", JSON.stringify(next)); } catch {}
       return next;
     });
+    if (user) {
+      try {
+        const response = await fetch("/api/conversations", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: updatedChat.id,
+            title: updatedChat.title,
+            payload: {
+              messages: updatedChat.messages || [],
+              apiHistory: updatedChat.apiHistory || [],
+              lastImage: updatedChat.lastImage || "",
+              editVersions: updatedChat.editVersions || [],
+              editVersionIndex: Number.isInteger(updatedChat.editVersionIndex) ? updatedChat.editVersionIndex : -1,
+              pinned,
+            },
+          }),
+        });
+        if (!response.ok) throw new Error("Could not sync the pinned state.");
+      } catch {
+        setError("Pin state was updated in this browser, but account sync failed.");
+      }
+    }
+  }
+
+  async function copyText(value, successMessage = "Copied to clipboard.") {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(String(value ?? ""));
+      setError(successMessage);
+    } catch {
+      setError("Clipboard access failed. Please check browser permissions or copy manually.");
+    }
+  }
+
+  function editUserMessage(message, messageIndex) {
+    setEditingMessageId(message.id);
+    setPrompt(message.text || "");
+    setAttachments([]);
+    setError("Editing this prompt. Submit to replace it and regenerate the response.");
+    window.requestAnimationFrame(() => document.querySelector(".composer textarea")?.focus());
+  }
+
+  function retryAssistantResponse(messageIndex) {
+    const message = messages[messageIndex];
+    if (!message || message.role !== "assistant" || busy || sharedReadOnly) return;
+    let userIndex = messageIndex - 1;
+    while (userIndex >= 0 && messages[userIndex].role !== "user") userIndex--;
+    if (userIndex < 0) {
+      setError("Could not find the prompt for this response.");
+      return;
+    }
+    const originalPrompt = messages[userIndex];
+    setMessages((current) => current.slice(0, userIndex));
+    setApiHistory((current) => current.slice(0, Math.max(0, current.length - 2)));
+    setPrompt(originalPrompt.text || "");
+    setEditingMessageId("");
+    setError("");
+    window.setTimeout(() => composerFormRef.current?.requestSubmit(), 0);
   }
 
   function saveCurrentChat() {
@@ -792,13 +856,16 @@ export default function App() {
     const text = prompt.trim();
     if (sharedReadOnly || (!text && !attachments.length) || busy) return;
 
+    const editedIndex = editingMessageId ? messages.findIndex((item) => item.id === editingMessageId) : -1;
     const userMessage = {
-      id: crypto.randomUUID(),
+      id: editedIndex >= 0 ? messages[editedIndex].id : crypto.randomUUID(),
       role: "user",
       text,
       images: attachments.map((attachment) => attachment.preview),
     };
-    setMessages((current) => [...current, userMessage]);
+    const baseMessages = editedIndex >= 0 ? messages.slice(0, editedIndex) : messages;
+    setMessages([...baseMessages, userMessage]);
+    setEditingMessageId("");
     setProgressLabel(getProgressLabel(text, attachments.length > 0));
     setPrompt("");
     setError("");
@@ -847,7 +914,7 @@ export default function App() {
         setEditVersionIndex(next.length - 1);
       }
       const assistantMessage = { id: crypto.randomUUID(), role: "assistant", text: answers.join("\n\n"), images: resultImages };
-      const completedMessages = [...messages, userMessage, assistantMessage];
+      const completedMessages = [...baseMessages, userMessage, assistantMessage];
       setMessages(completedMessages);
       const completedVersions = resultImages.length
         ? (editVersionIndex >= 0 ? editVersions.slice(0, editVersionIndex + 1) : editVersions).concat(
@@ -866,7 +933,7 @@ export default function App() {
       const message = err instanceof Error ? err.message : "Something went wrong.";
       setError(message);
       const failedMessage = { id: crypto.randomUUID(), role: "assistant", text: message, failed: true };
-      const failedMessages = [...messages, userMessage, failedMessage];
+      const failedMessages = [...baseMessages, userMessage, failedMessage];
       setMessages(failedMessages);
       persistChatSnapshot(failedMessages);
     } finally {
@@ -950,8 +1017,9 @@ export default function App() {
                   <div className="message-avatar">{message.role === "user" ? "Y" : <Sparkles size={16} />}</div>
                   <div className="message-content">
                     <div className="message-heading"><strong>{message.role === "user" ? "You" : "Lumina"}</strong><div className="message-actions">
-                      {message.text && <button type="button" onClick={() => navigator.clipboard.writeText(message.text).then(() => setError("")).catch(() => setError("Clipboard access failed. Please copy manually."))} title="Copy message"><Copy size={13} /> Copy</button>}
-                      {message.role === "user" && message.text && <button type="button" onClick={() => { setPrompt(message.text); document.querySelector(".composer textarea")?.focus(); }} title="Edit and resend this prompt">Edit / retry</button>}
+                      {message.text && <button type="button" onClick={() => copyText(message.text, "Message copied.")} title={message.role === "user" ? "Copy prompt" : "Copy response"} aria-label={message.role === "user" ? "Copy prompt" : "Copy response"}><Copy size={13} /> Copy</button>}
+                      {message.role === "user" && message.text && <button type="button" onClick={() => editUserMessage(message, messageIndex)} title="Edit and resend this prompt">Edit</button>}
+                      {message.role === "assistant" && !message.failed && <button type="button" onClick={() => retryAssistantResponse(messageIndex)} disabled={busy || sharedReadOnly} title="Regenerate this response" aria-label="Retry response"><WandSparkles size={13} /> Retry</button>}
                     </div></div>
                     {message.text && (message.role === "assistant" ? <StructuredResponse text={message.text} onCopy={(value) => navigator.clipboard.writeText(value).catch(() => setError("Clipboard access failed. Please copy manually."))} /> : <p>{message.text}</p>)}
                     {message.image && <img className="message-image" src={message.image} alt="Uploaded input" />}
@@ -976,7 +1044,7 @@ export default function App() {
 
         <div className="composer-area">
           {error && <div className="error-banner" role="alert">{error}</div>}
-          <form className="composer" onSubmit={submitPrompt}>
+          <form className="composer" ref={composerFormRef} onSubmit={submitPrompt}>
             {attachments.length > 0 && <div className="attachment-strip" aria-label="Selected image attachments">{attachments.map((item, index) => <div className="attachment" key={item.id}><button type="button" className="attachment-preview-trigger" onClick={() => setLightbox(item.preview)} aria-label={"Preview image " + (index + 1)}><img src={item.preview} alt={"Selected upload preview " + (index + 1)} onError={(event) => { event.currentTarget.style.display = "none"; event.currentTarget.parentElement.parentElement.classList.add("attachment-preview-error"); }} /></button><span>{index + 1}</span><button type="button" className="attachment-remove" aria-label={"Remove image " + (index + 1)} onClick={() => removeAttachment(item.id)}><X size={15} /></button></div>)}</div>}
             <textarea
               disabled={sharedReadOnly}
@@ -1045,7 +1113,7 @@ export default function App() {
       </div>}
       {panel && <div className="drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setPanel(""); }}>
         <section className="drawer">
-          <header className="drawer-header"><div><h2>{panel === "menu" ? "Lumina menu" : panel === "gallery" ? "Saved images" : panel === "operations" ? "Image operations" : panel === "status" ? "API status" : panel === "settings" ? "Settings" : "Saved conversations"}</h2><p>{panel === "menu" ? "Navigate your workspace." : panel === "operations" ? "Choose an operation, add an image if needed, then send the prompt." : panel === "status" ? "Local Flask backend health" : panel === "settings" ? "Account, history, privacy, and workspace preferences." : "Saved locally in this browser"}</p></div><button className="drawer-close" onClick={() => setPanel("")} aria-label="Close panel"><X size={18} /></button></header>
+          <header className="drawer-header"><div><h2>{({ menu: "Lumina menu", gallery: "Saved images", operations: "Image operations", status: "API status", settings: "Settings", history: "Saved conversations" })[panel] || "Lumina"}</h2><p>{({ menu: "Navigate your workspace.", operations: "Choose an operation, add an image if needed, then send the prompt.", status: "Local Flask backend health", settings: "Account, history, privacy, and workspace preferences.", history: "Saved locally in this browser" })[panel] || ""}</p></div><button className="drawer-close" onClick={() => setPanel("")} aria-label="Close panel"><X size={18} /></button></header>
           {panel === "settings" ? <div className="settings-content"><section className="settings-section"><h3>Account</h3><p>{user ? "Signed in as " + (user.email || user.username) : "You are using Lumina as a guest."}</p><p><strong>Plan:</strong> {user ? (user.plan || user.subscriptionPlan || "Not configured") : "Guest access"}</p>{user ? <button type="button" className="operation-chip" onClick={() => { setPasswordModalOpen(true); setPasswordError(""); setPasswordNotice(""); }}>Change password</button> : <button type="button" className="operation-chip" onClick={() => setAuthOpen(true)}>Sign in to sync your history</button>}</section><section className="settings-section"><h3>Conversation history</h3><p>Signed-in conversations are synced to your account. Guest conversations stay in this browser.</p><button type="button" className="operation-chip" onClick={() => setPanel("history")}>Open saved conversations</button></section><section className="settings-section"><h3>Privacy</h3><p>Signing out clears account-specific conversations from this browser view. Your saved account conversations remain available after you sign back in.</p></section><section className="settings-section"><h3>Workspace</h3><p>Saved images: {savedGallery.length} · Saved conversations: {savedChats.length}</p><button type="button" className="operation-chip" onClick={checkApiStatus}>Check service status</button></section></div> : panel === "menu" ? <div className="mobile-menu-actions"><button className="side-action" onClick={() => { activeConversationId.current = ""; try { localStorage.removeItem("lumina_react_active_chat"); } catch {} setMessages([]); setApiHistory([]); setLastImage(""); setEditVersions([]); setEditVersionIndex(-1); setError(""); setPanel(""); }}><PanelLeft size={16} /> New conversation</button><button className="side-action" onClick={() => setPanel("history")}><History size={16} /> Saved conversations <span>{savedChats.length}</span></button><button className="side-action" onClick={() => setPanel("gallery")}><Images size={16} /> Saved images <span>{savedGallery.length}</span></button><button className="side-action" onClick={() => { setPanel("operations"); }}><WandSparkles size={16} /> Operations</button><button className="side-action" onClick={checkApiStatus}><Activity size={16} /> API status</button><button className="side-action" onClick={saveCurrentChat}><BookmarkPlus size={16} /> Save conversation</button><button className="side-action" onClick={shareCurrentChat}><Share2 size={16} /> Share conversation</button>{user ? <><button className="side-action" onClick={() => { setPanel(""); setPasswordModalOpen(true); }}>Change password</button><button className="side-action" onClick={signOut}>Sign out</button></> : <button className="side-action" onClick={() => { setPanel(""); setAuthOpen(true); }}>Sign in</button>}</div> : panel === "operations" ? <div className="operations-content">{OPERATION_GROUPS.map(([group, operations]) => <section className="operation-group" key={group}><h3>{group}</h3><div className="operation-chips">{operations.map(([label, operation]) => <button type="button" className="operation-chip" key={label} onClick={() => runOperation(operation)}>{label}</button>)}</div></section>)}<button type="button" className="operation-chip operation-generate" onClick={() => runOperation("Generate an image from this description: ")}>✨ Generate from text</button></div> : panel === "status" ? <div className="status-content"><p>{apiStatus || "Checking backend…"}</p><button type="button" className="operation-chip" onClick={checkApiStatus}>Check again</button></div> : panel === "gallery" ? (savedGallery.length ? <div className="saved-gallery">{savedGallery.map((item) => <article className="saved-image-card" key={item.id}><img src={item.src} alt={item.prompt} /><p title={item.prompt}>{item.prompt}</p><div className="saved-image-actions"><a href={item.src} download="lumina-image.png">Download</a><button onClick={async () => {
                     if (user) {
                       try {
