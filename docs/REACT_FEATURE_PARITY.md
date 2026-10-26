@@ -23,7 +23,7 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 - [x] New chat and conversation history save/list/load/delete, with authenticated server sync.
 - [x] Restore messages, API history, image state, and edit versions.
 - [x] Create/copy expiring share links; shared conversations load read-only and expire after 7 days.
-- [ ] Richer inline Markdown syntax still needs work; nested ordered/unordered list rendering, blockquotes, and copy response/code/table controls are implemented.
+- [ ] Remaining Markdown edge cases still need broader parity testing; nested ordered/unordered lists, blockquotes, strikethrough, basic emphasis/links/code, and copy response/code/table controls are implemented.
 - [x] Code copy/save, sandboxed browser-safe run previews, and table copy controls.
 - [x] Display returned image variations and provide per-image actions.
 - [x] Use generated images as the next edit input through the existing `last_image` flow.
@@ -48,10 +48,10 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 - [x] Sign-up fields/validation: first/last name, email, username, date of birth/age gate, password strength, confirm password, terms agreement; server enforcement is implemented.
 - [x] Password visibility controls.
 - [x] Login identifier supports email/username; [ ] saved-account dropdown behavior.
-- [ ] Failed-login rate-limit messaging/timer.
+- [x] Client-side failed-login retry countdown feedback is implemented; server-side authentication throttling still requires backend protection and security verification.
 - [x] Forgot password request, 60-second resend countdown, resend, six separate OTP digit fields with keyboard navigation/paste, and OTP/password reset UI are implemented; end-to-end email verification still needs manual testing.
 - [x] Authenticated change-password workflow using the current password.
-- [x] User display, logout, Settings, and Change password are accessible through the profile dropdown; dedicated plan display and saved-account dropdown remain unimplemented.
+- [x] User display, logout, Settings, and Change password are accessible through the profile dropdown; plan is shown only when the authenticated user payload includes a plan field.
 - [x] User-scoped conversation and gallery API endpoints; guest gallery storage is separated from authenticated gallery state. Verify all sign-out/login edge cases manually.
 
 ## Latest branch changes
@@ -69,7 +69,8 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 ## React migration gaps visible from current implementation
 - Saved chats now restore API history and edit context; confirm with an authenticated end-to-end test.
 - React saved gallery is capped at 12 and saved chats at 20; original storage behavior needs comparison and compatibility decisions.
-- Remaining known gaps: richer inline Markdown syntax; saved-account dropdown; failed-login rate-limit timer; dedicated plan display; full quick-operation parity verification; voice-input verification; and final end-to-end/manual regression tests.
+- Remaining known gaps: complete Markdown edge-case parity; backend login throttling; confirm plan data is supplied by the backend; full quick-operation parity verification; voice-input verification; and final end-to-end/manual regression tests.
+- Added recent account selection without storing credentials, client-side failed-login retry feedback, additional inline strikethrough formatting, and conditional plan display.
 - Added nested ordered/unordered list rendering with indentation-aware list nesting.
 - Added client-side image resizing/compression for raster uploads to 1024px maximum dimension and JPEG quality 0.85.
 - Added recursive blockquote rendering to the React response renderer.
