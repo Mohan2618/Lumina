@@ -41,7 +41,7 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
   - Basic edits: rotate, flip, grayscale, invert, sepia, sharpen, blur, contrast, brightness, saturation, vignette, grain, warm/cool white balance, image info.
   - Generate from text shortcut.
 - [x] API status check from the workspace navigation.
-- [ ] Image compression/resizing behavior before upload (original max dimension 1024 and JPEG quality 0.85).
+- [x] Raster image compression/resizing before upload (max dimension 1024 and JPEG quality 0.85; GIF animation and unsupported decoding fall back to original file).
 
 ### Account and profile
 - [x] Sign-in and sign-up wired to existing Flask endpoints.
@@ -69,7 +69,8 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 ## React migration gaps visible from current implementation
 - Saved chats now restore API history and edit context; confirm with an authenticated end-to-end test.
 - React saved gallery is capped at 12 and saved chats at 20; original storage behavior needs comparison and compatibility decisions.
-- Remaining known gaps: nested-list/richer Markdown parity; saved-account dropdown; failed-login rate-limit timer; dedicated plan display; image compression/resizing parity; full quick-operation parity verification; voice-input verification; and final end-to-end/manual regression tests.
+- Remaining known gaps: nested-list/richer Markdown parity; saved-account dropdown; failed-login rate-limit timer; dedicated plan display; full quick-operation parity verification; voice-input verification; and final end-to-end/manual regression tests.
+- Added client-side image resizing/compression for raster uploads to 1024px maximum dimension and JPEG quality 0.85.
 - Added recursive blockquote rendering to the React response renderer.
 - Some features may exist in backend or shared scripts, but they are not considered migrated until wired into React and tested end-to-end.
 
