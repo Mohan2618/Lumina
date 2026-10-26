@@ -11,6 +11,8 @@ export default function AuthModal({ onClose, onAuthenticated }) {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [showPasswords, setShowPasswords] = useState(false);
+  const [savedIdentifiers, setSavedIdentifiers] = useState(() => { try { return JSON.parse(localStorage.getItem("lumina_saved_login_identifiers") || "[]").filter((item) => typeof item === "string").slice(0, 5); } catch { return []; } });
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
   const [resendSeconds, setResendSeconds] = useState(0);
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
   const otpRefs = useRef([]);
@@ -47,7 +49,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
       setError("Passwords do not match.");
       return;
     }
-    if (mode === "signup") {
+    if (mode === "login" && lockoutSeconds > 0) { setError(`Please wait ${lockoutSeconds}s before trying again.`); return; }\n    if (mode === "signup") {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
         setError("Enter a valid email address.");
         return;
@@ -105,7 +107,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
           : { firstName: form.firstName.trim(), lastName: form.lastName.trim(), email: form.email.trim(), username: form.username.trim(), password: form.password, dateOfBirth: form.dateOfBirth, acceptedTerms: form.acceptedTerms },
       );
       if (!data.user) throw new Error("The server did not return an account session.");
-      onAuthenticated(data.user);
+      if (isLogin) {\n        const next = [form.identifier.trim(), ...savedIdentifiers.filter((item) => item.toLowerCase() !== form.identifier.trim().toLowerCase())].filter(Boolean).slice(0, 5);\n        setSavedIdentifiers(next);\n        try { localStorage.setItem("lumina_saved_login_identifiers", JSON.stringify(next)); } catch {}\n        setLockoutSeconds(0);\n      }\n      onAuthenticated(data.user);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -137,7 +139,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
             <label>Username<input name="username" value={form.username} onChange={update} required autoComplete="username" minLength={3} maxLength={24} pattern="[a-zA-Z0-9_]{3,24}" title="3–24 letters, numbers, or underscores" /></label>
             <label>Date of birth<input name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={update} required max={new Date().toISOString().slice(0, 10)} /></label>
           </>}
-          {isLogin && <label>Email or username<input name="identifier" value={form.identifier} onChange={update} required autoComplete="username" /></label>}
+          {isLogin && <label>Email or username<input name="identifier" value={form.identifier} onChange={update} required autoComplete="username" list="lumina-saved-identifiers" /><datalist id="lumina-saved-identifiers">{savedIdentifiers.map((identifier) => <option key={identifier} value={identifier} />)}</datalist></label>}{isLogin && savedIdentifiers.length > 0 && <div className="saved-login-accounts"><span>Recent accounts</span>{savedIdentifiers.map((identifier) => <button key={identifier} type="button" onClick={() => setForm((current) => ({ ...current, identifier }))}>{identifier}</button>)}</div>}
           {isForgot && <label>Email or username<input name="identifier" value={form.identifier} onChange={update} required autoComplete="username" /></label>}
           {isReset && <>
             <label>Verification code
@@ -175,7 +177,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
           {notice && <p className="auth-notice" role="status">{notice}</p>}
           <button className="auth-submit" type="submit" disabled={busy}>
             {busy && <LoaderCircle size={16} className="spin" />}
-            {busy ? "Please wait…" : isLogin ? "Sign in" : isSignup ? "Create account" : isForgot ? "Send verification code" : "Reset password"}
+            {busy ? "Please wait…" : isLogin && lockoutSeconds > 0 ? `Try again in ${lockoutSeconds}s` : isLogin ? "Sign in" : isSignup ? "Create account" : isForgot ? "Send verification code" : "Reset password"}
           </button>
         </form>
         <div className="auth-switch">
