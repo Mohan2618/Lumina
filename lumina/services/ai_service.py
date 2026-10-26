@@ -236,10 +236,24 @@ def detect_op(p, has_image=False):
         p,
     )
     high_res_target = re.search(
-        r'\b4k\b|3840\s*[x×]\s*2160|2160p|\buhd\b|ultra[- ]?hd|high[- ]?resolution',
+        r'\b4k\b|3840\s*[x×]\s*2160|2160p|\buhd\b|ultra[- ]?hd|high[- ]?resolution|\bhigh\s+resolution\b',
         p,
     )
-    if has_image and desktop_target and high_res_target:
+    # Users often answer a follow-up about screen dimensions with a short
+    # contextual request such as "I don't know, just make it high". When an
+    # image is already in the conversation, treat this as a desktop wallpaper
+    # request rather than returning a text-only answer.
+    desktop_quality_followup = bool(
+        has_image
+        and re.search(
+            r'\b(?:make|keep|set)\s+(?:it|this|the image|the picture)\s+'
+            r'(?:high|higher|high[- ]?quality|high[- ]?resolution|4k|uhd)\b'
+            r'|\b(?:just|please)\s+make\s+it\s+high\b'
+            r'|\bi\s+don.t\s+know\s+(?:my\s+)?(?:screen\s+)?resolution\b.*\bhigh\b',
+            p,
+        )
+    )
+    if has_image and ((desktop_target and high_res_target) or desktop_quality_followup):
         position = (
             'top' if re.search(r'\btop\b|\btop[- ]aligned\b', p)
             else 'bottom' if re.search(r'\bbottom\b', p)
