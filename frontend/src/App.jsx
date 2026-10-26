@@ -522,10 +522,12 @@ export default function App() {
     const id = activeConversationId.current || crypto.randomUUID();
     activeConversationId.current = id;
     try { localStorage.setItem("lumina_react_active_chat", id); } catch {}
+    const existingChat = savedChats.find((item) => item.id === id);
     const chat = {
       id,
       title: firstPrompt.slice(0, 52) || "Lumina conversation",
       savedAt: new Date().toISOString(),
+      pinned: Boolean(existingChat?.pinned),
       messages: messageList.map((item) => ({
         role: item.role,
         text: item.text || "",
@@ -538,6 +540,7 @@ export default function App() {
       editVersionIndex: versionIndex,
     };
     const payload = {
+      pinned: chat.pinned,
       messages: chat.messages,
       apiHistory: chat.apiHistory,
       lastImage: chat.lastImage,
@@ -1021,7 +1024,7 @@ export default function App() {
                       {message.role === "user" && message.text && <button type="button" onClick={() => editUserMessage(message, messageIndex)} title="Edit and resend this prompt">Edit</button>}
                       {message.role === "assistant" && !message.failed && <button type="button" onClick={() => retryAssistantResponse(messageIndex)} disabled={busy || sharedReadOnly} title="Regenerate this response" aria-label="Retry response"><WandSparkles size={13} /> Retry</button>}
                     </div></div>
-                    {message.text && (message.role === "assistant" ? <StructuredResponse text={message.text} onCopy={(value) => navigator.clipboard.writeText(value).catch(() => setError("Clipboard access failed. Please copy manually."))} /> : <p>{message.text}</p>)}
+                    {message.text && (message.role === "assistant" ? <StructuredResponse text={message.text} onCopy={(value) => copyText(value, "Response copied.")} /> : <p>{message.text}</p>)}
                     {message.image && <img className="message-image" src={message.image} alt="Uploaded input" />}
                     {message.role === "user" && message.images?.map((src, index) => <img className="message-image attachment-message-image" key={index} src={src} alt={"Attached image " + (index + 1)} />)}
                     {message.role !== "user" && message.images?.map((src, index) => {
