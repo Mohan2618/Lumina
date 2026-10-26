@@ -23,7 +23,7 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 - [x] New chat and conversation history save/list/load/delete, with authenticated server sync.
 - [x] Restore messages, API history, image state, and edit versions.
 - [x] Create/copy expiring share links; shared conversations load read-only and expire after 7 days.
-- [ ] Full Markdown parity (nested lists, blockquotes, richer inline syntax) still needs work; copy response/code/table controls are implemented.
+- [ ] Full Markdown parity (nested lists and richer inline syntax) still needs work; blockquote rendering and copy response/code/table controls are implemented.
 - [x] Code copy/save, sandboxed browser-safe run previews, and table copy controls.
 - [x] Display returned image variations and provide per-image actions.
 - [x] Use generated images as the next edit input through the existing `last_image` flow.
@@ -69,7 +69,8 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 ## React migration gaps visible from current implementation
 - Saved chats now restore API history and edit context; confirm with an authenticated end-to-end test.
 - React saved gallery is capped at 12 and saved chats at 20; original storage behavior needs comparison and compatibility decisions.
-- Remaining known gaps: full Markdown parity; saved-account dropdown; failed-login rate-limit timer; dedicated plan display; image compression/resizing parity; full quick-operation parity verification; voice-input verification; and final end-to-end/manual regression tests.
+- Remaining known gaps: nested-list/richer Markdown parity; saved-account dropdown; failed-login rate-limit timer; dedicated plan display; image compression/resizing parity; full quick-operation parity verification; voice-input verification; and final end-to-end/manual regression tests.
+- Added recursive blockquote rendering to the React response renderer.
 - Some features may exist in backend or shared scripts, but they are not considered migrated until wired into React and tested end-to-end.
 
 ## Implementation and verification order
