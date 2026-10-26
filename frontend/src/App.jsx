@@ -675,12 +675,41 @@ export default function App() {
     }
   }
 
-  function chooseFiles(fileList) {
+  async function prepareImageFile(file) {
+    // Preserve animation and vector-like fidelity for GIFs; compress large raster uploads.
+    if (!file || file.type === "image/gif") return file;
+    try {
+      const bitmap = await createImageBitmap(file);
+      const maxDimension = 1024;
+      if (bitmap.width <= maxDimension && bitmap.height <= maxDimension && file.type === "image/jpeg" && file.size < 1.5 * 1024 * 1024) {
+        bitmap.close?.();
+        return file;
+      }
+      const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const context = canvas.getContext("2d");
+      if (!context) { bitmap.close?.(); return file; }
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close?.();
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+      if (!blob) return file;
+      const stem = file.name.replace(/\.[^.]+$/, "") || "image";
+      return new File([blob], stem + ".jpg", { type: "image/jpeg", lastModified: file.lastModified });
+    } catch {
+      // Unsupported decoding should never prevent the original image from being uploaded.
+      return file;
+    }
+  }
+
+  async function chooseFiles(fileList) {
     const incoming = Array.from(fileList || []);
     if (!incoming.length) return;
     const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp"];
     const accepted = [];
-    for (const nextFile of incoming) {
+    for (const originalFile of incoming) {
+      const nextFile = await prepareImageFile(originalFile);
       if (!allowedTypes.includes(nextFile.type)) { setError(nextFile.name + ": use a JPG, PNG, WEBP, GIF, or BMP image."); continue; }
       if (nextFile.size > 10 * 1024 * 1024) { setError(nextFile.name + ": images must be 10 MB or smaller."); continue; }
       accepted.push({ id: crypto.randomUUID(), file: nextFile, preview: URL.createObjectURL(nextFile) });
