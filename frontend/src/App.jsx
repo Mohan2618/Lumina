@@ -348,8 +348,27 @@ export default function App() {
   }
 
   async function signOut() {
-    try { await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }); }
-    finally { setUser(null); }
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+    } finally {
+      // Account conversations must not remain visible after the account session ends.
+      // This cache currently mixes local and synced chats, so clear it to avoid
+      // exposing the signed-out user's private history on a shared browser.
+      setUser(null);
+      setSavedChats([]);
+      setMessages([]);
+      setApiHistory([]);
+      setLastImage("");
+      setEditVersions([]);
+      setEditVersionIndex(-1);
+      setPanel("");
+      setError("");
+      activeConversationId.current = "";
+      try {
+        localStorage.removeItem("lumina_react_chats");
+        localStorage.removeItem("lumina_react_active_chat");
+      } catch { /* The signed-out UI is still cleared if browser storage is unavailable. */ }
+    }
   }
 
   useEffect(() => {
