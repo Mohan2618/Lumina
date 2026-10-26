@@ -660,3 +660,11 @@ a{color:#ff5268}
   .image-more-actions>summary{width:34px;height:34px}
 }
 
+
+
+/* Account-history loading and transient status messages */
+.history-loading{display:flex;align-items:center;justify-content:center;gap:10px;min-height:110px;padding:22px;color:#aab4c5;font-size:13px}
+.history-loading .spin{flex:0 0 auto}
+.error-banner{animation:lumina-notice-in .18s ease-out both}
+@keyframes lumina-notice-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.error-banner{animation:none}}
