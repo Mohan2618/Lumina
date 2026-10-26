@@ -1,368 +1,351 @@
----
-title: Lumina
-emoji: 🖼️
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-pinned: false
----
+# Lumina
 
-## Links
+**Lumina is an AI-powered chat workspace for image understanding, image editing, image generation, and structured technical answers.** It combines a React interface with a Flask/Python backend, computer-vision utilities, and configurable AI services.
 
-**Live Demo:** https://lumina-fbhi.onrender.com
+<p align="center">
+  <a href="https://lumina-fbhi.onrender.com">Live demo</a> ·
+  <a href="https://github.com/Mohan2618/Lumina">Source code</a>
+</p>
 
-**Source Code:** https://github.com/Mohan2618/Lumina
+> **Deployment note:** The live demo is hosted on Render and may take time to wake up. AI features require valid provider credentials and may be affected by provider quotas, network availability, and service configuration.
 
-# Lumina - AI-Powered Image Processing Chatbot
+## Contents
 
-## Overview
+- [Highlights](#highlights)
+- [Technology stack](#technology-stack)
+- [How Lumina works](#how-lumina-works)
+- [Repository structure](#repository-structure)
+- [Requirements](#requirements)
+- [Local setup](#local-setup)
+- [Environment configuration](#environment-configuration)
+- [Run Lumina](#run-lumina)
+- [Docker and deployment](#docker-and-deployment)
+- [Testing and quality checks](#testing-and-quality-checks)
+- [Security and privacy notes](#security-and-privacy-notes)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [Author](#author)
 
-Lumina is an AI-powered image processing chatbot that combines computer vision techniques with generative AI to provide an interactive platform for image analysis, enhancement, editing, and generation. Users can communicate with the application using natural language and perform image processing operations through a web interface.
+## Highlights
 
-The application is developed using Flask, OpenCV, Pillow, and NumPy and integrates Google Gemini for intelligent image understanding and conversational responses. It is deployed on Render using Docker.
+### AI chat and technical responses
 
----
+- Natural-language conversations through the Lumina chat interface.
+- Structured Markdown rendering for headings, lists, links, blockquotes, tables, and fenced code.
+- Code blocks with language labels, syntax highlighting, copy and save actions, and browser-sandboxed previews for supported web formats.
+- Table-copy support for moving tabular output into spreadsheets and editors.
+- Task-specific progress indicators for chat, coding, structured responses, image editing, and image generation.
 
-## User-Facing Branding
+Code execution is deliberately limited: browser previews are intended for supported HTML/SVG/CSS/JavaScript content in a sandbox. Lumina does not provide a general-purpose server-side terminal for arbitrary generated code.
 
-Lumina presents a consistent **Lumina AI** identity throughout the application. User-facing status messages, notifications, assistant responses, and service errors do not expose the names of underlying AI models or providers. Provider integrations remain implementation details and do not change the Lumina user experience.
+### Image understanding and editing
 
----
+- Image upload and image analysis through natural-language prompts.
+- Common deterministic image operations, including grayscale, invert, sepia, blur, sharpen, flip, and rotation, alongside additional computer-vision filters and effects.
+- Color analysis, detection and edge-processing utilities.
+- Creative effects and selected restoration/enhancement operations implemented in the image-processing modules.
+- AI image generation through the configured image-generation provider.
+- Multi-step natural-language editing where supported by the backend.
+- Image result preview, download/copy/save actions, before-and-after comparison, and undo/redo editing history in the interface.
+- 4K desktop wallpaper fitting: creates a 3840 × 2160 canvas using the source image with a blurred background fill, rather than stretching the source to fill the screen.
 
-## Features
+**Medical-image caution:** Image-processing or AI descriptions of medical images are for informational and educational use only. They are not a diagnosis and must not replace a qualified clinician's assessment.
 
-- AI-powered conversational image assistant
-- Image analysis and description
-- AI image generation
-- Image enhancement and restoration
-- Face detection
-- Background removal
-- Edge detection
-- Color analysis
-- Image filtering
-- Cartoon, sketch, and watercolor effects
-- Noise reduction
-- Super resolution
-- Histogram equalization
-- Medical image analysis with appropriate disclaimer
-- Session-based conversation management
-- Email OTP delivery for password reset
-- Natural-language multi-step image editing
-- Local image-edit undo/redo history
-- Before/after image comparison
-- 4K desktop wallpaper fitting
-- Structured code blocks with **Copy** and **Save** controls
-- Safe client-side **Run** controls for HTML, SVG, CSS, and JavaScript response blocks
-- Markdown table rendering with **Copy table** support
-- Project/folder structures and diagrams preserved as copyable text artifacts
-- Task-specific progress states for chat, coding, structured information, image editing, and image generation
-- Responsive response artifacts for desktop and mobile layouts
+### Accounts and saved work
 
----
+- Sign-up and sign-in.
+- Password reset using a one-time verification code when email delivery is configured.
+- Authenticated conversation history and saved-image gallery.
+- Pinned saved conversations and profile/account controls.
+- Database-backed account data when PostgreSQL is configured, with SQLite available for local development.
+- Guest message limits and browser-local state for selected guest experiences.
 
-## Structured AI Responses
+Account, history, and gallery features depend on the relevant backend configuration and the user's authentication state.
 
-Lumina now treats assistant responses as structured content instead of displaying every response as plain text.
+## Technology stack
 
-### Code
-
-Fenced Markdown code blocks such as:
-
-```python
-print("Hello from Lumina")
-```
-
-are displayed as dedicated code artifacts with:
-
-- language label
-- syntax-preserving formatting
-- Copy button
-- Save button
-- Run button for supported browser-safe languages
-
-The browser Run action is sandboxed and is currently available for HTML, SVG, CSS, and JavaScript. It does not execute Python, shell commands, PowerShell, or server-side code.
-
-### Tables
-
-Standard Markdown tables are converted into responsive table cards with a **Copy table** action. The copied table uses tab-separated values so it can be pasted into spreadsheets and editors.
-
-### Project Structures and Diagrams
-
-Folder structures, ASCII diagrams, Mermaid source, architecture sketches, and other structured text inside fenced code blocks are preserved as copyable artifacts instead of being flattened into normal paragraphs.
-
-### Security
-
-Assistant-generated HTML is not trusted as executable page content. Code artifacts are escaped before rendering. The optional Run action executes only the selected browser-safe artifact inside a sandboxed iframe.
-
----
-
-## Task-Specific Response Status
-
-Lumina uses separate user-facing progress states based on the type of request rather than using the same generic status for every operation.
-
-| Request type | Example progress states |
+| Area | Technologies |
 |---|---|
-| Normal chat | Understanding → Forming → Polishing |
-| Coding / project help | Understanding → Structuring → Checking |
-| Tables / diagrams / comparisons | Organizing → Formatting → Polishing |
-| Image editing | Understanding → Processing → Finalizing |
-| Image generation | Planning → Creating → Preparing |
+| Frontend | React 18, Vite, JavaScript, CSS, Lucide icons |
+| Backend | Python 3.10, Flask, Werkzeug, Gunicorn |
+| Image processing | OpenCV, OpenCV-contrib, Pillow, NumPy |
+| AI integrations | Google Gemini; optional Anthropic Claude integration |
+| Image generation | Configurable provider integration; Cloudflare Workers AI is the configured example in `.env.example`, with Hugging Face support in the service |
+| Authentication and storage | Flask sessions, PostgreSQL via `psycopg2`, SQLite fallback |
+| Email | Brevo API for OTP email delivery |
+| Deployment | Docker, Render |
+| Checks | Python `unittest`, frontend Vite production build, GitHub Actions |
 
-These are interface-level progress indicators. They do not claim to expose hidden model reasoning or private chain-of-thought.
+## How Lumina works
 
----
+1. The user sends a message and may attach one or more images.
+2. The React interface sends the request to Flask API routes.
+3. The backend determines whether to answer conversationally, call a configured AI service, generate an image, or apply an image-processing operation.
+4. Flask returns text and any available image or conversation state.
+5. The frontend renders the result as a message, code artifact, table, image result, or other supported structured content.
+6. Authenticated history and gallery operations are persisted through the configured backend storage; selected guest state may remain in the browser.
 
-## Technology Stack
+Provider calls can fail because of missing API keys, quota limits, rate limits, or network issues. A successful frontend build does not validate external provider credentials.
 
-### Backend
-
-- Python
-- Flask
-
-### Computer Vision
-
-- OpenCV
-- Pillow (PIL)
-- NumPy
-
-### Artificial Intelligence
-
-- Google Gemini API
-- Anthropic Claude API
-- Brevo Transactional Email API for password-reset OTP delivery
-
-### Frontend
-
-- React 18
-- Vite
-- JavaScript and CSS
-- Responsive structured-response rendering and sandboxed code previews
-
-### Deployment
-
-- Render
-- Docker
-- PostgreSQL for production authentication storage
-- SQLite for local-development fallback
-
----
-
-## Project Structure
+## Repository structure
 
 ```text
 Lumina/
-│
-├── app.py
+├── app.py                         # Flask application entry point
 ├── lumina/
-│   ├── core.py
-│   ├── routes.py
+│   ├── core.py                    # Flask app and shared service setup
+│   ├── config.py                  # AI clients and application settings
+│   ├── routes.py                  # Chat, image, health, auth and history routes
 │   ├── image_processing/
+│   │   ├── basic.py               # Basic image transformations
+│   │   ├── color.py               # Color utilities
+│   │   ├── creative.py            # Creative image effects
+│   │   ├── detection.py           # Detection and analysis operations
+│   │   ├── filters.py             # Image filters
+│   │   ├── medical.py             # Medical-image processing helpers
+│   │   ├── advanced.py            # Advanced processing helpers
+│   │   └── processor.py           # Processing dispatcher
 │   ├── prompts/
+│   │   └── system_prompt.py       # Assistant instructions
 │   ├── services/
-│   └── utils/
-├── templates/
-│   └── index.html
-├── static/
-│   ├── logo.jpeg
-│   └── response_enhancements.js
-├── tests/
-├── Dockerfile
-├── requirements.txt
-├── README.md
-└── ...
+│   │   ├── ai_service.py          # AI response orchestration
+│   │   ├── image_generation.py    # Image generation provider integration
+│   │   ├── auth_db.py             # Account, conversation and gallery persistence
+│   │   └── email_service.py       # OTP email delivery
+│   └── utils/                     # Authentication and image utilities
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx                # React application and chat workspace
+│   │   ├── AuthModal.jsx          # Authentication UI
+│   │   ├── main.jsx               # React entry point
+│   │   └── styles.css             # Frontend styling
+│   ├── package.json
+│   ├── vite.config.js
+│   └── README.md                  # Frontend-specific instructions
+├── templates/                     # Legacy/fallback Flask templates
+├── static/                        # Static assets and response enhancements
+├── tests/                         # Backend unit tests
+├── docs/REACT_FEATURE_PARITY.md   # Frontend feature audit and known gaps
+├── Dockerfile                     # Builds React and packages Flask
+├── requirements.txt               # Python dependencies
+├── .env.example                   # Environment variable template
+└── README.md
 ```
 
----
+## Requirements
 
-## Installation
+- Python 3.10 (matches the Docker image).
+- Node.js 20 and npm for frontend development/builds.
+- Git.
+- API credentials for the AI or image-generation features you want to use.
+- PostgreSQL for persistent production account data (recommended for deployment); SQLite is supported as a local fallback.
 
-### Clone the Repository
+## Local setup
+
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/Mohan2618/Lumina.git
 cd Lumina
 ```
 
-### Create a Virtual Environment
+### 2. Create and activate a Python virtual environment
 
-```bash
-python -m venv venv
-```
-
-Windows PowerShell:
+**Windows PowerShell**
 
 ```powershell
-venv\Scripts\activate
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 ```
 
-Linux/macOS:
+If PowerShell blocks activation due to its execution policy, follow your machine's Python/PowerShell guidance or activate the environment from Command Prompt instead.
+
+**macOS/Linux**
 
 ```bash
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
-### Install Dependencies
+### 3. Install backend dependencies
 
 ```bash
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Configure Environment Variables
+### 4. Install frontend dependencies
 
-Create a `.env` file in the project root.
-
-For Render, configure these environment variables in the service settings:
-
-```text
-GOOGLE_API_KEY=your_google_api_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
-BREVO_API_KEY=your_brevo_api_key
-BREVO_FROM_EMAIL=your_verified_sender_email
-BREVO_FROM_NAME=Lumina
-FLASK_SECRET_KEY=generate_a_random_secret_at_least_32_characters
-DATABASE_URL=your_postgresql_connection_string
-```
-
-Generate `FLASK_SECRET_KEY` as a long random secret (at least 32 characters) and set it in the deployment environment. Production startup now refuses to run without it because a random per-process session key invalidates logins across workers/restarts. Keep the same value across all app instances. Never commit real API keys, database connection strings, session secrets, passwords, or other credentials to GitHub.
-
-### Persistent Authentication Database
-
-Accounts created in an older Render-hosted SQLite database are not automatically migrated into PostgreSQL. After configuring `DATABASE_URL`, create/test an account in the new database or perform a deliberate data migration before testing password reset.
-
-Lumina uses PostgreSQL in production when `DATABASE_URL` is configured. SQLite remains the local-development fallback when it is not set. The application creates the required authentication tables on startup.
-
-Do not commit `DATABASE_URL` or any database password to the repository.
-
-### Run the Application
-
-Start the backend from the repository root:
+Open a second terminal or continue after activating the Python environment:
 
 ```bash
+cd frontend
+npm install
+cd ..
+```
+
+### 5. Configure environment variables
+
+Copy `.env.example` to `.env` in the repository root, then fill in only the credentials for services you intend to use. See [Environment configuration](#environment-configuration) below.
+
+### 6. Start the application
+
+Start Flask from the repository root:
+
+```powershell
 python app.py
 ```
 
-For React frontend development, in a second terminal:
+In a second terminal, start Vite:
 
 ```powershell
 cd frontend
-npm install
 npm run dev
 ```
 
-Open the Vite URL shown in the terminal. Vite proxies `/api`, `/process`, and `/health` requests to Flask on port 7860. Production Docker builds compile React automatically and serve it from the Flask root route.
+Open the development URL printed by Vite (typically `http://localhost:5173`). The Vite configuration proxies supported backend paths, including `/api`, `/process`, and `/health`, to Flask on port `7860`.
 
-The application will be available at:
+For a production-style frontend build:
 
-```text
-http://localhost:7860
+```powershell
+cd frontend
+npm run build
+cd ..
 ```
 
----
+The generated assets are written to `frontend/dist/`. The Dockerfile builds these assets and copies them into the final image. For local production-style serving, ensure the frontend build exists before starting the backend.
 
-## Deployment
+## Environment configuration
 
-The application is deployed on Render using Docker.
+The application reads environment variables from the process environment; `app.py` also loads a root `.env` file for local development. Never commit real credentials.
 
-Live Demo:
+| Variable | Purpose | Required when |
+|---|---|---|
+| `GEMINI_API_KEY` | Google Gemini client used by the AI service | Using Gemini-powered features |
+| `ANTHROPIC_API_KEY` | Credentials for optional Claude integration | Claude is enabled |
+| `ENABLE_CLAUDE` | Enables optional Claude client initialization when set to `true` | Using Claude |
+| `IMAGE_PROVIDER` | Selects the image-generation provider | Image generation |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account for Workers AI | `IMAGE_PROVIDER=cloudflare` |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API token | `IMAGE_PROVIDER=cloudflare` |
+| `IMAGE_GENERATION_STEPS` | Configures generation steps where supported by the provider | Optional; example default is `4` |
+| `HF_TOKEN` | Hugging Face token for the supported Hugging Face path | When that provider/model requires it |
+| `IMAGE_GENERATION_MODEL` | Image-generation model identifier | Optional/provider-specific |
+| `IMAGE_GENERATION_GUIDANCE` | Provider-specific generation guidance value | Optional/provider-specific |
+| `BREVO_API_KEY` | Brevo API key for transactional email | Sending OTP emails through Brevo |
+| `BREVO_FROM_EMAIL` | Verified sender address | Sending OTP emails through Brevo |
+| `BREVO_FROM_NAME` | Sender display name | Optional email branding |
+| `DATABASE_URL` | PostgreSQL connection string | Persistent PostgreSQL storage |
+| `FLASK_SECRET_KEY` | Stable Flask session-signing secret | **Required in production** |
+| `GEMINI_TIMEOUT` | Gemini request timeout in seconds | Optional; defaults to `45` |
 
-https://lumina-fbhi.onrender.com
+The exact provider options and defaults are defined in `lumina/config.py`, `lumina/services/image_generation.py`, and `.env.example`. Do not assume a provider is available until its credentials and deployment configuration have been tested.
 
----
+### Production secrets and database
 
-## How It Works
+- Set `FLASK_SECRET_KEY` to a random secret of at least 32 characters. The production application refuses to start if this requirement is not met. Use the same secret across instances and restarts so sessions remain valid.
+- Set `DATABASE_URL` to a PostgreSQL connection string for persistent deployed account, conversation, and gallery data. Without it, the application uses its SQLite fallback, which may not be suitable for ephemeral container storage.
+- Existing records in a previous SQLite database are not automatically migrated to PostgreSQL. Plan and verify any migration explicitly.
+- Keep API keys, email credentials, database passwords, and session secrets out of source control and logs.
 
-1. The user enters a natural-language request and optionally uploads an image.
-2. Lumina determines whether the request is conversational, analytical, an image edit, an image-generation task, or another supported operation.
-3. AI-assisted requests are sent through Lumina's configured AI service, while deterministic image operations are executed through the image-processing layer.
-4. The backend returns the assistant message, optional processed/generated image, conversation history, and current image state.
-5. The frontend converts supported Markdown structures into dedicated response artifacts such as code blocks and tables.
-6. Code artifacts provide copy/save controls and browser-safe Run controls where supported.
-7. Image operations can use local undo/redo history and before/after comparison.
-8. Password-reset requests use one-time OTPs stored in the configured authentication database and delivered through Brevo.
+## Docker and deployment
 
----
+The root `Dockerfile` uses a multi-stage build:
 
-## Advanced Editing
+1. Node.js 20 installs frontend dependencies and runs `npm run build`.
+2. Python 3.10 installs `requirements.txt`.
+3. The React `dist/` output is copied into the application image.
+4. Gunicorn starts the Flask application on port `7860`.
 
-Lumina supports natural-language multi-step image editing. Users can request several supported edits in a single message, and Lumina can preserve the requested order and apply up to eight operations as one workflow.
+Build and run locally:
 
-The web interface provides local undo/redo controls for image-edit states, with up to 20 states retained per active chat, plus an interactive before/after comparison with a draggable split slider.
-
-Lumina also supports **4K desktop wallpaper fitting**. A request such as "make this image into a desktop 4K wallpaper" preserves the complete source image as the foreground and builds the remaining 16:9 canvas from a softly blurred, enlarged version of the same image. This avoids stretching or cutting the original subject while producing a 3840×2160 result. Center, top, and bottom placement are supported.
-
----
-
-## Response UI Architecture
-
-The React/Vite application in `frontend/` is the primary interface when a production build is present. The Docker image builds the React app and Flask serves the generated assets. For local frontend development, run Flask on port 7860 and start Vite from `frontend/`; Vite proxies API calls to Flask. If no React build exists, Flask keeps the legacy template available as a fallback.
-
-The React response renderer provides:
-
-```text
-AI response
-    ↓
-Markdown / structured-content detection
-    ↓
-┌───────────────┬───────────────┬────────────────┐
-│ Code artifact │ Table artifact│ Normal message │
-└───────┬───────┴───────┬───────┴────────────────┘
-        ↓               ↓
- Copy / Save       Copy table
-        ↓
- Optional sandbox Run
+```bash
+docker build -t lumina .
+docker run --rm -p 7860:7860 --env-file .env lumina
 ```
 
-The response enhancement layer is intentionally client-side for presentation. It does not change the server's image-processing pipeline.
+Configure production environment variables in the hosting provider's dashboard. For Render, connect the GitHub repository, use the Docker runtime, and provide the required secrets and persistent database configuration. After a deployment, inspect the service logs and test the live site; a successful image build alone does not guarantee valid runtime configuration or AI-provider access.
 
----
+Live demo: https://lumina-fbhi.onrender.com
 
-## v1.1 Stability & Reliability
+## Testing and quality checks
 
-The v1.1 stability work hardens the existing application without removing its current image-processing or response features. It includes safer image upload validation, explicit upload size limits, session-cookie security defaults, removal of the obsolete client-side password-hashing endpoint, and clearer image-generation failure handling. Images are validated by their decoded format and dimensions rather than trusting the uploaded filename or MIME type.
+### Frontend production build
 
-The backend rejects oversized image payloads, malformed/truncated files, unsupported formats, and images exceeding the configured pixel/dimension limits before normal processing. Image-generation failures now return an explicit service-unavailable response instead of pretending that a result was produced.
+```bash
+cd frontend
+npm install
+npm run build
+cd ..
+```
 
-## Future Enhancements
+### Backend tests
 
-- Streaming assistant responses
-- Rich visual graph and chart rendering
-- Mermaid diagram rendering with export support
-- Additional AI image-generation models
-- Specialized vision models for segmentation and super-resolution
-- Model/provider routing and fallback
-- Batch image processing
-- Cloud image storage
-- REST API support
-- Additional authentication hardening
-- Performance optimization
+From the repository root with the virtual environment activated:
 
----
+```bash
+python -m unittest discover -s tests -p "test_*.py" -v
+```
 
-## Learning Outcomes
+### Python syntax check
 
-This project demonstrates practical experience in:
+```bash
+python -m compileall -q app.py lumina
+```
 
-- Flask application development
-- Computer vision using OpenCV
-- AI model integration
-- Prompt engineering
-- Structured AI response rendering
-- Frontend JavaScript and responsive UI design
-- Image processing techniques
-- API integration
-- Docker-based deployment
-- Render deployment
+The repository includes tests for image processing, image validation, guest limits, and response UI behavior. GitHub Actions also runs frontend build, Python syntax, and backend unit-test checks on configured branch/pull-request events. Run these checks after changes and manually test integrations that require credentials.
 
----
+### Suggested manual smoke test
+
+- [ ] Homepage loads without a server error.
+- [ ] Send a plain-text message and verify the response.
+- [ ] Render code in Python, Java, JavaScript/TypeScript, SQL, and another language; test copy and save.
+- [ ] Verify wide code can still be scrolled when its scrollbar is hidden.
+- [ ] Upload a supported image and test a basic edit such as grayscale or rotate.
+- [ ] Test image generation with valid provider credentials and check provider quota/error handling.
+- [ ] Sign up, sign in, sign out, and refresh the page.
+- [ ] Verify saved conversation history and active-conversation restoration.
+- [ ] Test gallery save/download/delete and image undo/redo/compare.
+- [ ] Test password reset only when Brevo and a verified sender are configured.
+- [ ] Check Render logs for missing packages, missing environment variables, or provider errors.
+
+## Security and privacy notes
+
+- Treat all AI-generated content as untrusted input.
+- Browser code previews should remain sandboxed; do not enable arbitrary server-side execution of generated code.
+- Do not commit `.env`, access tokens, secrets, or real database connection strings.
+- Validate uploaded images and keep request-size limits in place.
+- Medical-image features are not a substitute for professional medical advice.
+- Review authentication, session, rate-limit, and sharing behavior before exposing a deployment to sensitive or high-volume use.
+
+## Troubleshooting
+
+| Symptom | What to check |
+|---|---|
+| `ModuleNotFoundError` during startup | Confirm the dependency is in root `requirements.txt` and the deployment installs that file; trigger a fresh build if necessary. |
+| Flask refuses to start in production | Set `FLASK_SECRET_KEY` to a stable value at least 32 characters long. |
+| AI response or image generation fails | Check the relevant API key, selected provider, model configuration, network logs, and provider quota/rate limits. |
+| Password-reset email does not arrive | Verify `BREVO_API_KEY`, the verified sender address, and email-service logs. |
+| Saved account history is missing | Confirm the user is signed in, `DATABASE_URL` points to the expected database, and the history API request succeeds. |
+| Frontend changes do not appear | Confirm the latest commit deployed, inspect Render build logs, and hard-refresh the browser to bypass cached assets. |
+| Homepage returns HTTP 500 | Read the newest server traceback in Render logs; the browser's generic error page does not identify the underlying exception. |
+
+## Contributing
+
+1. Create a branch for your change.
+2. Keep secrets and local environment files out of commits.
+3. Run the frontend build, Python syntax check, and backend tests.
+4. Test the relevant user workflow manually, especially when changing authentication, history, image handling, or deployment behavior.
+5. Update this README or the relevant documentation when commands, configuration, or user-facing features change.
+
+For details about the React frontend and feature-parity tracking, see [`frontend/README.md`](frontend/README.md) and [`docs/REACT_FEATURE_PARITY.md`](docs/REACT_FEATURE_PARITY.md).
 
 ## Author
 
 **Mohan Lingabathina**
 
-GitHub: https://github.com/Mohan2618/Lumina
-
----
+- GitHub: https://github.com/Mohan2618
+- Project: https://github.com/Mohan2618/Lumina
 
 ## License
 
-This project is intended for educational and research purposes.
+No explicit open-source license is currently documented in this repository. Unless a license is added, reuse and redistribution are subject to the default copyright rules.
