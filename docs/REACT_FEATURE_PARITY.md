@@ -47,7 +47,7 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 - [x] Sign-in and sign-up wired to existing Flask endpoints.
 - [x] Sign-up fields/validation: first/last name, email, username, date of birth/age gate, password strength, confirm password, terms agreement; server enforcement is implemented.
 - [x] Password visibility controls.
-- [x] Login identifier supports email/username; [ ] saved-account dropdown behavior.
+- [x] Login identifier supports email/username and offers a recent-account picker using identifiers only (no passwords stored).
 - [x] Client-side failed-login retry countdown feedback is implemented; server-side authentication throttling still requires backend protection and security verification.
 - [x] Forgot password request, 60-second resend countdown, resend, six separate OTP digit fields with keyboard navigation/paste, and OTP/password reset UI are implemented; end-to-end email verification still needs manual testing.
 - [x] Authenticated change-password workflow using the current password.
