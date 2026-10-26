@@ -350,11 +350,11 @@ export default function App() {
               setLastImage(activeChat.lastImage || "");
               setEditVersions(Array.isArray(activeChat.editVersions) ? activeChat.editVersions : []);
               setEditVersionIndex(Number.isInteger(activeChat.editVersionIndex) ? activeChat.editVersionIndex : -1);
-            } else {
-              activeConversationId.current = "";
-              localStorage.removeItem("lumina_react_active_chat");
             }
-          } catch { /* Ignore invalid browser cache and start with a clean chat. */ }
+            // Do not clear the active conversation ID just because it is absent
+            // from the initial browser cache. The account history request below
+            // may still restore it from the server.
+          } catch { /* Ignore invalid browser cache; server history can still restore the active chat. */ }
         }
         try {
           const response = await fetch("/api/conversations", { credentials: "same-origin" });
