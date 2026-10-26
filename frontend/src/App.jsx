@@ -272,6 +272,7 @@ export default function App() {
   const requestController = useRef(null);
   const activeConversationId = useRef("");
   const [error, setError] = useState("");
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
@@ -290,6 +291,13 @@ export default function App() {
   const [savedGallery, setSavedGallery] = useState(() => { try { return JSON.parse(localStorage.getItem("lumina_react_guest_gallery") || "[]"); } catch { return []; } });
   const [savedChats, setSavedChats] = useState(() => { try { return JSON.parse(localStorage.getItem("lumina_react_chats") || "[]"); } catch { return []; } });
   const fileInput = useRef(null);
+
+  // Treat status banners as transient notifications so old messages don't linger.
+  useEffect(() => {
+    if (!error) return undefined;
+    const timer = window.setTimeout(() => setError(""), 4000);
+    return () => window.clearTimeout(timer);
+  }, [error]);
 
   useEffect(() => {
     let active = true;
@@ -1139,7 +1147,7 @@ export default function App() {
                       } catch (error) { setError(error instanceof Error ? error.message : "Could not delete saved image."); return; }
                     }
                     setSavedGallery((current) => current.filter((saved) => saved.id !== item.id));
-                  }} aria-label="Remove saved image"><Trash2 size={14} /></button></div></article>)}</div> : <p className="drawer-empty">No saved images yet. Generate an image and select Save image.</p>) : (savedChats.length ? <div className="saved-chat-sections">{savedChats.some((chat) => chat.pinned) && <section className="saved-chat-group"><h3 className="saved-chat-group-title">Pinned</h3><div className="saved-chat-list">{savedChats.filter((chat) => chat.pinned).sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt)).map((chat) => <article className="saved-chat-card is-pinned" key={chat.id}><button className="saved-chat-open" onClick={() => restoreChat(chat)}><strong>📌 {chat.title}</strong><small>{new Date(chat.savedAt).toLocaleString()} · {chat.messages.length} messages</small></button><button type="button" className="saved-chat-pin" onClick={() => togglePinnedChat(chat)} aria-label="Unpin conversation">Unpin</button><button className="saved-chat-delete" onClick={() => deleteSavedChat(chat)} aria-label="Delete saved conversation"><Trash2 size={14} /></button></article>)}</div></section>}<section className="saved-chat-group"><h3 className="saved-chat-group-title">All conversations</h3>{savedChats.some((chat) => !chat.pinned) ? <div className="saved-chat-list">{savedChats.filter((chat) => !chat.pinned).sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt)).map((chat) => <article className="saved-chat-card" key={chat.id}><button className="saved-chat-open" onClick={() => restoreChat(chat)}><strong>{chat.title}</strong><small>{new Date(chat.savedAt).toLocaleString()} · {chat.messages.length} messages</small></button><button type="button" className="saved-chat-pin" onClick={() => togglePinnedChat(chat)} aria-label="Pin conversation">Pin</button><button className="saved-chat-delete" onClick={() => deleteSavedChat(chat)} aria-label="Delete saved conversation"><Trash2 size={14} /></button></article>)}</div> : <p className="drawer-empty">All conversations are pinned.</p>}</section></div> : <p className="drawer-empty">No saved conversations yet. Use Save conversation to keep a text copy.</p>)}
+                  }} aria-label="Remove saved image"><Trash2 size={14} /></button></div></article>)}</div> : <p className="drawer-empty">No saved images yet. Generate an image and select Save image.</p>) : panel === "history" && historyLoading ? <div className="history-loading" role="status" aria-live="polite"><LoaderCircle className="spin" size={20} /><span>Loading your saved conversations…</span></div> : (savedChats.length ? <div className="saved-chat-sections">{savedChats.some((chat) => chat.pinned) && <section className="saved-chat-group"><h3 className="saved-chat-group-title">Pinned</h3><div className="saved-chat-list">{savedChats.filter((chat) => chat.pinned).sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt)).map((chat) => <article className="saved-chat-card is-pinned" key={chat.id}><button className="saved-chat-open" onClick={() => restoreChat(chat)}><strong>📌 {chat.title}</strong><small>{new Date(chat.savedAt).toLocaleString()} · {chat.messages.length} messages</small></button><button type="button" className="saved-chat-pin" onClick={() => togglePinnedChat(chat)} aria-label="Unpin conversation">Unpin</button><button className="saved-chat-delete" onClick={() => deleteSavedChat(chat)} aria-label="Delete saved conversation"><Trash2 size={14} /></button></article>)}</div></section>}<section className="saved-chat-group"><h3 className="saved-chat-group-title">All conversations</h3>{savedChats.some((chat) => !chat.pinned) ? <div className="saved-chat-list">{savedChats.filter((chat) => !chat.pinned).sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt)).map((chat) => <article className="saved-chat-card" key={chat.id}><button className="saved-chat-open" onClick={() => restoreChat(chat)}><strong>{chat.title}</strong><small>{new Date(chat.savedAt).toLocaleString()} · {chat.messages.length} messages</small></button><button type="button" className="saved-chat-pin" onClick={() => togglePinnedChat(chat)} aria-label="Pin conversation">Pin</button><button className="saved-chat-delete" onClick={() => deleteSavedChat(chat)} aria-label="Delete saved conversation"><Trash2 size={14} /></button></article>)}</div> : <p className="drawer-empty">All conversations are pinned.</p>}</section></div> : <p className="drawer-empty">No saved conversations yet. Use Save conversation to keep a text copy.</p>)}
         </section>
       </div>}
       {passwordModalOpen && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setPasswordModalOpen(false); }}><section className="auth-card" role="dialog" aria-modal="true" aria-labelledby="change-password-heading"><button className="auth-close" type="button" onClick={() => setPasswordModalOpen(false)} aria-label="Close change password"><X size={18} /></button><div className="auth-mark"><Sparkles size={21} /></div><h2 id="change-password-heading">Change password</h2><p className="auth-subtitle">Confirm your current password and choose a strong new password.</p><form className="auth-form" onSubmit={submitPasswordChange}><label>Current password<input type="password" autoComplete="current-password" value={passwordFields.currentPassword} onChange={(event) => setPasswordFields((value) => ({ ...value, currentPassword: event.target.value }))} required /></label><label>New password<input type="password" autoComplete="new-password" minLength={8} value={passwordFields.newPassword} onChange={(event) => setPasswordFields((value) => ({ ...value, newPassword: event.target.value }))} required /></label><label>Confirm new password<input type="password" autoComplete="new-password" minLength={8} value={passwordFields.confirmPassword} onChange={(event) => setPasswordFields((value) => ({ ...value, confirmPassword: event.target.value }))} required /></label>{passwordError && <p className="auth-error" role="alert">{passwordError}</p>}{passwordNotice && <p className="auth-notice" role="status">{passwordNotice}</p>}<button className="auth-submit" type="submit" disabled={passwordBusy}>{passwordBusy ? "Updating…" : "Update password"}</button></form></section></div>}
@@ -1149,6 +1157,7 @@ export default function App() {
         setUser(nextUser);
         setAuthOpen(false);
         setError("");
+        setHistoryLoading(true);
         try {
           const [chatsResponse, galleryResponse] = await Promise.all([
             fetch("/api/conversations", { credentials: "same-origin" }),
@@ -1191,6 +1200,8 @@ export default function App() {
           }
         } catch {
           setError("Signed in, but account history or saved images could not be loaded. Please try again.");
+        } finally {
+          setHistoryLoading(false);
         }
       }} />}
     </main>
