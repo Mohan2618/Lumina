@@ -72,6 +72,8 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 - Remaining known gaps: complete Markdown edge-case parity; backend login throttling; confirm plan data is supplied by the backend; full quick-operation parity verification; voice-input verification; and final end-to-end/manual regression tests.
 - Added recent account selection without storing credentials, client-side failed-login retry feedback, additional inline strikethrough formatting, and conditional plan display.
 - Added nested ordered/unordered list rendering with indentation-aware list nesting.
+- Added recent login identifier selection and client-side retry countdown; no passwords are persisted and the countdown is not a substitute for server-side rate limiting.
+- Added inline strikethrough support and repaired malformed newline escapes in the response renderer.
 - Added client-side image resizing/compression for raster uploads to 1024px maximum dimension and JPEG quality 0.85.
 - Added recursive blockquote rendering to the React response renderer.
 - Some features may exist in backend or shared scripts, but they are not considered migrated until wired into React and tested end-to-end.
