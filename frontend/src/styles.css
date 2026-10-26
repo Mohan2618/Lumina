@@ -398,3 +398,41 @@ a{color:#ff5268}
   .message .message-actions button{min-height:35px;padding:8px 10px;font-size:12px}
 }
 
+/* Saved conversation pin controls — override browser-default button appearance explicitly. */
+.saved-chat-card .saved-chat-pin{
+  appearance:none;
+  -webkit-appearance:none;
+  display:inline-flex;
+  flex:0 0 auto;
+  align-items:center;
+  justify-content:center;
+  min-width:58px;
+  min-height:34px;
+  padding:7px 12px;
+  border:1px solid #ffffff20;
+  border-radius:9px;
+  background:#22232a;
+  color:#dce2ec;
+  font-family:inherit;
+  font-size:12px;
+  font-weight:600;
+  line-height:1.2;
+  box-shadow:none;
+  cursor:pointer;
+  transition:background .15s ease,border-color .15s ease,color .15s ease;
+}
+.saved-chat-card:not(.is-pinned) .saved-chat-pin{border-color:#ff52684d;background:#ff40580d;color:#ffb4bf}
+.saved-chat-card .saved-chat-pin:hover{border-color:#ff5268;background:#ff40581c;color:#fff}
+.saved-chat-card.is-pinned .saved-chat-pin{border-color:#ffffff24;background:#202129;color:#cbd2df}
+.saved-chat-card.is-pinned .saved-chat-pin:hover{border-color:#ff5268;background:#ff40581c;color:#fff}
+.saved-chat-card .saved-chat-pin:focus-visible{outline:2px solid #ff5268;outline-offset:2px}
+.saved-chat-card .saved-chat-delete{appearance:none;-webkit-appearance:none;display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;padding:0;border:1px solid #ffffff17;border-radius:9px;background:#1c1d23;color:#aeb8c8;cursor:pointer}
+.saved-chat-card .saved-chat-delete:hover{border-color:#ff526866;background:#ff405812;color:#ffb4bf}
+.saved-chat-card .saved-chat-open{min-height:42px;padding:2px 4px}
+@media(max-width:520px){
+  .saved-chat-sections{padding:8px}
+  .saved-chat-card{gap:7px;padding:10px}
+  .saved-chat-card .saved-chat-pin{min-width:54px;min-height:34px;padding:7px 9px}
+  .saved-chat-card .saved-chat-delete{flex-basis:34px}
+}
+
