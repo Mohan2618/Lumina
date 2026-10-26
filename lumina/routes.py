@@ -1,5 +1,5 @@
 from flask import request, jsonify, render_template, session, send_from_directory
-import base64, io, os, time, secrets, random, json
+import base64, io, os, time, secrets, random, json, re
 import numpy as np
 import cv2
 from PIL import Image
@@ -411,11 +411,41 @@ def register_routes(app):
             if image_pil is None and last_image_pil is not None:
                 image_pil=last_image_pil
     
-            # Existing-image edits must use the current image, even when the
-            # browser sends it as last_image instead of a fresh multipart upload.
-            ai_image=image_pil
-            raw_reply,model_used=call_ai(history,prompt,ai_image,gemini_client,GEMINI_MODEL,SYSTEM_PROMPT,GEMINI_TIMEOUT)
-            clean_reply,intent,params=extract_op(raw_reply)
+            # Deterministic pixel edits should not depend on an LLM interpreting the
+            # request. This prevents simple requests such as "make it grayscale" from
+            # accidentally triggering an unrelated operation (for example resizing).
+            direct_operations = [
+                (r"\b(grayscale|greyscale|gray scale|grey scale|black and white|black-and-white|monochrome)\b", "grayscale", "Converted the image to grayscale."),
+                (r"\b(invert|negative colors|invert colors)\b", "invert", "Inverted the image colors."),
+                (r"\b(sepia)\b", "sepia", "Applied a sepia tone."),
+                (r"\b(blur|blurry)\b", "blur", "Applied a blur effect."),
+                (r"\b(sharpen|sharper|increase sharpness)\b", "sharpen", "Sharpened the image."),
+                (r"\b(flip horizontally|horizontal flip|mirror image|mirror horizontally)\b", "flip", "Flipped the image horizontally."),
+                (r"\b(flip vertically|vertical flip)\b", "flip_vertical", "Flipped the image vertically."),
+                (r"\b(rotate 90|rotate clockwise|rotate right)\b", "rotate", "Rotated the image 90 degrees."),
+                (r"\b(rotate counter.?clockwise|rotate left)\b", "rotate_left", "Rotated the image 90 degrees counterclockwise."),
+            ]
+            normalized_prompt = prompt.lower()
+            direct_match = next(((operation, message) for pattern, operation, message in direct_operations
+                                 if re.search(pattern, normalized_prompt)), None) if image_pil else None
+            if direct_match:
+                intent, clean_reply = direct_match
+                params = {"axis": "vertical"} if intent == "flip_vertical" else {}
+                if intent == "flip_vertical":
+                    intent = "flip"
+                elif intent == "rotate_left":
+                    intent = "rotate"
+                    params = {"angle": -90}
+                elif intent == "rotate":
+                    params = {"angle": 90}
+                raw_reply = clean_reply
+                model_used = "local-image-operation"
+            else:
+                # Existing-image edits must use the current image, even when the
+                # browser sends it as last_image instead of a fresh multipart upload.
+                ai_image=image_pil
+                raw_reply,model_used=call_ai(history,prompt,ai_image,gemini_client,GEMINI_MODEL,SYSTEM_PROMPT,GEMINI_TIMEOUT)
+                clean_reply,intent,params=extract_op(raw_reply)
             result_b64=None
             result_images=[]
     
