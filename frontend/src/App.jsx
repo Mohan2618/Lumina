@@ -73,7 +73,7 @@ function InlineMarkdown({ text }) {
   const tokens = source.split(/(\x60{1,2}[^\x60\n]+\x60{1,2}|\*\*[^*\n]+\*\*|__[^_\n]+__|\*[^*\n]+\*|_[^_\n]+_|\[[^\]]+\]\([^)]+\))/g);
   return tokens.map((token, index) => {
     if (/^\x60{1,2}[^\x60\n]+\x60{1,2}$/.test(token)) return <code className="inline-code" key={index}>{token.replace(/^\x60{1,2}|\x60{1,2}$/g, "")}</code>;
-    if (token.startsWith("**") && token.endsWith("**")) return <strong key={index}>{token.slice(2, -2)}</strong>;
+    if (token.startsWith("~~") && token.endsWith("~~")) return <del key={index}>{token.slice(2, -2)}</del>;\n    if (token.startsWith("**") && token.endsWith("**")) return <strong key={index}>{token.slice(2, -2)}</strong>;
     if (token.startsWith("__") && token.endsWith("__")) return <strong key={index}>{token.slice(2, -2)}</strong>;
     if ((token.startsWith("*") && token.endsWith("*")) || (token.startsWith("_") && token.endsWith("_"))) return <em key={index}>{token.slice(1, -1)}</em>;
     const link = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
