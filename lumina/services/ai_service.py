@@ -61,7 +61,7 @@ def call_gemini_fast(history: list, user_text: str, image_pil=None, gemini_clien
                     contents=contents,
                     config=types.GenerateContentConfig(
                         system_instruction=system_prompt,
-                        max_output_tokens=4096,
+                        max_output_tokens=8192,
                         temperature=0.7,
                     )
                 )
