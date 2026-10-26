@@ -249,30 +249,31 @@ export default function App() {
   const fileInput = useRef(null);
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).has("share")) return;
-    try {
-      const activeId = localStorage.getItem("lumina_react_active_chat");
-      if (!activeId || !savedChats.length) return;
-      const activeChat = savedChats.find((chat) => chat.id === activeId);
-      if (!activeChat || !Array.isArray(activeChat.messages) || !activeChat.messages.length) return;
-      activeConversationId.current = activeId;
-      setMessages(activeChat.messages.map((item) => ({ ...item, id: crypto.randomUUID() })));
-      setApiHistory(Array.isArray(activeChat.apiHistory) ? activeChat.apiHistory : []);
-      setLastImage(activeChat.lastImage || "");
-      setEditVersions(Array.isArray(activeChat.editVersions) ? activeChat.editVersions : []);
-      setEditVersionIndex(Number.isInteger(activeChat.editVersionIndex) ? activeChat.editVersionIndex : -1);
-    } catch { /* Ignore invalid browser cache and start with a fresh conversation. */ }
-  // Restore only from the browser snapshot available at initial mount.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
     let active = true;
     fetch("/api/auth/me", { credentials: "same-origin" })
       .then((response) => response.ok ? response.json() : null)
       .then(async (data) => {
         if (!active || !data?.authenticated) return;
         setUser(data.user);
+        // Restore the last active conversation only for an authenticated session.
+        // A public/guest visit must always start with a clean chat.
+        if (!new URLSearchParams(window.location.search).has("share")) {
+          try {
+            const activeId = localStorage.getItem("lumina_react_active_chat");
+            const activeChat = savedChats.find((chat) => chat.id === activeId);
+            if (activeChat && Array.isArray(activeChat.messages) && activeChat.messages.length) {
+              activeConversationId.current = activeId;
+              setMessages(activeChat.messages.map((item) => ({ ...item, id: crypto.randomUUID() })));
+              setApiHistory(Array.isArray(activeChat.apiHistory) ? activeChat.apiHistory : []);
+              setLastImage(activeChat.lastImage || "");
+              setEditVersions(Array.isArray(activeChat.editVersions) ? activeChat.editVersions : []);
+              setEditVersionIndex(Number.isInteger(activeChat.editVersionIndex) ? activeChat.editVersionIndex : -1);
+            } else {
+              activeConversationId.current = "";
+              localStorage.removeItem("lumina_react_active_chat");
+            }
+          } catch { /* Ignore invalid browser cache and start with a clean chat. */ }
+        }
         try {
           const response = await fetch("/api/conversations", { credentials: "same-origin" });
           if (!response.ok) return;
