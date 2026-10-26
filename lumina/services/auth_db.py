@@ -133,6 +133,26 @@ def init_db():
 
         if _is_postgres():
             _execute(conn, """
+                CREATE TABLE IF NOT EXISTS saved_gallery (
+                    id TEXT PRIMARY KEY,
+                    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    payload JSONB NOT NULL,
+                    saved_at DOUBLE PRECISION NOT NULL
+                )
+            """)
+        else:
+            _execute(conn, """
+                CREATE TABLE IF NOT EXISTS saved_gallery (
+                    id TEXT PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    payload TEXT NOT NULL,
+                    saved_at REAL NOT NULL
+                )
+            """)
+        _execute(conn, "CREATE INDEX IF NOT EXISTS saved_gallery_user_saved_idx ON saved_gallery(user_id, saved_at DESC)")
+
+        if _is_postgres():
+            _execute(conn, """
                 CREATE TABLE IF NOT EXISTS shared_conversations (
                     token TEXT PRIMARY KEY,
                     payload JSONB NOT NULL,
@@ -432,6 +452,62 @@ def delete_conversation(user_id, conversation_id):
     conn = _connect()
     try:
         cur = _execute(conn, "DELETE FROM conversations WHERE id=? AND user_id=?", (conversation_id, user_id))
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+
+def list_saved_gallery(user_id):
+    import json
+    init_db()
+    conn = _connect()
+    try:
+        rows = _execute(conn, "SELECT id, payload, saved_at FROM saved_gallery WHERE user_id=? ORDER BY saved_at DESC LIMIT 100", (user_id,)).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            payload = item.get("payload")
+            if isinstance(payload, str):
+                payload = json.loads(payload)
+            result.append({"id": item["id"], **(payload if isinstance(payload, dict) else {}), "savedAt": item["saved_at"]})
+        return result
+    finally:
+        conn.close()
+
+
+def upsert_saved_gallery(user_id, image_id, payload):
+    import json
+    init_db()
+    encoded = json.dumps(payload, separators=(",", ":"))
+    now = time.time()
+    conn = _connect()
+    try:
+        if _is_postgres():
+            _execute(conn, """
+                INSERT INTO saved_gallery(id,user_id,payload,saved_at)
+                VALUES(?,?,?::jsonb,?)
+                ON CONFLICT(id) DO UPDATE SET payload=EXCLUDED.payload,saved_at=EXCLUDED.saved_at
+                WHERE saved_gallery.user_id=EXCLUDED.user_id
+            """, (image_id, user_id, encoded, now))
+        else:
+            _execute(conn, """
+                INSERT INTO saved_gallery(id,user_id,payload,saved_at)
+                VALUES(?,?,?,?)
+                ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,saved_at=excluded.saved_at
+                WHERE saved_gallery.user_id=excluded.user_id
+            """, (image_id, user_id, encoded, now))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def delete_saved_gallery(user_id, image_id):
+    init_db()
+    conn = _connect()
+    try:
+        cur = _execute(conn, "DELETE FROM saved_gallery WHERE id=? AND user_id=?", (image_id, user_id))
         conn.commit()
         return cur.rowcount > 0
     finally:
