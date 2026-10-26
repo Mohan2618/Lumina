@@ -1022,7 +1022,7 @@ export default function App() {
                     <div className="message-heading"><strong>{message.role === "user" ? "You" : "Lumina"}</strong><div className="message-actions">
                       {message.text && <button type="button" onClick={() => copyText(message.text, "Message copied.")} title={message.role === "user" ? "Copy prompt" : "Copy response"} aria-label={message.role === "user" ? "Copy prompt" : "Copy response"}><Copy size={13} /> Copy</button>}
                       {message.role === "user" && message.text && <button type="button" onClick={() => editUserMessage(message, messageIndex)} title="Edit and resend this prompt">Edit</button>}
-                      {message.role === "assistant" && !message.failed && <button type="button" onClick={() => retryAssistantResponse(messageIndex)} disabled={busy || sharedReadOnly} title="Regenerate this response" aria-label="Retry response"><WandSparkles size={13} /> Retry</button>}
+                      {message.role === "assistant" && <button type="button" onClick={() => retryAssistantResponse(messageIndex)} disabled={busy || sharedReadOnly} title={message.failed ? "Retry failed response" : "Regenerate this response"} aria-label="Retry response"><WandSparkles size={13} /> Retry</button>}
                     </div></div>
                     {message.text && (message.role === "assistant" ? <StructuredResponse text={message.text} onCopy={(value) => copyText(value, "Response copied.")} /> : <p>{message.text}</p>)}
                     {message.image && <img className="message-image" src={message.image} alt="Uploaded input" />}
