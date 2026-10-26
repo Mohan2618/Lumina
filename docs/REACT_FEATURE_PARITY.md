@@ -23,7 +23,7 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 - [x] New chat and conversation history save/list/load/delete, with authenticated server sync.
 - [x] Restore messages, API history, image state, and edit versions.
 - [x] Create/copy expiring share links; shared conversations load read-only and expire after 7 days.
-- [ ] Message copy controls exist; full Markdown parity (nested lists, blockquotes, richer inline syntax) still needs work.
+- [ ] Full Markdown parity (nested lists, blockquotes, richer inline syntax) still needs work; copy response/code/table controls are implemented.
 - [x] Code copy/save, sandboxed browser-safe run previews, and table copy controls.
 - [x] Display returned image variations and provide per-image actions.
 - [x] Use generated images as the next edit input through the existing `last_image` flow.
@@ -33,7 +33,7 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 
 ### Image gallery and tools
 - [x] Saved gallery with browser persistence, badge/count, display, download, delete, and save from lightbox; signed-in saves use the authenticated `/api/gallery` endpoints, while guest images stay in guest browser storage (legacy guest items are not automatically imported into accounts).
-- [ ] Operations panel and all original quick operations:
+- [x] Operations panel is present and opens; [ ] verify parity of all original quick operations:
   - Medical: X-ray, MRI, CT, fundus/retina, skin, wound, CLAHE, denoise, segmentation.
   - Creative: cartoon, watercolor, sketch, oil painting, neon, glitch, halftone, pop art, stained glass, pointillism, thermal, vintage, duotone, double exposure, tilt-shift, bokeh, HDR, fisheye, ASCII, mosaic, cross-process.
   - Analysis: face detection, color palette, Canny, Sobel, quality check, color analysis, histogram equalization.
@@ -45,9 +45,9 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 
 ### Account and profile
 - [x] Sign-in and sign-up wired to existing Flask endpoints.
-- [x] Sign-up fields/validation: first/last name, email, username, date of birth/age gate, password strength, confirm password, terms agreement (age/terms still need server-side enforcement).
-- [ ] Password visibility controls.
-- [ ] Login identifier supports email/username and saved-account dropdown behavior.
+- [x] Sign-up fields/validation: first/last name, email, username, date of birth/age gate, password strength, confirm password, terms agreement; server enforcement is implemented.
+- [x] Password visibility controls.
+- [x] Login identifier supports email/username; [ ] saved-account dropdown behavior.
 - [ ] Failed-login rate-limit messaging/timer.
 - [x] Forgot password request, 60-second resend countdown, resend, six separate OTP digit fields with keyboard navigation/paste, and OTP/password reset UI are implemented; end-to-end email verification still needs manual testing.
 - [x] Authenticated change-password workflow using the current password.
@@ -59,7 +59,7 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 - Added client and server validation for signup email, username, password strength, date of birth/age 13+, and terms acceptance.
 - Added a compact profile dropdown containing Settings, Change password, and Sign out (Sign in for guests).
 - Fixed account history/gallery hydration after in-page login.
-- CI passed on `5ab78e8`. Profile-menu commits `8d4d622` and `1da8341` are awaiting CI results.
+- CI passed on `8ceb3e8` (including profile-menu changes). This is automated build/syntax verification, not a substitute for manual end-to-end account and media tests.
 
 ## Latest user test results
 - [x] Operations panel visible and opens.
@@ -69,7 +69,7 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 ## React migration gaps visible from current implementation
 - Saved chats now restore API history and edit context; confirm with an authenticated end-to-end test.
 - React saved gallery is capped at 12 and saved chats at 20; original storage behavior needs comparison and compatibility decisions.
-- Remaining known gaps: full Markdown parity; saved-account dropdown; failed-login rate-limit timer; dedicated plan display; image compression/resizing parity; voice-input verification; and final end-to-end/manual regression tests.
+- Remaining known gaps: full Markdown parity; saved-account dropdown; failed-login rate-limit timer; dedicated plan display; image compression/resizing parity; full quick-operation parity verification; voice-input verification; and final end-to-end/manual regression tests.
 - Some features may exist in backend or shared scripts, but they are not considered migrated until wired into React and tested end-to-end.
 
 ## Implementation and verification order
