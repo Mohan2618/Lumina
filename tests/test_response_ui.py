@@ -39,7 +39,7 @@ class ResponseUITests(unittest.TestCase):
     def test_frontend_markdown_renderer_handles_fenced_code_and_lists(self):
         source = (ROOT / "frontend" / "src" / "App.jsx").read_text(encoding="utf-8")
         self.assertIn(r"const fence = /", source)
-        self.assertIn(r"const numbered = raw.match", source)
+        self.assertIn("numbered = raw.match", source)
         self.assertIn("function StructuredResponse", source)
         self.assertIn("function MarkdownText", source)
 
