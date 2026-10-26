@@ -102,7 +102,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
         isLogin ? "/api/auth/verify-password" : "/api/auth/signup",
         isLogin
           ? { identifier: form.identifier.trim(), password: form.password }
-          : { firstName: form.firstName.trim(), lastName: form.lastName.trim(), email: form.email.trim(), username: form.username.trim(), password: form.password },
+          : { firstName: form.firstName.trim(), lastName: form.lastName.trim(), email: form.email.trim(), username: form.username.trim(), password: form.password, dateOfBirth: form.dateOfBirth, acceptedTerms: form.acceptedTerms },
       );
       if (!data.user) throw new Error("The server did not return an account session.");
       onAuthenticated(data.user);
