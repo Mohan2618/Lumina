@@ -304,3 +304,31 @@ a{color:#ff5268}
 .otp-digit-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;width:100%}
 .auth-form .otp-digit-row input{min-width:0;padding:12px 4px;text-align:center;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
 @media(max-width:420px){.otp-digit-row{gap:5px}.auth-form .otp-digit-row input{padding:10px 2px}}
+
+/* Keep desktop navigation fixed while the conversation workspace scrolls. */
+@media (min-width: 761px) {
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 30;
+    width: 248px;
+    height: 100vh;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .workspace {
+    margin-left: 248px;
+    width: calc(100% - 248px);
+    min-height: 100vh;
+  }
+}
+.settings-content{display:flex;flex-direction:column;gap:14px;padding:16px}
+.settings-section{padding:15px;border:1px solid #ffffff12;border-radius:12px;background:#ffffff04}
+.settings-section h3{margin:0 0 8px;color:#f2f3f7;font-size:13px}
+.settings-section p{margin:0 0 12px;color:#9da7b8;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.settings-section .operation-chip{margin-top:2px}
+@media(max-width:760px){
+  .sidebar{position:static;height:auto;overflow:visible}
+  .workspace{margin-left:0;width:100%}
+}
