@@ -18,6 +18,7 @@ import {
   Share2,
   Settings,
   ChevronDown,
+  MoreHorizontal,
 } from "lucide-react";
 
 const WELCOME = {
@@ -1034,7 +1035,20 @@ export default function App() {
                       const normalizedSrc = imageSrc;
                       return <div className="result-image-wrap" key={index}>
                         <button className="image-open-button" onClick={() => setLightbox(imageSrc)} aria-label="Open image preview"><img className="message-image" src={imageSrc} alt={"Generated or edited result " + (index + 1)} /></button>
-                        <div className="image-action-row"><button className="save-image-button" onClick={() => saveImage(normalizedSrc)}><BookmarkPlus size={14} /> Save image</button><a className="image-download-link" href={imageSrc} download="lumina-image.png">Download</a><button className="image-download-link" onClick={() => copyImage(normalizedSrc)}>Copy image</button><button className="image-download-link" onClick={() => { setLastImage(normalizedSrc.startsWith("data:") ? normalizedSrc.split(",", 2)[1] : normalizedSrc.replace(/^blob:/, "")); setPrompt("Edit this image: "); }}>Use for edit</button><button className="image-download-link" disabled={editVersionIndex <= 0} onClick={undoImageEdit}>Undo edit</button><button className="image-download-link" disabled={editVersionIndex < 0 || editVersionIndex >= editVersions.length - 1} onClick={redoImageEdit}>Redo edit</button><button className="image-download-link" disabled={editVersionIndex <= 0} onClick={() => { setComparePosition(50); setCompareImages({ before: editVersions[editVersionIndex - 1]?.src, after: editVersions[editVersionIndex]?.src }); }}>Compare</button></div>
+                        <div className="image-action-row">
+                          <button type="button" className="save-image-button" onClick={() => saveImage(normalizedSrc)}><BookmarkPlus size={14} /> Save image</button>
+                          <a className="image-download-link image-primary-action" href={imageSrc} download="lumina-image.png">Download</a>
+                          <button type="button" className="image-download-link image-primary-action" onClick={() => copyImage(normalizedSrc)}><Copy size={14} /> Copy image</button>
+                          <details className="image-more-actions">
+                            <summary aria-label="More image actions" title="More image actions"><MoreHorizontal size={18} /></summary>
+                            <div className="image-more-menu" role="group" aria-label="More image actions">
+                              <button type="button" onClick={() => { setLastImage(normalizedSrc.startsWith("data:") ? normalizedSrc.split(",", 2)[1] : normalizedSrc.replace(/^blob:/, "")); setPrompt("Edit this image: "); }}>Use for edit</button>
+                              <button type="button" disabled={editVersionIndex <= 0} onClick={undoImageEdit}>Undo edit</button>
+                              <button type="button" disabled={editVersionIndex < 0 || editVersionIndex >= editVersions.length - 1} onClick={redoImageEdit}>Redo edit</button>
+                              <button type="button" disabled={editVersionIndex <= 0} onClick={() => { setComparePosition(50); setCompareImages({ before: editVersions[editVersionIndex - 1]?.src, after: editVersions[editVersionIndex]?.src }); }}>Compare</button>
+                            </div>
+                          </details>
+                        </div>
                       </div>;
                     })}
                   </div>
