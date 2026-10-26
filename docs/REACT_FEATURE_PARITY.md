@@ -51,13 +51,15 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 - [ ] Failed-login rate-limit messaging/timer.
 - [x] Forgot password request, 60-second resend countdown, resend, six separate OTP digit fields with keyboard navigation/paste, and OTP/password reset UI are implemented; end-to-end email verification still needs manual testing.
 - [x] Authenticated change-password workflow using the current password.
-- [ ] User display and logout work; dedicated profile menu/plan display and saved-account dropdown remain missing.
+- [x] User display, logout, Settings, and Change password are accessible through the profile dropdown; dedicated plan display and saved-account dropdown remain unimplemented.
 - [x] User-scoped conversation and gallery API endpoints; guest gallery storage is separated from authenticated gallery state. Verify all sign-out/login edge cases manually.
 
 ## Latest branch changes
 - Added authenticated saved-gallery GET/POST/DELETE endpoints and frontend sync for signed-in saved images.
-- Added sign-up client validation for email, username, password strength, date of birth/age 13+, and terms acceptance.
-- Latest known green CI commit before the sign-up validation change: `4c4fba6`; rerun CI for newer commits before merging.
+- Added client and server validation for signup email, username, password strength, date of birth/age 13+, and terms acceptance.
+- Added a compact profile dropdown containing Settings, Change password, and Sign out (Sign in for guests).
+- Fixed account history/gallery hydration after in-page login.
+- CI passed on `5ab78e8`. Profile-menu commits `8d4d622` and `1da8341` are awaiting CI results.
 
 ## Latest user test results
 - [x] Operations panel visible and opens.
@@ -67,7 +69,7 @@ Rule: preserve Flask routes and existing backend behavior; do not merge/deploy u
 ## React migration gaps visible from current implementation
 - Saved chats now restore API history and edit context; confirm with an authenticated end-to-end test.
 - React saved gallery is capped at 12 and saved chats at 20; original storage behavior needs comparison and compatibility decisions.
-- Remaining known gaps: full Markdown parity; signup age/terms gates; saved-account dropdown; failed-login rate-limit timer;  dedicated profile/plan menu; image gallery cloud sync; and final end-to-end/manual regression tests.
+- Remaining known gaps: full Markdown parity; saved-account dropdown; failed-login rate-limit timer; dedicated plan display; image compression/resizing parity; voice-input verification; and final end-to-end/manual regression tests.
 - Some features may exist in backend or shared scripts, but they are not considered migrated until wired into React and tested end-to-end.
 
 ## Implementation and verification order
