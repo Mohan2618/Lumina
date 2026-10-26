@@ -18,6 +18,11 @@ export default function AuthModal({ onClose, onAuthenticated }) {
   const otpRefs = useRef([]);
 
   useEffect(() => {
+    // Remove identifiers saved by the older "Recent accounts" UI; never surface them in auth forms.
+    try { localStorage.removeItem("lumina_saved_login_identifiers"); } catch {}
+  }, []);
+
+  useEffect(() => {
     if (mode !== "reset" || resendSeconds <= 0) return;
     const timer = window.setTimeout(() => setResendSeconds((seconds) => Math.max(0, seconds - 1)), 1000);
     return () => window.clearTimeout(timer);
