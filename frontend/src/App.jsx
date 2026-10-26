@@ -297,15 +297,30 @@ export default function App() {
           const response = await fetch("/api/conversations", { credentials: "same-origin" });
           if (!response.ok) return;
           const result = await response.json();
-          if (active && Array.isArray(result.conversations) && result.conversations.length) {
+          if (active && Array.isArray(result.conversations)) {
+            const serverChats = result.conversations.map((chat) => {
+              const savedAt = typeof chat.savedAt === "number" ? new Date(chat.savedAt * 1000).toISOString() : chat.savedAt;
+              return { ...chat, savedAt, messages: Array.isArray(chat.messages) ? chat.messages : [] };
+            });
+            // The server is the source of truth for an account's history. Do not
+            // let an empty local cache hide conversations saved in the database.
             setSavedChats((current) => {
               const merged = new Map(current.map((chat) => [chat.id, chat]));
-              result.conversations.forEach((chat) => {
-                const savedAt = typeof chat.savedAt === "number" ? new Date(chat.savedAt * 1000).toISOString() : chat.savedAt;
-                merged.set(chat.id, { ...chat, savedAt, messages: Array.isArray(chat.messages) ? chat.messages : [] });
-              });
-              return [...merged.values()].sort((a, b) => new Date(b.savedAt || 0) - new Date(a.savedAt || 0)).slice(0, 100);
+              serverChats.forEach((chat) => merged.set(chat.id, { ...merged.get(chat.id), ...chat }));
+              const next = [...merged.values()].sort((a, b) => new Date(b.savedAt || 0) - new Date(a.savedAt || 0)).slice(0, 100);
+              try { localStorage.setItem("lumina_react_chats", JSON.stringify(next)); } catch {}
+              return next;
             });
+            const activeId = (() => { try { return localStorage.getItem("lumina_react_active_chat"); } catch { return ""; } })();
+            const activeChat = serverChats.find((chat) => chat.id === activeId);
+            if (activeChat && active && !new URLSearchParams(window.location.search).has("share")) {
+              activeConversationId.current = activeChat.id;
+              setMessages(activeChat.messages.map((item) => ({ ...item, id: crypto.randomUUID() })));
+              setApiHistory(Array.isArray(activeChat.apiHistory) ? activeChat.apiHistory : []);
+              setLastImage(activeChat.lastImage || "");
+              setEditVersions(Array.isArray(activeChat.editVersions) ? activeChat.editVersions : []);
+              setEditVersionIndex(Number.isInteger(activeChat.editVersionIndex) ? activeChat.editVersionIndex : -1);
+            }
           }
         } catch { /* Keep the browser cache available when sync is offline. */ }
       })
