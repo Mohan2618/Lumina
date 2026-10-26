@@ -253,7 +253,24 @@ export default function App() {
     fetch("/api/auth/me", { credentials: "same-origin" })
       .then((response) => response.ok ? response.json() : null)
       .then(async (data) => {
-        if (!active || !data?.authenticated) return;
+        if (!active) return;
+        if (!data?.authenticated) {
+          // Never show cached account history before/without authentication.
+          // Conversations are account-scoped; guest visits start with a clean slate.
+          setUser(null);
+          setSavedChats([]);
+          setMessages([]);
+          setApiHistory([]);
+          setLastImage("");
+          setEditVersions([]);
+          setEditVersionIndex(-1);
+          activeConversationId.current = "";
+          try {
+            localStorage.removeItem("lumina_react_chats");
+            localStorage.removeItem("lumina_react_active_chat");
+          } catch { /* Ignore unavailable browser storage. */ }
+          return;
+        }
         setUser(data.user);
         // Restore the last active conversation only for an authenticated session.
         // A public/guest visit must always start with a clean chat.
