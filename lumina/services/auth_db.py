@@ -99,6 +99,77 @@ def init_db():
                 )
             """)
 
+        if _is_postgres():
+            _execute(conn, """
+                CREATE TABLE IF NOT EXISTS conversations (
+                    id TEXT PRIMARY KEY,
+                    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    title TEXT NOT NULL,
+                    payload JSONB NOT NULL,
+                    updated_at DOUBLE PRECISION NOT NULL,
+                    created_at DOUBLE PRECISION NOT NULL
+                )
+            """)
+            _execute(conn, "CREATE INDEX IF NOT EXISTS conversations_user_updated_idx ON conversations(user_id, updated_at DESC)")
+        else:
+            _execute(conn, """
+                CREATE TABLE IF NOT EXISTS conversations (
+                    id TEXT PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    title TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    updated_at REAL NOT NULL,
+                    created_at REAL NOT NULL
+                )
+            """)
+            _execute(conn, "CREATE INDEX IF NOT EXISTS conversations_user_updated_idx ON conversations(user_id, updated_at DESC)")
+
+        _execute(conn, """
+            CREATE TABLE IF NOT EXISTS otp_send_limits (
+                email TEXT PRIMARY KEY,
+                sent_at DOUBLE PRECISION NOT NULL
+            )
+        """)
+
+        if _is_postgres():
+            _execute(conn, """
+                CREATE TABLE IF NOT EXISTS saved_gallery (
+                    id TEXT PRIMARY KEY,
+                    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    payload JSONB NOT NULL,
+                    saved_at DOUBLE PRECISION NOT NULL
+                )
+            """)
+        else:
+            _execute(conn, """
+                CREATE TABLE IF NOT EXISTS saved_gallery (
+                    id TEXT PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    payload TEXT NOT NULL,
+                    saved_at REAL NOT NULL
+                )
+            """)
+        _execute(conn, "CREATE INDEX IF NOT EXISTS saved_gallery_user_saved_idx ON saved_gallery(user_id, saved_at DESC)")
+
+        if _is_postgres():
+            _execute(conn, """
+                CREATE TABLE IF NOT EXISTS shared_conversations (
+                    token TEXT PRIMARY KEY,
+                    payload JSONB NOT NULL,
+                    created_at DOUBLE PRECISION NOT NULL,
+                    expires_at DOUBLE PRECISION NOT NULL
+                )
+            """)
+        else:
+            _execute(conn, """
+                CREATE TABLE IF NOT EXISTS shared_conversations (
+                    token TEXT PRIMARY KEY,
+                    payload TEXT NOT NULL,
+                    created_at REAL NOT NULL,
+                    expires_at REAL NOT NULL
+                )
+            """)
+
         conn.commit()
     finally:
         conn.close()
@@ -257,5 +328,198 @@ def otp_can_send(email, cooldown=60):
             (email,),
         ).fetchone()
         return not row or time.time() - row["sent_at"] >= cooldown
+    finally:
+        conn.close()
+
+
+def record_otp_sent(email):
+    """Persist the last successful OTP send independently of the OTP's lifecycle."""
+    normalized_email = str(email or "").strip().lower()
+    if not normalized_email:
+        raise ValueError("Email is required")
+    init_db()
+    conn = _connect()
+    try:
+        _execute(
+            conn,
+            """
+                INSERT INTO otp_send_limits(email, sent_at)
+                VALUES(?, ?)
+                ON CONFLICT(email) DO UPDATE SET sent_at=excluded.sent_at
+            """,
+            (normalized_email, time.time()),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def create_shared_conversation(token, payload, ttl=604800):
+    """Create a read-only share token that expires after seven days by default."""
+    import json
+    now = time.time()
+    encoded = json.dumps(payload, separators=(",", ":"))
+    conn = _connect()
+    try:
+        if _is_postgres():
+            _execute(
+                conn,
+                """INSERT INTO shared_conversations(token,payload,created_at,expires_at)
+                   VALUES(?,?::jsonb,?,?) ON CONFLICT(token) DO UPDATE
+                   SET payload=EXCLUDED.payload, created_at=EXCLUDED.created_at, expires_at=EXCLUDED.expires_at""",
+                (token, encoded, now, now + ttl),
+            )
+        else:
+            _execute(
+                conn,
+                """INSERT INTO shared_conversations(token,payload,created_at,expires_at)
+                   VALUES(?,?,?,?) ON CONFLICT(token) DO UPDATE
+                   SET payload=excluded.payload, created_at=excluded.created_at, expires_at=excluded.expires_at""",
+                (token, encoded, now, now + ttl),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_shared_conversation(token):
+    import json
+    conn = _connect()
+    try:
+        row = _execute(
+            conn,
+            "SELECT payload, expires_at FROM shared_conversations WHERE token=?",
+            (token,),
+        ).fetchone()
+        if not row:
+            return None
+        if time.time() >= row["expires_at"]:
+            _execute(conn, "DELETE FROM shared_conversations WHERE token=?", (token,))
+            conn.commit()
+            return None
+        payload = row["payload"]
+        return json.loads(payload) if isinstance(payload, str) else payload
+    finally:
+        conn.close()
+
+
+def list_conversations(user_id):
+    import json
+    init_db()
+    conn = _connect()
+    try:
+        rows = _execute(conn, "SELECT id,title,payload,created_at,updated_at FROM conversations WHERE user_id=? ORDER BY updated_at DESC LIMIT 100", (user_id,)).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            if isinstance(item.get("payload"), str):
+                item["payload"] = json.loads(item["payload"])
+            result.append(item)
+        return result
+    finally:
+        conn.close()
+
+
+def upsert_conversation(user_id, conversation_id, title, payload):
+    import json
+    init_db()
+    now = time.time()
+    encoded = json.dumps(payload, separators=(",", ":"))
+    conn = _connect()
+    try:
+        if _is_postgres():
+            _execute(conn, """
+                INSERT INTO conversations(id,user_id,title,payload,created_at,updated_at)
+                VALUES(?,?,?,?::jsonb,?,?)
+                ON CONFLICT(id) DO UPDATE SET title=EXCLUDED.title,payload=EXCLUDED.payload,updated_at=EXCLUDED.updated_at
+                WHERE conversations.user_id=EXCLUDED.user_id
+            """, (conversation_id, user_id, title, encoded, now, now))
+        else:
+            _execute(conn, """
+                INSERT INTO conversations(id,user_id,title,payload,created_at,updated_at)
+                VALUES(?,?,?,?,?,?)
+                ON CONFLICT(id) DO UPDATE SET title=excluded.title,payload=excluded.payload,updated_at=excluded.updated_at
+                WHERE conversations.user_id=excluded.user_id
+            """, (conversation_id, user_id, title, encoded, now, now))
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+
+def delete_conversation(user_id, conversation_id):
+    init_db()
+    conn = _connect()
+    try:
+        cur = _execute(conn, "DELETE FROM conversations WHERE id=? AND user_id=?", (conversation_id, user_id))
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+
+def list_saved_gallery(user_id):
+    import json
+    init_db()
+    conn = _connect()
+    try:
+        rows = _execute(conn, "SELECT id, payload, saved_at FROM saved_gallery WHERE user_id=? ORDER BY saved_at DESC LIMIT 100", (user_id,)).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            payload = item.get("payload")
+            if isinstance(payload, str):
+                payload = json.loads(payload)
+            result.append({"id": item["id"], **(payload if isinstance(payload, dict) else {}), "savedAt": item["saved_at"]})
+        return result
+    finally:
+        conn.close()
+
+
+def upsert_saved_gallery(user_id, image_id, payload):
+    import json
+    init_db()
+    encoded = json.dumps(payload, separators=(",", ":"))
+    now = time.time()
+    conn = _connect()
+    try:
+        if _is_postgres():
+            _execute(conn, """
+                INSERT INTO saved_gallery(id,user_id,payload,saved_at)
+                VALUES(?,?,?::jsonb,?)
+                ON CONFLICT(id) DO UPDATE SET payload=EXCLUDED.payload,saved_at=EXCLUDED.saved_at
+                WHERE saved_gallery.user_id=EXCLUDED.user_id
+            """, (image_id, user_id, encoded, now))
+        else:
+            _execute(conn, """
+                INSERT INTO saved_gallery(id,user_id,payload,saved_at)
+                VALUES(?,?,?,?)
+                ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,saved_at=excluded.saved_at
+                WHERE saved_gallery.user_id=excluded.user_id
+            """, (image_id, user_id, encoded, now))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def delete_saved_gallery(user_id, image_id):
+    init_db()
+    conn = _connect()
+    try:
+        cur = _execute(conn, "DELETE FROM saved_gallery WHERE id=? AND user_id=?", (image_id, user_id))
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def delete_otp(email):
+    """Remove a pending OTP when delivery fails, allowing a clean retry."""
+    init_db()
+    conn = _connect()
+    try:
+        _execute(conn, "DELETE FROM otps WHERE LOWER(email)=LOWER(?)", (str(email or "").strip(),))
+        conn.commit()
     finally:
         conn.close()

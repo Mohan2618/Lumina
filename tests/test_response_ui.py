@@ -23,6 +23,26 @@ class ResponseUITests(unittest.TestCase):
         ):
             self.assertIn(marker, source)
 
+
+    def test_system_prompt_requires_structured_complete_answers(self):
+        prompt = (ROOT / "lumina" / "prompts" / "system_prompt.py").read_text(encoding="utf-8")
+        for requirement in (
+            "Answer the user's actual question directly",
+            "Never stop in the middle of a sentence, code block, list item, or explanation",
+            "Avoid duplicated examples, repeated headings, malformed Markdown",
+            "one complete runnable code block",
+            "include time and space complexity when relevant",
+            "state meaning, transition derivation, base cases",
+        ):
+            self.assertIn(requirement, prompt)
+
+    def test_frontend_markdown_renderer_handles_fenced_code_and_lists(self):
+        source = (ROOT / "frontend" / "src" / "App.jsx").read_text(encoding="utf-8")
+        self.assertIn(r"const fence = /", source)
+        self.assertIn("numbered = raw.match", source)
+        self.assertIn("function StructuredResponse", source)
+        self.assertIn("function MarkdownText", source)
+
     def test_html_loader_is_injected_by_app(self):
         source = (ROOT / "app.py").read_text(encoding="utf-8")
         self.assertIn("response_enhancements.js?v=1", source)

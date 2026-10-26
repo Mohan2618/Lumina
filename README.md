@@ -133,10 +133,10 @@ These are interface-level progress indicators. They do not claim to expose hidde
 
 ### Frontend
 
-- HTML
-- CSS
-- JavaScript
-- Responsive structured-response rendering
+- React 18
+- Vite
+- JavaScript and CSS
+- Responsive structured-response rendering and sandboxed code previews
 
 ### Deployment
 
@@ -219,10 +219,11 @@ ANTHROPIC_API_KEY=your_anthropic_api_key
 BREVO_API_KEY=your_brevo_api_key
 BREVO_FROM_EMAIL=your_verified_sender_email
 BREVO_FROM_NAME=Lumina
+FLASK_SECRET_KEY=generate_a_random_secret_at_least_32_characters
 DATABASE_URL=your_postgresql_connection_string
 ```
 
-Never commit real API keys, database connection strings, passwords, or other credentials to GitHub.
+Generate `FLASK_SECRET_KEY` as a long random secret (at least 32 characters) and set it in the deployment environment. Production startup now refuses to run without it because a random per-process session key invalidates logins across workers/restarts. Keep the same value across all app instances. Never commit real API keys, database connection strings, session secrets, passwords, or other credentials to GitHub.
 
 ### Persistent Authentication Database
 
@@ -234,9 +235,21 @@ Do not commit `DATABASE_URL` or any database password to the repository.
 
 ### Run the Application
 
+Start the backend from the repository root:
+
 ```bash
 python app.py
 ```
+
+For React frontend development, in a second terminal:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open the Vite URL shown in the terminal. Vite proxies `/api`, `/process`, and `/health` requests to Flask on port 7860. Production Docker builds compile React automatically and serve it from the Flask root route.
 
 The application will be available at:
 
@@ -281,9 +294,9 @@ Lumina also supports **4K desktop wallpaper fitting**. A request such as "make t
 
 ## Response UI Architecture
 
-The existing Flask template remains the primary application interface. A small response-enhancement layer is loaded from `static/response_enhancements.js` through the Flask response pipeline in `app.py`.
+The React/Vite application in `frontend/` is the primary interface when a production build is present. The Docker image builds the React app and Flask serves the generated assets. For local frontend development, run Flask on port 7860 and start Vite from `frontend/`; Vite proxies API calls to Flask. If no React build exists, Flask keeps the legacy template available as a fallback.
 
-This keeps the existing chat implementation intact while adding:
+The React response renderer provides:
 
 ```text
 AI response

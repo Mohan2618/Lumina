@@ -1,5 +1,5 @@
-from flask import request, jsonify, render_template, session
-import base64, io, os, time, secrets, random, json
+from flask import request, jsonify, render_template, session, send_from_directory
+import base64, io, os, time, secrets, random, json, re
 import numpy as np
 import cv2
 from PIL import Image
@@ -7,7 +7,7 @@ from .core import app, GEMINI_MODEL, GEMINI_TIMEOUT, SYSTEM_PROMPT, gemini_clien
 from .utils.auth import hash_password, verify_password, validate_password_strength, validate_username, validate_email
 from .utils.image import pil_to_base64, file_to_pil, bytes_to_pil, pil_to_bytes, pil_to_cv2, is_rate_limit, check_guest_limit, consume_guest_limit, ImageValidationError
 from .services.email_service import send_email_otp
-from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp, update_password, otp_can_send
+from .services.auth_db import init_db, create_user, get_user, save_otp, verify_otp, update_password, otp_can_send, record_otp_sent, delete_otp, list_conversations, upsert_conversation, delete_conversation, create_shared_conversation, get_shared_conversation, list_saved_gallery, upsert_saved_gallery, delete_saved_gallery
 from .services.image_generation import generate_image_variations
 from .services.ai_service import call_ai, extract_op
 from .image_processing.processor import process_image
@@ -15,6 +15,8 @@ from .image_processing.processor import process_image
 
 def register_routes(app):
     init_db()
+    # Process-local throttling is a defense-in-depth UX safeguard; production deployments
+    # should additionally enforce shared rate limits at the proxy/cache layer.
     # ─────────────────────────────────────────────────────────────
     # AUTH ROUTES
     # ─────────────────────────────────────────────────────────────
@@ -33,6 +35,19 @@ def register_routes(app):
         required=["firstName","lastName","email","username","password"]
         if any(not str(data.get(k,"")).strip() for k in required):
             return jsonify({"error":"All required fields must be provided"}),400
+        # Enforce age and consent on the server; client-side checks can be bypassed.
+        dob_text = str(data.get("dateOfBirth") or "").strip()
+        if not dob_text or data.get("acceptedTerms") is not True:
+            return jsonify({"error":"Date of birth and acceptance of the Terms of Service and Privacy Policy are required."}),400
+        try:
+            from datetime import date
+            birth_date = date.fromisoformat(dob_text)
+            today = date.today()
+            age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+            if birth_date > today or age < 13:
+                return jsonify({"error":"You must be at least 13 years old to create an account."}),400
+        except (ValueError, TypeError):
+            return jsonify({"error":"Enter a valid date of birth."}),400
         email=data["email"].strip().lower()
         username=data["username"].strip()
         if not validate_email(email): return jsonify({"error":"Invalid email"}),400
@@ -54,9 +69,24 @@ def register_routes(app):
         identifier=str(data.get("identifier") or "").strip()
         pw=data.get("password","")
         if identifier:
+            now = time.time()
+            bucket_key = (request.remote_addr or "unknown", identifier.casefold())
+            failures = app.config.setdefault("_login_failures", {})
+            state = failures.get(bucket_key, {"count": 0, "locked_until": 0})
+            if state["locked_until"] > now:
+                retry_after = max(1, int(state["locked_until"] - now + 0.999))
+                return jsonify({"valid": False, "error": f"Too many sign-in attempts. Try again in {retry_after} seconds.", "retry_after": retry_after}), 429
             user=get_user(identifier)
             if not user or not verify_password(pw,user["salt"],user["password_hash"]):
-                return jsonify({"valid":False}),401
+                state["count"] = state["count"] + 1
+                if state["count"] >= 5:
+                    state["count"] = 0
+                    state["locked_until"] = now + 30
+                    failures[bucket_key] = state
+                    return jsonify({"valid": False, "error": "Too many sign-in attempts. Try again in 30 seconds.", "retry_after": 30}), 429
+                failures[bucket_key] = state
+                return jsonify({"valid":False,"error":"Incorrect username/email or password."}),401
+            failures.pop(bucket_key, None)
             session["user"]={"id":user["id"],"firstName":user["first_name"],"lastName":user["last_name"],"email":user["email"],"username":user["username"]}
             return jsonify({"valid":True,"user":session["user"]})
         salt=data.get("salt",""); stored_hash=data.get("hash","")
@@ -66,6 +96,147 @@ def register_routes(app):
     @app.route("/api/auth/me", methods=["GET"])
     def auth_me():
         return jsonify({"authenticated": "user" in session, "user": session.get("user")})
+
+
+    @app.route("/api/gallery", methods=["GET", "POST"])
+    def api_gallery():
+        user = session.get("user")
+        if not user:
+            return jsonify({"error": "Sign in to sync saved images."}), 401
+        user_id = user.get("id")
+        if request.method == "GET":
+            try:
+                return jsonify({"images": list_saved_gallery(user_id)})
+            except Exception as exc:
+                print(f"[GALLERY] list failed: {exc}")
+                return jsonify({"error": "Could not load saved images."}), 500
+
+        data = request.get_json(silent=True) or {}
+        image_id = str(data.get("id") or "").strip()
+        if not image_id or len(image_id) > 100:
+            return jsonify({"error": "A valid saved image id is required."}), 400
+        payload = data.get("payload")
+        if not isinstance(payload, dict) or not isinstance(payload.get("src"), str):
+            return jsonify({"error": "Saved image payload must include an image source."}), 400
+        if len(request.get_data(cache=True)) > 12 * 1024 * 1024:
+            return jsonify({"error": "Image is too large to save (12 MB limit)."}), 413
+        try:
+            upsert_saved_gallery(user_id, image_id, payload)
+            return jsonify({"success": True, "id": image_id})
+        except Exception as exc:
+            print(f"[GALLERY] save failed: {exc}")
+            return jsonify({"error": "Could not save image to your account."}), 500
+
+    @app.route("/api/gallery/<image_id>", methods=["DELETE"])
+    def api_gallery_item(image_id):
+        user = session.get("user")
+        if not user:
+            return jsonify({"error": "Sign in to manage saved images."}), 401
+        try:
+            deleted = delete_saved_gallery(user.get("id"), image_id)
+            return jsonify({"success": True, "deleted": deleted})
+        except Exception as exc:
+            print(f"[GALLERY] delete failed: {exc}")
+            return jsonify({"error": "Could not delete saved image."}), 500
+
+    @app.route("/api/conversations", methods=["GET", "POST"])
+    def api_conversations():
+        user = session.get("user")
+        if not user:
+            return jsonify({"error": "Sign in to sync your conversations."}), 401
+        user_id = user.get("id")
+        if request.method == "GET":
+            try:
+                rows = list_conversations(user_id)
+                return jsonify({"conversations": [{
+                    "id": row["id"], "title": row["title"],
+                    "savedAt": row["updated_at"],
+                    **(row["payload"] if isinstance(row.get("payload"), dict) else {})
+                } for row in rows]})
+            except Exception as exc:
+                print(f"[CONVERSATIONS] list failed: {exc}")
+                return jsonify({"error": "Could not load saved conversations."}), 500
+        data = request.get_json(silent=True) or {}
+        conversation_id = str(data.get("id") or "").strip()
+        title = str(data.get("title") or "Lumina conversation").strip()[:120]
+        if not conversation_id or len(conversation_id) > 100:
+            return jsonify({"error": "A valid conversation id is required."}), 400
+        payload = data.get("payload")
+        if not isinstance(payload, dict):
+            return jsonify({"error": "Conversation payload must be an object."}), 400
+        if len(request.get_data(cache=True)) > 12 * 1024 * 1024:
+            return jsonify({"error": "Conversation is too large to save (12 MB limit)."}), 413
+        try:
+            upsert_conversation(user_id, conversation_id, title, payload)
+            return jsonify({"success": True, "id": conversation_id})
+        except Exception as exc:
+            print(f"[CONVERSATIONS] save failed: {exc}")
+            return jsonify({"error": "Could not save conversation."}), 500
+
+    @app.route("/api/conversations/<conversation_id>", methods=["DELETE"])
+    def api_delete_conversation(conversation_id):
+        user = session.get("user")
+        if not user:
+            return jsonify({"error": "Sign in to delete saved conversations."}), 401
+        try:
+            deleted = delete_conversation(user.get("id"), conversation_id)
+            if deleted:
+                return jsonify({"success": True})
+            return jsonify({"error": "Conversation not found."}), 404
+        except Exception as exc:
+            print(f"[CONVERSATIONS] delete failed: {exc}")
+            return jsonify({"error": "Could not delete conversation."}), 500
+
+    @app.route("/api/share", methods=["POST"])
+    def api_create_share():
+        user = session.get("user")
+        if not user:
+            return jsonify({"error": "Sign in to create a share link."}), 401
+        data = request.get_json(silent=True) or {}
+        payload = data.get("payload")
+        if not isinstance(payload, dict) or not isinstance(payload.get("messages"), list):
+            return jsonify({"error": "A valid conversation is required."}), 400
+        if len(request.get_data(cache=True)) > 12 * 1024 * 1024:
+            return jsonify({"error": "This conversation is too large to share (12 MB limit)."}), 413
+        token = secrets.token_urlsafe(24)
+        try:
+            create_shared_conversation(token, payload, ttl=604800)
+            return jsonify({"success": True, "token": token, "expiresIn": 604800})
+        except Exception as exc:
+            print(f"[SHARE] create failed: {type(exc).__name__}")
+            return jsonify({"error": "Could not create a share link."}), 500
+
+    @app.route("/api/shared/<token>", methods=["GET"])
+    def api_get_shared_conversation(token):
+        try:
+            payload = get_shared_conversation(token)
+            if not payload:
+                return jsonify({"error": "This share link is invalid or has expired."}), 404
+            return jsonify({"payload": payload})
+        except Exception as exc:
+            print(f"[SHARE] read failed: {type(exc).__name__}")
+            return jsonify({"error": "Could not load the shared conversation."}), 500
+
+    @app.route("/api/auth/change-password", methods=["POST"])
+    def api_change_password():
+        user_session = session.get("user")
+        if not user_session:
+            return jsonify({"error": "Sign in to change your password."}), 401
+        data = request.get_json(silent=True) or {}
+        current_password = data.get("currentPassword", "")
+        new_password = data.get("newPassword", "")
+        if not current_password or not new_password:
+            return jsonify({"error": "Current and new passwords are required."}), 400
+        strength = validate_password_strength(new_password)
+        if not strength["valid"]:
+            return jsonify({"error": "Weak password", "details": strength["errors"]}), 400
+        user_record = get_user(user_session.get("email") or user_session.get("username") or "")
+        if not user_record or not verify_password(current_password, user_record["salt"], user_record["password_hash"]):
+            return jsonify({"error": "Current password is incorrect."}), 400
+        salt, hashed = hash_password(new_password)
+        if not update_password(user_record["email"], salt, hashed):
+            return jsonify({"error": "Could not update the password."}), 500
+        return jsonify({"success": True})
 
     @app.route("/api/auth/logout", methods=["POST"])
     def auth_logout():
@@ -118,13 +289,22 @@ def register_routes(app):
         if not otp_can_send(email):
             return jsonify({"error":"Please wait before requesting another OTP"}),429
 
-        code=str(secrets.randbelow(900000)+100000)
-        save_otp(email,code)
+        code = str(secrets.randbelow(900000) + 100000)
+        # Store the code before delivery so a successfully delivered code is
+        # immediately verifiable. If delivery fails, remove it so the user can
+        # retry without being blocked by a stale OTP/cooldown.
         try:
-            send_email_otp(email,code)
-        except Exception:
-            return jsonify({"error":"Email delivery failed"}),500
-        return jsonify({"success":True,"email":email})
+            save_otp(email, code)
+            send_email_otp(email, code)
+            record_otp_sent(email)
+        except Exception as exc:
+            try:
+                delete_otp(email)
+            except Exception as cleanup_exc:
+                print(f"[AUTH] OTP cleanup failed: {type(cleanup_exc).__name__}")
+            print(f"[AUTH] OTP email delivery failed: {type(exc).__name__}")
+            return jsonify({"error":"We couldn't send the verification email. Please check email service configuration and try again shortly."}),503
+        return jsonify({"success":True,"email":email,"message":"Verification code sent."})
 
     @app.route("/api/auth/verify-otp", methods=["POST"])
     def verify_otp_route():
@@ -179,7 +359,21 @@ def register_routes(app):
     
     @app.route("/")
     def index():
+        # Serve the built React app in deployments that include frontend/dist.
+        # Local Flask-only development keeps the legacy template available;
+        # the Vite dev server serves React directly during frontend development.
+        react_dist = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "dist")
+        react_index = os.path.join(react_dist, "index.html")
+        if os.path.isfile(react_index):
+            return send_from_directory(react_dist, "index.html")
         return render_template("index.html")
+
+    @app.route("/assets/<path:filename>")
+    def react_assets(filename):
+        react_dist = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "dist")
+        if not os.path.isdir(os.path.join(react_dist, "assets")):
+            return jsonify({"error": "React assets are not built."}), 404
+        return send_from_directory(os.path.join(react_dist, "assets"), filename)
     
     @app.route("/process", methods=["POST"])
     def process():
@@ -217,11 +411,41 @@ def register_routes(app):
             if image_pil is None and last_image_pil is not None:
                 image_pil=last_image_pil
     
-            # Existing-image edits must use the current image, even when the
-            # browser sends it as last_image instead of a fresh multipart upload.
-            ai_image=image_pil
-            raw_reply,model_used=call_ai(history,prompt,ai_image,gemini_client,GEMINI_MODEL,SYSTEM_PROMPT,GEMINI_TIMEOUT)
-            clean_reply,intent,params=extract_op(raw_reply)
+            # Deterministic pixel edits should not depend on an LLM interpreting the
+            # request. This prevents simple requests such as "make it grayscale" from
+            # accidentally triggering an unrelated operation (for example resizing).
+            direct_operations = [
+                (r"\b(grayscale|greyscale|gray scale|grey scale|black and white|black-and-white|monochrome)\b", "grayscale", "Converted the image to grayscale."),
+                (r"\b(invert|negative colors|invert colors)\b", "invert", "Inverted the image colors."),
+                (r"\b(sepia)\b", "sepia", "Applied a sepia tone."),
+                (r"\b(blur|blurry)\b", "blur", "Applied a blur effect."),
+                (r"\b(sharpen|sharper|increase sharpness)\b", "sharpen", "Sharpened the image."),
+                (r"\b(flip horizontally|horizontal flip|mirror image|mirror horizontally)\b", "flip", "Flipped the image horizontally."),
+                (r"\b(flip vertically|vertical flip)\b", "flip_vertical", "Flipped the image vertically."),
+                (r"\b(rotate 90|rotate clockwise|rotate right)\b", "rotate", "Rotated the image 90 degrees."),
+                (r"\b(rotate counter.?clockwise|rotate left)\b", "rotate_left", "Rotated the image 90 degrees counterclockwise."),
+            ]
+            normalized_prompt = prompt.lower()
+            direct_match = next(((operation, message) for pattern, operation, message in direct_operations
+                                 if re.search(pattern, normalized_prompt)), None) if image_pil else None
+            if direct_match:
+                intent, clean_reply = direct_match
+                params = {"axis": "vertical"} if intent == "flip_vertical" else {}
+                if intent == "flip_vertical":
+                    intent = "flip"
+                elif intent == "rotate_left":
+                    intent = "rotate"
+                    params = {"angle": -90}
+                elif intent == "rotate":
+                    params = {"angle": 90}
+                raw_reply = clean_reply
+                model_used = "local-image-operation"
+            else:
+                # Existing-image edits must use the current image, even when the
+                # browser sends it as last_image instead of a fresh multipart upload.
+                ai_image=image_pil
+                raw_reply,model_used=call_ai(history,prompt,ai_image,gemini_client,GEMINI_MODEL,SYSTEM_PROMPT,GEMINI_TIMEOUT)
+                clean_reply,intent,params=extract_op(raw_reply)
             result_b64=None
             result_images=[]
     
@@ -317,14 +541,18 @@ def register_routes(app):
             return jsonify({"message":clean_reply,"image":result_b64,"images":result_images,"history":updated_history,"last_image":new_last_image,"model":"lumina"})
     
         except Exception as e:
-            err=str(e); print(f"[ERROR] {err}")
+            err = str(e)
+            print(f"[ERROR] {type(e).__name__}: {err}")
             if "API_KEY_INVALID" in err or "API key not valid" in err:
-                msg="⚠️ Lumina could not connect to its AI service. Please try again."
+                msg = "⚠️ Lumina couldn't authenticate with its AI provider. Check the configured API key."
+                status = 503
             elif is_rate_limit(err):
-                msg="⚠️ Lumina is temporarily busy. Please try again shortly."
+                msg = "⚠️ Lumina's AI provider is rate-limiting requests. Please wait a moment and try again."
+                status = 429
             else:
-                msg="⚠️ Lumina couldn’t process your request. Please try again."
-            return jsonify({"message":msg}),200
+                msg = "⚠️ Lumina couldn't process this request because of a server or AI-provider error. Please try again shortly."
+                status = 500
+            return jsonify({"message": msg}), status
     
     if __name__=="__main__":
         app.run(host="0.0.0.0",port=int(os.environ.get("PORT",7860)),debug=False)

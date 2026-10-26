@@ -33,7 +33,17 @@ app = Flask(__name__, template_folder="../templates", static_folder="../static")
 app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
 app.config["MAX_FORM_MEMORY_SIZE"] = 30 * 1024 * 1024
 app.config["MAX_FORM_PARTS"] = 1000
-app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(32)
+_configured_secret = os.environ.get("FLASK_SECRET_KEY", "").strip()
+_is_production = (
+    os.environ.get("FLASK_ENV", "").lower() == "production"
+    or os.environ.get("RENDER", "").lower() == "true"
+)
+if _is_production and len(_configured_secret) < 32:
+    raise RuntimeError(
+        "FLASK_SECRET_KEY must be configured with at least 32 characters in production. "
+        "Set it in the deployment environment so login sessions remain valid across workers and restarts."
+    )
+app.secret_key = _configured_secret or os.urandom(32)
 app.config["SESSION_COOKIE_NAME"] = "lumina_session"
 app.config["SESSION_COOKIE_SECURE"] = os.environ.get("FLASK_ENV", "").lower() == "production"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
