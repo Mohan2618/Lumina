@@ -195,6 +195,17 @@ function MarkdownText({ text, onCopyTable }) {
       }
     }
     if (!line) { flushParagraph(); flushList(); continue; }
+    if (/^>\s?/.test(line)) {
+      flushParagraph(); flushList();
+      const quoteLines = [];
+      while (index < lines.length && /^\s*>\s?/.test(lines[index])) {
+        quoteLines.push(lines[index].replace(/^\s*>\s?/, "").trim());
+        index++;
+      }
+      index--;
+      output.push(<blockquote key={"q" + output.length}><MarkdownText text={quoteLines.join("\n")} onCopyTable={onCopyTable} /></blockquote>);
+      continue;
+    }
     const heading = line.match(/^(#{1,6})\s+(.+)$/);
     const boldHeading = line.match(/^\*\*(.+?)\*\*:?\s*$/);
     if (heading || boldHeading) {
